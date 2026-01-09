@@ -1,0 +1,101 @@
+services:
+    postgres:
+        image: postgres:18-alpine
+        container_name: dokusho-postgres
+        command: "-c 'max_connections=200'"
+        env_file: [.env]
+        ports:
+            - "5432:5432"
+        volumes:
+            - pg_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U dokusho"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    meilisearch:
+        image: getmeili/meilisearch:latest
+        container_name: dokusho-meilisearch
+        env_file: [.env]
+        ports:
+            - "7700:7700"
+        volumes:
+            - meili_data:/meili_data
+        healthcheck:
+            test:
+                ["CMD-SHELL", "curl -f http://localhost:7700/health || exit 1"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    redis:
+        image: redis:latest
+        container_name: dokusho-redis
+        ports:
+            - "6379:6379"
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    rustfs:
+        image: rustfs/rustfs:latest
+        container_name: dokusho-rustfs
+        environment:
+            RUSTFS_ACCESS_KEY: minioadmin
+            RUSTFS_SECRET_KEY: minioadmin
+        ports:
+            - "9000:9000"
+            - "9001:9001"
+        volumes:
+            - rustfs_data:/data
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    byparr:
+        image: byparr:local
+        container_name: dokusho-byparr
+        ports:
+            - "8191:8191"
+        environment:
+            - HOST=0.0.0.0
+            - PORT=8191
+        restart: unless-stopped
+
+    suwayomi:
+        image: ghcr.io/suwayomi/suwayomi-server:stable
+        container_name: dokusho-suwayomi
+        ports:
+            - "4567:4567"
+        environment:
+            - TZ=Europe/Paris
+            - BIND_IP=0.0.0.0
+            - BIND_PORT=4567
+            - WEB_UI_ENABLED=true
+            - WEB_UI_FLAVOR=WebUI
+            - WEB_UI_CHANNEL=stable
+            - FLARESOLVERR_ENABLED=true
+            - FLARESOLVERR_URL=http://byparr:8191
+        volumes:
+            - suwayomi_data:/home/suwayomi/.local/share/Tachidesk
+        restart: unless-stopped
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "curl -f http://localhost:4567/api/v1/settings/about || exit 1",
+                ]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+
+volumes:
+    pg_data:
+    meili_data:
+    rustfs_data:
+    suwayomi_data:

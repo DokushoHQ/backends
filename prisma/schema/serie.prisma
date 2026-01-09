@@ -1,0 +1,250 @@
+model Source {
+    id                      String     @id @default(uuid()) @db.Uuid
+    external_id             String     @unique
+    updated_at              DateTime
+    name                    String     @unique
+    icon                    String
+    version                 String
+    nsfw                    Boolean
+    enabled                 Boolean    @default(true)
+    languages               Language[]
+    /// [SupportedFiltersType]
+    search_filters          Json
+    timeout                 Int
+    can_block_scraping      Boolean
+    minimum_update_interval Int
+    rate_limit_max          Int        @default(1)
+    rate_limit_duration     Int        @default(30000)
+    /// [StringArray]
+    last_fetch_fingerprint  Json?
+
+    serie_sources     SerieSource[]
+    chapters          Chapter[]
+    scanlation_groups ScanlationGroup[]
+
+    @@map("source")
+}
+
+model Serie {
+    id           String    @id @default(uuid()) @db.Uuid
+    created_at   DateTime  @default(now()) @db.Timestamptz()
+    updated_at   DateTime  @default(now()) @db.Timestamptz() // Only updated when new chapters added
+    refreshed_at DateTime? @db.Timestamptz() // When metadata was last refreshed
+
+    // Pre-calculated display values (resolved strings, not MultiLanguage JSON)
+    title    String
+    synopsis String?
+    cover    String? // Current display cover (S3 URL, computed by indexer)
+    status   SerieStatus[]
+    type     SerieType
+
+    // User customization
+    custom_cover    String? // User-uploaded cover (S3 URL), used when "cover" is locked
+    /// [SerieFieldType]
+    locked_fields   Json    @default("[]")
+    /// [CustomMetadataType]
+    custom_metadata Json?
+
+    // Soft deletion
+    soft_deleted_at       DateTime? @db.Timestamptz()
+    pending_delete_job_id String?
+
+    sources  SerieSource[]
+    chapters Chapter[]
+    genres   Genre[]
+    authors  Author[]
+    artists  Artist[]
+
+    @@map("serie")
+}
+
+model SerieSource {
+    id          String   @id @default(uuid()) @db.Uuid
+    created_at  DateTime @default(now()) @db.Timestamptz()
+    updated_at  DateTime @default(now()) @db.Timestamptz()
+    serie_id    String   @db.Uuid
+    source_id   String   @db.Uuid
+    external_id String
+
+    // Raw source data (MultiLanguage JSON preserved)
+    /// [MultiLanguageType]
+    title             Json
+    /// [MultiLanguageType]
+    alternates_titles Json?
+    /// [MultiLanguageType]
+    synopsis          Json?
+    status            SerieStatus[]
+    type              SerieType
+
+    // Cover handling: source URL (may expire) + S3 URL (stable)
+    cover_source_url String // Original URL from scraper
+    cover            String? // S3 URL after processing
+
+    // External URL to the serie on the source website
+    external_url String?
+
+    // Source priority for aggregation
+    is_primary Boolean @default(false)
+
+    // Scheduling fields (per-source tracking)
+    last_checked_at      DateTime? @db.Timestamptz()
+    consecutive_failures Int       @default(0)
+
+    serie  Serie  @relation(fields: [serie_id], references: [id], onDelete: Cascade)
+    source Source @relation(fields: [source_id], references: [id])
+
+    @@unique([source_id, external_id])
+    @@map("serie_source")
+}
+
+model Chapter {
+    id          String   @id @default(uuid()) @db.Uuid
+    created_at  DateTime @default(now()) @db.Timestamptz()
+    updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz()
+    serie_id    String   @db.Uuid
+    source_id   String   @db.Uuid
+    external_id String
+
+    // Display values (resolved)
+    title          String?
+    chapter_number Float
+    volume_number  Int?
+    volume_name    String?
+    language       Language
+    date_upload    DateTime
+    external_url   String?
+
+    // Manual duplicate control
+    enabled Boolean @default(true)
+
+    // Page fetch tracking
+    page_fetch_status PageFetchStatus @default(Pending)
+
+    // Source availability tracking
+    source_removed_at              DateTime? @db.Timestamptz()
+    source_removal_acknowledged_at DateTime? @db.Timestamptz()
+
+    // User customization
+    /// [ChapterFieldType]
+    locked_fields   Json  @default("[]")
+    /// [CustomMetadataType]
+    custom_metadata Json?
+
+    serie  Serie             @relation(fields: [serie_id], references: [id], onDelete: Cascade)
+    source Source            @relation(fields: [source_id], references: [id])
+    data   ChapterData[]
+    groups ScanlationGroup[]
+
+    @@unique([source_id, external_id])
+    @@map("chapter")
+}
+
+model ChapterData {
+    id         String   @id @default(uuid()) @db.Uuid
+    created_at DateTime @default(now()) @db.Timestamptz()
+    updated_at DateTime @default(now()) @updatedAt @db.Timestamptz()
+    chapter_id String   @db.Uuid
+    index      Int
+    type       String
+    url        String? // S3 URL after upload (null if failed)
+    source_url String? // Original source URL for retry
+    content    String?
+
+    chapter Chapter @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
+
+    @@unique([chapter_id, index])
+    @@map("chapter_data")
+}
+
+model Genre {
+    id     String  @id @default(uuid()) @db.Uuid
+    /// [SourceSerieGenreType]
+    title  String  @unique
+    series Serie[]
+
+    @@map("genre")
+}
+
+model Author {
+    id     String  @id @default(uuid()) @db.Uuid
+    name   String  @unique
+    series Serie[]
+
+    @@map("author")
+}
+
+model Artist {
+    id     String  @id @default(uuid()) @db.Uuid
+    name   String  @unique
+    series Serie[]
+
+    @@map("artist")
+}
+
+model ScanlationGroup {
+    id          String   @id @default(uuid()) @db.Uuid
+    created_at  DateTime @default(now()) @db.Timestamptz()
+    updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz()
+    source_id   String   @db.Uuid
+    external_id String
+    name        String
+    url         String?
+
+    source   Source    @relation(fields: [source_id], references: [id])
+    chapters Chapter[]
+
+    @@unique([source_id, external_id])
+    @@map("scanlation_group")
+}
+
+enum Language {
+    En
+    Jp
+    JpRo
+    Fr
+    Ko
+    KoRo
+    ZhHk
+    Zh
+
+    @@map("Language")
+}
+
+enum SerieStatus {
+    Ongoing
+    Completed
+    Hiatus
+    Canceled
+    Publishing
+    Published
+    Scanlating
+    Scanlated
+    Unknown
+
+    @@map("SerieStatus")
+}
+
+enum SerieType {
+    Manga
+    Manhwa
+    Manhua
+    Webtoon
+    Lightnovel
+    Novel
+    Doujinshi
+    Comic
+    Oel
+    Unknown
+
+    @@map("SerieType")
+}
+
+enum PageFetchStatus {
+    Pending
+    InProgress
+    Success
+    Partial
+    Failed
+
+    @@map("PageFetchStatus")
+}
