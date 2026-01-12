@@ -66,7 +66,7 @@ jobs:
         run: |
           pnpm prisma migrate diff \
             --from-migrations ./prisma/migrations \
-            --to-schema-datamodel ./prisma/schema \
+            --to-schema ./prisma/schema \
             --exit-code
 
   version-check:
