@@ -33,13 +33,55 @@ PRs welcome - if your code works, manual test is passing and isn't a complete di
 
 ## Running
 
-```bash
-# Dev
-pnpm dev                    # Server on http://localhost:3000
-pnpm processor:dev          # Background workers
+### Development
 
-# Docker services (postgres, redis, meilisearch, etc.)
+```bash
+# Start dependencies (postgres, redis, meilisearch, etc.)
 docker compose up -d
+
+# Run the app
+pnpm dev                    # Server on http://localhost:3000
+pnpm processor:dev          # Background workers (separate terminal)
+```
+
+### Production
+
+The image supports three commands: `server` (default), `workers`, and `migrate`.
+
+```yaml
+# compose.prod.yml
+services:
+  dokusho:
+    image: ghcr.io/dokushohq/dokusho-backends:latest
+    container_name: dokusho-server
+    command: server
+    env_file: [.env]
+    ports:
+      - "3000:3000"
+    depends_on:
+      dokusho-migrate:
+        condition: service_completed_successfully
+
+  dokusho-workers:
+    image: ghcr.io/dokushohq/dokusho-backends:latest
+    container_name: dokusho-workers
+    command: workers
+    env_file: [.env]
+    depends_on:
+      dokusho-migrate:
+        condition: service_completed_successfully
+
+  dokusho-migrate:
+    image: ghcr.io/dokushohq/dokusho-backends:latest
+    container_name: dokusho-migrate
+    command: migrate
+    env_file: [.env]
+```
+
+Combine with `compose.yml` for the full stack:
+
+```bash
+docker compose -f compose.yml -f compose.prod.yml up -d
 ```
 
 You'll need to set up your environment variables. Check `nuxt.config.ts` for what's expected, there is an .env.example file to get you started.

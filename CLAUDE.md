@@ -18,9 +18,9 @@ pnpm build                  # Production build
 pnpm preview                # Preview production build
 
 # Code Quality
-pnpm lint                   # Run Biome linter
+pnpm lint                   # Run ESLint
 pnpm lint:fix               # Auto-fix linting issues
-pnpm format                 # Format code with Biome
+pnpm format                 # Format code with ESLint
 pnpm typecheck              # Run TypeScript type checking
 
 # Database
@@ -110,3 +110,10 @@ Series have `soft_deleted_at` and `pending_delete_job_id`. Deletion flow:
 ### Cover/Image Handling
 
 All external images (covers, chapter pages) are downloaded and uploaded to S3. Source URLs may expire; S3 URLs are stable. The `s3.ts` utility handles uploads via AWS SDK.
+
+## Git Workflow
+
+- Always work inside a feature branch, never commit directly to main
+- Make a single commit with a clear message when adding a significant change
+- Before finishing work on a PR branch, bump the version in `package.json` (patch for fixes, minor for features)
+- CI enforces version bump check on PRs to main
