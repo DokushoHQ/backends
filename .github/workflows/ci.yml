@@ -1,99 +1,102 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
+    pull_request:
+        branches: [main]
+        types: [opened, synchronize, reopened]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  lint-and-build:
-    name: Lint, Typecheck & Build
-    runs-on: ubuntu-latest
+    lint-and-build:
+        name: Lint, Typecheck & Build
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "pnpm"
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: "pnpm"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
 
-      - name: Run lint
-        run: pnpm lint
+            - name: Generate Prisma client
+              run: pnpm db:generate
 
-      - name: Run typecheck
-        run: pnpm typecheck
+            - name: Run lint
+              run: pnpm lint
 
-      - name: Run build
-        run: pnpm build
+            - name: Run typecheck
+              run: pnpm typecheck
 
-  prisma-check:
-    name: Prisma Migration Check
-    runs-on: ubuntu-latest
+            - name: Run build
+              run: pnpm build
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    prisma-check:
+        name: Prisma Migration Check
+        runs-on: ubuntu-latest
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "pnpm"
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: "pnpm"
 
-      - name: Generate Prisma client
-        run: pnpm db:generate
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
 
-      - name: Check migrations are up to date
-        run: |
-          pnpm prisma migrate diff \
-            --from-migrations ./prisma/migrations \
-            --to-schema-datamodel ./prisma/schema \
-            --exit-code
+            - name: Generate Prisma client
+              run: pnpm db:generate
 
-  version-check:
-    name: Version Bump Check
-    runs-on: ubuntu-latest
+            - name: Check migrations are up to date
+              run: |
+                  pnpm prisma migrate diff \
+                    --from-migrations ./prisma/migrations \
+                    --to-schema ./prisma/schema \
+                    --exit-code
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    version-check:
+        name: Version Bump Check
+        runs-on: ubuntu-latest
 
-      - name: Check version has been bumped
-        run: |
-          # Get current PR version
-          PR_VERSION=$(node -p "require('./package.json').version")
-          echo "PR version: $PR_VERSION"
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
-          # Get main branch version
-          git fetch origin main --depth=1
-          MAIN_VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8')).version")
-          echo "Main version: $MAIN_VERSION"
+            - name: Check version has been bumped
+              run: |
+                  # Get current PR version
+                  PR_VERSION=$(node -p "require('./package.json').version")
+                  echo "PR version: $PR_VERSION"
 
-          # Compare versions
-          if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
-            echo "::error::Version in package.json ($PR_VERSION) has not been changed from main branch. Please bump the version."
-            exit 1
-          fi
+                  # Get main branch version
+                  git fetch origin main --depth=1
+                  MAIN_VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8')).version")
+                  echo "Main version: $MAIN_VERSION"
 
-          echo "Version bumped: $MAIN_VERSION -> $PR_VERSION"
+                  # Compare versions
+                  if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
+                    echo "::error::Version in package.json ($PR_VERSION) has not been changed from main branch. Please bump the version."
+                    exit 1
+                  fi
+
+                  echo "Version bumped: $MAIN_VERSION -> $PR_VERSION"
