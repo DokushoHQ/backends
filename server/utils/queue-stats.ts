@@ -217,3 +217,13 @@ export async function removeJob(
 	}
 	return false
 }
+
+export async function pauseQueue(name: QueueName): Promise<void> {
+	const queue = queues[name]
+	await queue.pause()
+}
+
+export async function resumeQueue(name: QueueName): Promise<void> {
+	const queue = queues[name]
+	await queue.resume()
+}

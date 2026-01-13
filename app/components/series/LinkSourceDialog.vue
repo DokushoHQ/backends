@@ -132,7 +132,7 @@ function handleUrlInputChange() {
 				name="i-lucide-link"
 				class="h-4 w-4"
 			/>
-			Link Source
+			<span class="hidden sm:inline">Link</span>
 		</UButton>
 
 		<template #content>

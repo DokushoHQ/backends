@@ -11,6 +11,28 @@ if (error.value) {
 	console.error("Jobs fetch error:", error.value)
 }
 
+// Queue pause/resume
+const anyQueuePaused = computed(() =>
+	data.value?.stats?.some(q => q.paused) ?? false,
+)
+
+const pauseAllPending = ref(false)
+
+async function togglePauseAllQueues() {
+	pauseAllPending.value = true
+	try {
+		const endpoint = anyQueuePaused.value ? "/api/jobs/resume-all" : "/api/jobs/pause-all"
+		await $fetch(endpoint, { method: "POST" })
+		refresh()
+	}
+	catch (err) {
+		console.error("Failed to toggle queue pause state:", err)
+	}
+	finally {
+		pauseAllPending.value = false
+	}
+}
+
 // Compute segments for a queue with pre-calculated percentages
 function getQueueSegments(queue: {
 	active?: number
@@ -59,7 +81,23 @@ onUnmounted(() => {
 			<UDashboardNavbar
 				title="Job Queues"
 				:description="`${data?.totalJobs.toLocaleString() ?? 0} total jobs`"
-			/>
+			>
+				<template #right>
+					<UButton
+						:variant="anyQueuePaused ? 'solid' : 'outline'"
+						:color="anyQueuePaused ? 'primary' : 'neutral'"
+						size="sm"
+						:loading="pauseAllPending"
+						@click="togglePauseAllQueues"
+					>
+						<UIcon
+							:name="anyQueuePaused ? 'i-lucide-play' : 'i-lucide-pause'"
+							class="size-4 mr-2"
+						/>
+						{{ anyQueuePaused ? 'Resume All Queues' : 'Pause All Queues' }}
+					</UButton>
+				</template>
+			</UDashboardNavbar>
 			<!-- Redis Info Bar -->
 			<div
 				v-if="redisInfo"

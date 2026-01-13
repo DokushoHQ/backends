@@ -233,7 +233,7 @@ const coverButtonText = computed(() => {
 				name="i-lucide-edit-2"
 				class="h-4 w-4"
 			/>
-			Edit Metadata
+			<span class="hidden sm:inline">Edit</span>
 		</UButton>
 
 		<template #content>
