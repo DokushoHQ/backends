@@ -17,6 +17,33 @@ interface Job {
 	returnvalue?: unknown
 }
 
+interface QueueStats {
+	name: string
+	displayName: string
+	waiting: number
+	active: number
+	completed: number
+	failed: number
+	delayed: number
+	paused: boolean
+	total: number
+}
+
+interface QueueApiResponse {
+	queue: {
+		name: string
+		displayName: string
+	}
+	stats: QueueStats
+	jobs: Job[]
+	pagination: {
+		page: number
+		pageSize: number
+		totalCount: number
+		totalPages: number
+	}
+}
+
 const route = useRoute()
 const router = useRouter()
 const queueName = route.params.queue as string
@@ -29,7 +56,7 @@ definePageMeta({
 const currentStatus = computed(() => (route.query.status as string) || "latest")
 const currentPage = computed(() => Math.max(1, Number.parseInt(String(route.query.page || "1"), 10)))
 
-const { data, error, refresh } = await useFetch(`/api/jobs/${queueName}`, {
+const { data, error, refresh } = await useFetch<QueueApiResponse>(`/api/jobs/${queueName}`, {
 	query: {
 		status: currentStatus,
 		page: currentPage,
@@ -52,7 +79,7 @@ const statusTabs = [
 
 function getTabCount(key: string): number | null | undefined {
 	if (!data.value?.stats || key === "latest") return null
-	return data.value.stats[key]
+	return data.value.stats[key as keyof QueueStats] as number | undefined
 }
 
 function setStatus(status: string) {
@@ -120,6 +147,26 @@ async function promoteJob(jobId: string) {
 	}
 	finally {
 		actionPending.value = false
+	}
+}
+
+// Queue pause/resume
+const queuePausePending = ref(false)
+
+async function toggleQueuePause() {
+	queuePausePending.value = true
+	try {
+		const endpoint = data.value?.stats?.paused
+			? `/api/jobs/${queueName}/resume`
+			: `/api/jobs/${queueName}/pause`
+		await $fetch(endpoint, { method: "POST" })
+		refresh()
+	}
+	catch (err) {
+		console.error("Failed to toggle queue pause state:", err)
+	}
+	finally {
+		queuePausePending.value = false
 	}
 }
 
@@ -228,17 +275,32 @@ function getJobDefaultTabIndex(job: Job): number {
 					/>
 				</template>
 				<template #right>
-					<UButton
-						variant="outline"
-						size="sm"
-						to="/jobs"
-					>
-						<UIcon
-							name="i-lucide-arrow-left"
-							class="h-4 w-4 mr-2"
-						/>
-						Back to Jobs
-					</UButton>
+					<div class="flex items-center gap-2">
+						<UButton
+							:variant="data?.stats?.paused ? 'solid' : 'outline'"
+							:color="data?.stats?.paused ? 'primary' : 'neutral'"
+							size="sm"
+							:loading="queuePausePending"
+							@click="toggleQueuePause"
+						>
+							<UIcon
+								:name="data?.stats?.paused ? 'i-lucide-play' : 'i-lucide-pause'"
+								class="h-4 w-4 mr-2"
+							/>
+							{{ data?.stats?.paused ? 'Resume Queue' : 'Pause Queue' }}
+						</UButton>
+						<UButton
+							variant="outline"
+							size="sm"
+							to="/jobs"
+						>
+							<UIcon
+								name="i-lucide-arrow-left"
+								class="h-4 w-4 mr-2"
+							/>
+							Back to Jobs
+						</UButton>
+					</div>
 				</template>
 			</UDashboardNavbar>
 		</template>
