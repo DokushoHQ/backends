@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
 	const nullJobsCount = jobs.filter(job => job == null).length
 	if (nullJobsCount > 0) {
 		console.warn(
-			`[jobs] Encountered ${nullJobsCount} null job(s) for queue "${queueName}" with status "${status}" on page ${page}.`
+			`[jobs] Encountered ${nullJobsCount} null job(s) for queue "${queueName}" with status "${status}" on page ${page}.`,
 		)
 	}
 	const validJobs = jobs.filter(job => job != null)

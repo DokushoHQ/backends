@@ -24,7 +24,8 @@ export default defineEventHandler(async (event) => {
 			const queue = getQueue(queueName)
 			await queue.removeJobScheduler(schedulerName)
 			return { success: true, message: `Removed job scheduler: ${schedulerName}` }
-		} else {
+		}
+		else {
 			throw createError({ statusCode: 400, message: "Invalid repeatable job ID format" })
 		}
 	}
