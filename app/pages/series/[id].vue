@@ -105,7 +105,7 @@ useHead({
 					/>
 				</template>
 				<template #right>
-					<div class="flex items-center gap-2">
+					<div class="flex items-center gap-1.5 sm:gap-2">
 						<template v-if="isAdmin && !deletionStatus?.isDeleted">
 							<SeriesRefreshMetadataButton
 								:serie-id="serieId"
@@ -136,12 +136,13 @@ useHead({
 							variant="outline"
 							size="sm"
 							to="/series"
+							class="shrink-0"
 						>
 							<UIcon
 								name="i-lucide-arrow-left"
-								class="h-4 w-4 mr-2"
+								class="h-4 w-4 sm:mr-2"
 							/>
-							Back to Series
+							<span class="hidden sm:inline">Back to Series</span>
 						</UButton>
 					</div>
 				</template>

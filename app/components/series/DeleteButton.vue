@@ -41,7 +41,7 @@ async function handleDelete() {
 				name="i-lucide-trash-2"
 				class="h-4 w-4"
 			/>
-			Delete
+			<span class="hidden sm:inline">Delete</span>
 		</UButton>
 
 		<template #content>

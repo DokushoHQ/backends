@@ -140,19 +140,19 @@ const filterItems = computed(() => {
 </script>
 
 <template>
-	<div>
-		<UDashboardPanel>
+	<div class="flex flex-col flex-1 min-h-0">
+		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
 				<UDashboardNavbar
 					title="Series"
 					:description="pageDescription"
 				>
 					<template #right>
-						<div class="flex items-center gap-2">
-							<!-- Active filter badges -->
+						<div class="flex items-center gap-1.5 sm:gap-2">
+							<!-- Active filter badges (hidden on mobile) -->
 							<div
 								v-if="hasActiveFilters"
-								class="flex items-center gap-1"
+								class="hidden sm:flex items-center gap-1"
 							>
 								<UBadge
 									v-if="isFailingFilter"
@@ -186,26 +186,28 @@ const filterItems = computed(() => {
 
 							<UInput
 								v-model="searchInput"
-								placeholder="Search series..."
+								placeholder="Search..."
 								icon="i-lucide-search"
-								class="w-64"
+								class="w-32 sm:w-64"
 							/>
 
 							<UDropdownMenu :items="filterItems">
 								<UButton
 									variant="outline"
 									icon="i-lucide-filter"
+									class="shrink-0"
 								>
-									Filter
+									<span class="hidden sm:inline">Filter</span>
 								</UButton>
 							</UDropdownMenu>
 
 							<UButton
 								v-if="isAdmin"
 								icon="i-lucide-plus"
+								class="shrink-0"
 								@click="importDialogOpen = true"
 							>
-								Import
+								<span class="hidden sm:inline">Import</span>
 							</UButton>
 						</div>
 					</template>
@@ -282,56 +284,61 @@ const filterItems = computed(() => {
 				</div>
 
 				<!-- Series grid -->
-				<template v-else>
-					<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-						<NuxtLink
-							v-for="serie in series"
-							:key="serie.id"
-							:to="`/series/${serie.id}`"
-							class="group block rounded-lg bg-card overflow-hidden hover:ring-1 hover:ring-primary/50 transition-all"
-						>
-							<div class="aspect-2/3 relative bg-muted overflow-hidden">
-								<img
-									v-if="serie.cover"
-									:src="serie.cover"
-									:alt="serie.title"
-									class="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-								>
-								<div
-									v-else
-									class="absolute inset-0 flex items-center justify-center"
-								>
-									<UIcon
-										name="i-lucide-book-open"
-										class="h-12 w-12 text-muted-foreground/50"
-									/>
+				<div
+					v-else
+					class="flex flex-col min-h-full"
+				>
+					<div class="flex-1">
+						<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
+							<NuxtLink
+								v-for="serie in series"
+								:key="serie.id"
+								:to="`/series/${serie.id}`"
+								class="group block rounded-lg bg-card overflow-hidden hover:ring-1 hover:ring-primary/50 transition-all"
+							>
+								<div class="aspect-2/3 relative bg-muted overflow-hidden">
+									<img
+										v-if="serie.cover"
+										:src="serie.cover"
+										:alt="serie.title"
+										class="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+									>
+									<div
+										v-else
+										class="absolute inset-0 flex items-center justify-center"
+									>
+										<UIcon
+											name="i-lucide-book-open"
+											class="h-12 w-12 text-muted-foreground/50"
+										/>
+									</div>
+									<div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent p-3 pt-8">
+										<p class="font-medium text-white text-sm truncate">{{ serie.title }}</p>
+									</div>
 								</div>
-								<div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent p-3 pt-8">
-									<p class="font-medium text-white text-sm truncate">{{ serie.title }}</p>
+								<div class="p-2 flex items-center gap-1.5">
+									<span class="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium">
+										{{ serie._count?.chapters ?? 0 }} ch
+									</span>
+									<span
+										v-if="getFailureCount(serie) > 0"
+										class="inline-flex items-center gap-0.5 rounded-md bg-red-500/10 text-red-500 px-2 py-1 text-xs font-medium"
+									>
+										<UIcon
+											name="i-lucide-alert-triangle"
+											class="h-3 w-3"
+										/>
+										{{ getFailureCount(serie) }}
+									</span>
 								</div>
-							</div>
-							<div class="p-2 flex items-center gap-1.5">
-								<span class="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium">
-									{{ serie._count?.chapters ?? 0 }} ch
-								</span>
-								<span
-									v-if="getFailureCount(serie) > 0"
-									class="inline-flex items-center gap-0.5 rounded-md bg-red-500/10 text-red-500 px-2 py-1 text-xs font-medium"
-								>
-									<UIcon
-										name="i-lucide-alert-triangle"
-										class="h-3 w-3"
-									/>
-									{{ getFailureCount(serie) }}
-								</span>
-							</div>
-						</NuxtLink>
+							</NuxtLink>
+						</div>
 					</div>
 
 					<!-- Pagination -->
 					<div
 						v-if="pagination.totalPages > 1"
-						class="flex items-center justify-center gap-2 mt-6"
+						class="flex items-center justify-center gap-2 mt-6 pb-4"
 					>
 						<UButton
 							variant="outline"
@@ -375,7 +382,7 @@ const filterItems = computed(() => {
 							/>
 						</UButton>
 					</div>
-				</template>
+				</div>
 			</template>
 		</UDashboardPanel>
 

@@ -38,6 +38,6 @@ async function handleRefresh() {
 			class="h-4 w-4"
 			:class="{ 'animate-spin': loading }"
 		/>
-		Refresh
+		<span class="hidden sm:inline">Refresh</span>
 	</UButton>
 </template>
