@@ -11,7 +11,7 @@ export const updateSchedulerJobDataSchema = z.object({
 
 export type UpdateSchedulerJobData = z.infer<typeof updateSchedulerJobDataSchema>
 
-export default defineQueue<UpdateSchedulerJobData, undefined, typeof QUEUE_NAME>({
+export default defineQueue<UpdateSchedulerJobData, undefined, "fetch-latest-scheduler" | "refresh-all-scheduler" | typeof QUEUE_NAME>({
 	name: QUEUE_NAME,
 	options: {
 		defaultJobOptions: {

@@ -13,6 +13,23 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const queueName = queueParam as QueueName
+
+	// Job scheduler jobs (repeat:*) cannot be removed directly
+	// They need to be removed via removeJobScheduler
+	if (jobId.startsWith("repeat:")) {
+		// Extract scheduler name from jobId (format: repeat:schedulerName:timestamp)
+		const parts = jobId.split(":")
+		if (parts.length >= 2 && parts[1]) {
+			const schedulerName = parts[1]
+			const queue = getQueue(queueName)
+			await queue.removeJobScheduler(schedulerName)
+			return { success: true, message: `Removed job scheduler: ${schedulerName}` }
+		}
+		else {
+			throw createError({ statusCode: 400, message: "Invalid repeatable job ID format" })
+		}
+	}
+
 	const job = await getJobById(queueName, jobId)
 
 	if (!job) {
