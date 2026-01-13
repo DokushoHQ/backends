@@ -29,7 +29,14 @@ export default defineEventHandler(async (event) => {
 	const totalCount = typeof total === "number" ? total : 0
 	const totalPages = Math.ceil(totalCount / pageSize)
 
-	const serializedJobs = await Promise.all(jobs.map(job => serializeJobWithLogs(queueName, job)))
+	const nullJobsCount = jobs.filter(job => job == null).length
+	if (nullJobsCount > 0) {
+		console.warn(
+			`[jobs] Encountered ${nullJobsCount} null job(s) for queue "${queueName}" with status "${status}" on page ${page}.`,
+		)
+	}
+	const validJobs = jobs.filter(job => job != null)
+	const serializedJobs = await Promise.all(validJobs.map(job => serializeJobWithLogs(queueName, job)))
 
 	return {
 		queue: {
