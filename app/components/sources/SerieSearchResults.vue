@@ -96,6 +96,7 @@ function getBadgeInfo(serie: SearchResult): { text: string, variant: "subtle" | 
 						v-if="serie.cover"
 						:src="serie.cover"
 						:alt="serie.title"
+						referrerpolicy="no-referrer"
 						class="h-full w-full object-cover"
 					>
 					<div
