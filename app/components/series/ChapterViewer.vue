@@ -49,14 +49,23 @@ const imagePages = computed(() => pages.value.filter(p => p.type === "image" && 
 		<template #content>
 			<div class="flex flex-col h-full">
 				<div class="p-4 border-b shrink-0">
-					<h3 class="font-semibold flex items-center gap-2">
-						<UIcon
-							name="i-lucide-book-open"
-							class="h-4 w-4"
+					<div class="flex items-start justify-between gap-2">
+						<h3 class="font-semibold flex items-center gap-2">
+							<UIcon
+								name="i-lucide-book-open"
+								class="h-4 w-4"
+							/>
+							<span v-if="chapter?.volume_number !== null">Vol. {{ chapter?.volume_number }}</span>
+							Ch. {{ chapter?.chapter_number }}
+						</h3>
+						<UButton
+							variant="ghost"
+							size="sm"
+							icon="i-lucide-x"
+							class="shrink-0 -mr-2 -mt-1"
+							@click="open = false"
 						/>
-						<span v-if="chapter?.volume_number !== null">Vol. {{ chapter?.volume_number }}</span>
-						Ch. {{ chapter?.chapter_number }}
-					</h3>
+					</div>
 					<div class="flex items-center gap-2 flex-wrap text-sm text-muted-foreground mt-1">
 						<span v-if="chapter?.title">{{ chapter.title }}</span>
 						<UBadge variant="subtle">
