@@ -57,6 +57,7 @@ const emit = defineEmits<{
 								v-if="detail.cover"
 								:src="detail.cover"
 								:alt="detail.title"
+								referrerpolicy="no-referrer"
 								class="h-full w-full object-cover"
 							>
 							<div
