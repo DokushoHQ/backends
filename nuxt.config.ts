@@ -1,6 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-	modules: ["@nuxt/ui", "nuxt-processor", "@vueuse/nuxt", "@nuxt/eslint", "nuxt-nodemailer", "nuxt-email-renderer", "nuxt-charts"],
+	modules: ["@nuxt/ui", "@dokushohq/nuxt-processor", "@vueuse/nuxt", "@nuxt/eslint", "nuxt-nodemailer", "nuxt-email-renderer", "nuxt-charts"],
 	devtools: { enabled: true },
 	css: ["~/assets/css/main.css"],
 	runtimeConfig: {
@@ -48,7 +48,9 @@ export default defineNuxtConfig({
 				indent: "tab",
 				quotes: "double",
 			},
+			typescript: { strict: true },
 		},
+		checker: true,
 	},
 	nodemailer: {
 		from: "", // Set via NUXT_NODEMAILER_FROM env var
