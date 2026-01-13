@@ -15,8 +15,8 @@ importers:
         specifier: ^3.965.0
         version: 3.965.0(@aws-sdk/client-s3@3.965.0)
       '@dokushohq/nuxt-processor':
-        specifier: ^0.0.13
-        version: 0.0.13(magicast@0.5.1)
+        specifier: ^0.0.14
+        version: 0.0.14(magicast@0.5.1)
       '@nuxt/ui':
         specifier: ^4.3.0
         version: 4.3.0(247c973fc40000de17c82265d77660f7)
@@ -636,8 +636,8 @@ packages:
     resolution: {integrity: sha512-Nu8ahitGFFJztxUml9oD/DLb7Z28C8cd8F46IVQ7y5Btz575pvMY8AqZsXkX7Gds29eCKdMgIHjIvzskHgPSFg==}
     engines: {node: '>=18.0.0'}
 
-  '@dokushohq/nuxt-processor@0.0.13':
-    resolution: {integrity: sha512-oOZZQ/8iygDE/DQB8qSly88WJnDLAYG/ULLlRKFHWuSrYZH2rdFh5cPtNsKl2xRg9moe/PnZE3C5wmv8Zr5U3Q==}
+  '@dokushohq/nuxt-processor@0.0.14':
+    resolution: {integrity: sha512-UJHJGUek+cnC7YbmfEoyFEgKkt5Eyloz4TbopR+hy92agneqMc7leN4THviQTm5NFny4fzagL8zfLl2XioI+4A==}
     hasBin: true
 
   '@dxup/nuxt@0.2.2':
@@ -8310,7 +8310,7 @@ snapshots:
     dependencies:
       mime: 3.0.0
 
-  '@dokushohq/nuxt-processor@0.0.13(magicast@0.5.1)':
+  '@dokushohq/nuxt-processor@0.0.14(magicast@0.5.1)':
     dependencies:
       '@nuxt/kit': 4.2.2(magicast@0.5.1)
       bullmq: 5.66.4
