@@ -275,30 +275,32 @@ function getJobDefaultTabIndex(job: Job): number {
 					/>
 				</template>
 				<template #right>
-					<div class="flex items-center gap-2">
+					<div class="flex items-center gap-1.5 sm:gap-2">
 						<UButton
 							:variant="data?.stats?.paused ? 'solid' : 'outline'"
 							:color="data?.stats?.paused ? 'primary' : 'neutral'"
 							size="sm"
 							:loading="queuePausePending"
+							class="shrink-0"
 							@click="toggleQueuePause"
 						>
 							<UIcon
 								:name="data?.stats?.paused ? 'i-lucide-play' : 'i-lucide-pause'"
-								class="h-4 w-4 mr-2"
+								class="h-4 w-4 sm:mr-2"
 							/>
-							{{ data?.stats?.paused ? 'Resume Queue' : 'Pause Queue' }}
+							<span class="hidden sm:inline">{{ data?.stats?.paused ? 'Resume Queue' : 'Pause Queue' }}</span>
 						</UButton>
 						<UButton
 							variant="outline"
 							size="sm"
 							to="/jobs"
+							class="shrink-0"
 						>
 							<UIcon
 								name="i-lucide-arrow-left"
-								class="h-4 w-4 mr-2"
+								class="h-4 w-4 sm:mr-2"
 							/>
-							Back to Jobs
+							<span class="hidden sm:inline">Back to Jobs</span>
 						</UButton>
 					</div>
 				</template>
@@ -440,24 +442,22 @@ function getJobDefaultTabIndex(job: Job): number {
 
 							<!-- Main content -->
 							<div class="flex-1 py-4 px-3 min-w-0 overflow-hidden">
-								<div class="flex items-start justify-between gap-4">
+								<div class="flex items-start justify-between gap-2 sm:gap-4">
 									<div class="flex-1 min-w-0">
 										<div class="flex items-center justify-between gap-2 mb-2">
 											<div class="flex items-center gap-2 min-w-0">
-												<span class="text-muted-foreground text-sm">#{{ job.id }}</span>
-												<h3 class="font-medium truncate min-w-0 flex-1">
-													{{ job.name }}
-												</h3>
+												<span class="text-muted-foreground text-sm shrink-0">#{{ job.id }}</span>
 												<UBadge
 													variant="outline"
 													:class="getJobStatus(job).color"
+													class="shrink-0"
 												>
 													{{ getJobStatus(job).status }}
 												</UBadge>
 											</div>
 
 											<!-- Actions -->
-											<div class="flex items-center gap-1 shrink-0">
+											<div class="flex items-center gap-0.5 sm:gap-1 shrink-0">
 												<UButton
 													v-if="getJobStatus(job).status === 'failed'"
 													variant="ghost"
@@ -467,9 +467,9 @@ function getJobDefaultTabIndex(job: Job): number {
 												>
 													<UIcon
 														name="i-lucide-rotate-ccw"
-														class="size-3.5 mr-1"
+														class="size-3.5 sm:mr-1"
 													/>
-													Retry
+													<span class="hidden sm:inline">Retry</span>
 												</UButton>
 												<UButton
 													v-if="getJobStatus(job).status === 'delayed'"
@@ -480,9 +480,9 @@ function getJobDefaultTabIndex(job: Job): number {
 												>
 													<UIcon
 														name="i-lucide-fast-forward"
-														class="size-3.5 mr-1"
+														class="size-3.5 sm:mr-1"
 													/>
-													Run Now
+													<span class="hidden sm:inline">Run Now</span>
 												</UButton>
 												<UButton
 													variant="ghost"
@@ -492,9 +492,9 @@ function getJobDefaultTabIndex(job: Job): number {
 												>
 													<UIcon
 														name="i-lucide-copy"
-														class="size-3.5 mr-1"
+														class="size-3.5 sm:mr-1"
 													/>
-													Duplicate
+													<span class="hidden sm:inline">Duplicate</span>
 												</UButton>
 												<UButton
 													variant="ghost"
@@ -505,9 +505,9 @@ function getJobDefaultTabIndex(job: Job): number {
 												>
 													<UIcon
 														name="i-lucide-trash-2"
-														class="size-3.5 mr-1"
+														class="size-3.5 sm:mr-1"
 													/>
-													Delete
+													<span class="hidden sm:inline">Delete</span>
 												</UButton>
 											</div>
 										</div>
@@ -596,8 +596,11 @@ function getJobDefaultTabIndex(job: Job): number {
 										</div>
 									</div>
 
-									<!-- Progress circle -->
-									<JobsProgressCircle :progress="getProgressValue(job.progress)" />
+									<!-- Progress circle (hidden on mobile) -->
+									<JobsProgressCircle
+										:progress="getProgressValue(job.progress)"
+										class="hidden sm:block"
+									/>
 								</div>
 							</div>
 						</div>

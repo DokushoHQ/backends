@@ -148,11 +148,11 @@ const filterItems = computed(() => {
 					:description="pageDescription"
 				>
 					<template #right>
-						<div class="flex items-center gap-2">
-							<!-- Active filter badges -->
+						<div class="flex items-center gap-1.5 sm:gap-2">
+							<!-- Active filter badges (hidden on mobile) -->
 							<div
 								v-if="hasActiveFilters"
-								class="flex items-center gap-1"
+								class="hidden sm:flex items-center gap-1"
 							>
 								<UBadge
 									v-if="isFailingFilter"
@@ -186,26 +186,28 @@ const filterItems = computed(() => {
 
 							<UInput
 								v-model="searchInput"
-								placeholder="Search series..."
+								placeholder="Search..."
 								icon="i-lucide-search"
-								class="w-64"
+								class="w-32 sm:w-64"
 							/>
 
 							<UDropdownMenu :items="filterItems">
 								<UButton
 									variant="outline"
 									icon="i-lucide-filter"
+									class="shrink-0"
 								>
-									Filter
+									<span class="hidden sm:inline">Filter</span>
 								</UButton>
 							</UDropdownMenu>
 
 							<UButton
 								v-if="isAdmin"
 								icon="i-lucide-plus"
+								class="shrink-0"
 								@click="importDialogOpen = true"
 							>
-								Import
+								<span class="hidden sm:inline">Import</span>
 							</UButton>
 						</div>
 					</template>
