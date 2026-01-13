@@ -14,6 +14,9 @@ importers:
       '@aws-sdk/lib-storage':
         specifier: ^3.965.0
         version: 3.965.0(@aws-sdk/client-s3@3.965.0)
+      '@dokushohq/nuxt-processor':
+        specifier: ^0.0.13
+        version: 0.0.13(magicast@0.5.1)
       '@nuxt/ui':
         specifier: ^4.3.0
         version: 4.3.0(247c973fc40000de17c82265d77660f7)
@@ -71,9 +74,6 @@ importers:
       nuxt-nodemailer:
         specifier: ^1.1.4
         version: 1.1.4(magicast@0.5.1)(nodemailer@7.0.12)
-      nuxt-processor:
-        specifier: github:DokushoHQ/nuxt-processor
-        version: https://codeload.github.com/DokushoHQ/nuxt-processor/tar.gz/a6ce0a6b9d0202da7a39356f9206ed3b9f14377f(magicast@0.5.1)
       p-limit:
         specifier: ^7.2.0
         version: 7.2.0
@@ -635,6 +635,10 @@ packages:
   '@cloudflare/kv-asset-handler@0.4.1':
     resolution: {integrity: sha512-Nu8ahitGFFJztxUml9oD/DLb7Z28C8cd8F46IVQ7y5Btz575pvMY8AqZsXkX7Gds29eCKdMgIHjIvzskHgPSFg==}
     engines: {node: '>=18.0.0'}
+
+  '@dokushohq/nuxt-processor@0.0.13':
+    resolution: {integrity: sha512-oOZZQ/8iygDE/DQB8qSly88WJnDLAYG/ULLlRKFHWuSrYZH2rdFh5cPtNsKl2xRg9moe/PnZE3C5wmv8Zr5U3Q==}
+    hasBin: true
 
   '@dxup/nuxt@0.2.2':
     resolution: {integrity: sha512-RNpJjDZs9+JcT9N87AnOuHsNM75DEd58itADNd/s1LIF6BZbTLZV0xxilJZb55lntn4TYvscTaXLCBX2fq9CXg==}
@@ -5484,11 +5488,6 @@ packages:
     peerDependencies:
       nodemailer: ^7.0.6
 
-  nuxt-processor@https://codeload.github.com/DokushoHQ/nuxt-processor/tar.gz/a6ce0a6b9d0202da7a39356f9206ed3b9f14377f:
-    resolution: {tarball: https://codeload.github.com/DokushoHQ/nuxt-processor/tar.gz/a6ce0a6b9d0202da7a39356f9206ed3b9f14377f}
-    version: 0.0.13
-    hasBin: true
-
   nuxt@4.2.2:
     resolution: {integrity: sha512-n6oYFikgLEb70J4+K19jAzfx4exZcRSRX7yZn09P5qlf2Z59VNOBqNmaZO5ObzvyGUZ308SZfL629/Q2v2FVjw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -8310,6 +8309,19 @@ snapshots:
   '@cloudflare/kv-asset-handler@0.4.1':
     dependencies:
       mime: 3.0.0
+
+  '@dokushohq/nuxt-processor@0.0.13(magicast@0.5.1)':
+    dependencies:
+      '@nuxt/kit': 4.2.2(magicast@0.5.1)
+      bullmq: 5.66.4
+      citty: 0.1.6
+      consola: 3.4.2
+      fast-glob: 3.3.3
+      ioredis: 5.9.1
+      pathe: 1.1.2
+    transitivePeerDependencies:
+      - magicast
+      - supports-color
 
   '@dxup/nuxt@0.2.2(magicast@0.5.1)':
     dependencies:
@@ -13706,19 +13718,6 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
       - magicast
-
-  nuxt-processor@https://codeload.github.com/DokushoHQ/nuxt-processor/tar.gz/a6ce0a6b9d0202da7a39356f9206ed3b9f14377f(magicast@0.5.1):
-    dependencies:
-      '@nuxt/kit': 4.2.2(magicast@0.5.1)
-      bullmq: 5.66.4
-      citty: 0.1.6
-      consola: 3.4.2
-      fast-glob: 3.3.3
-      ioredis: 5.9.1
-      pathe: 1.1.2
-    transitivePeerDependencies:
-      - magicast
-      - supports-color
 
   nuxt@4.2.2(@biomejs/biome@2.3.11)(@electric-sql/pglite@0.3.2)(@parcel/watcher@2.5.1)(@types/node@25.0.3)(@vue/compiler-sfc@3.5.26)(cac@6.7.14)(db0@0.3.4(@electric-sql/pglite@0.3.2)(mysql2@3.15.3))(eslint@9.39.2(jiti@2.6.1))(ioredis@5.9.1)(lightningcss@1.30.2)(magicast@0.5.1)(mysql2@3.15.3)(optionator@0.9.4)(rollup@4.55.1)(terser@5.44.1)(typescript@5.9.3)(vite@7.3.1(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))(yaml@2.8.2):
     dependencies:
