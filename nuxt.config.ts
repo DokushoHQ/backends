@@ -48,7 +48,9 @@ export default defineNuxtConfig({
 				indent: "tab",
 				quotes: "double",
 			},
+			typescript: { strict: true }
 		},
+		checker: true
 	},
 	nodemailer: {
 		from: "", // Set via NUXT_NODEMAILER_FROM env var
