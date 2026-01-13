@@ -62,10 +62,4 @@ export default defineNuxtConfig({
 			pass: "", // Set via NUXT_NODEMAILER_AUTH_PASS env var
 		},
 	},
-	processor: {
-		redis: {
-			url: process.env.NUXT_REDIS_URL,
-			lazyConnect: true,
-		},
-	},
 })
