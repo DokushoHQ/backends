@@ -1,4 +1,5 @@
 import { load } from "cheerio"
+import { extractChapterNumber } from "~~/shared/utils/chapters"
 import {
 	type FetchSearchSerieFilter,
 	type SourceProvider,
@@ -359,7 +360,8 @@ export class WeebCentral implements SourceProvider {
 		const html = await data.text()
 		const $ = load(html)
 
-		const chapters: SourceSerieChapter[] = []
+		// Collect chapter data first (without chapterNumber)
+		const chapterData: Omit<SourceSerieChapter, "chapterNumber">[] = []
 
 		$("div.flex.items-center").each((_, element) => {
 			const $div = $(element)
@@ -383,17 +385,9 @@ export class WeebCentral implements SourceProvider {
 			const dateString = timeElement.attr("datetime")
 			const dateUpload = dateString ? new Date(dateString) : new Date()
 
-			// Try to parse chapter number from title
-			// Format is like "Battle 583", "Chapter 123", etc.
-			let chapterNumber = 0
-			const numberMatch = titleText.match(/(\d+(?:\.\d+)?)/)
-			if (numberMatch) {
-				chapterNumber = parseFloat(numberMatch[1] ?? "")
-			}
-
 			const externalUrl = new URL(href, this.#information.url)
 
-			chapters.push({
+			chapterData.push({
 				id,
 				title: { [SourceLanguage.En]: [titleText] },
 				dateUpload,
@@ -401,14 +395,27 @@ export class WeebCentral implements SourceProvider {
 				externalUrl,
 				volumeName: undefined,
 				volumeNumber: undefined,
-				chapterNumber,
 				groups: [],
 			})
 		})
 
+		// Assign chapter numbers using extractChapterNumber utility
+		// Falls back to positional numbering if no number found in title
+		const totalChapters = chapterData.length
+		const chapters: SourceSerieChapter[] = chapterData.map((chapter, index) => {
+			const title = Object.values(chapter.title).flat()[0] ?? ""
+			const chapterNumber = extractChapterNumber(title)
+
+			return {
+				...chapter,
+				chapterNumber: chapterNumber ?? totalChapters - index,
+			}
+		})
+
 		return {
 			chapters,
-			missingChapters: calculateMissingChapters(chapters.map(c => c.chapterNumber)),
+			// Can't calculate missing chapters - numbers are positional, not parsed
+			missingChapters: [],
 		}
 	}
 

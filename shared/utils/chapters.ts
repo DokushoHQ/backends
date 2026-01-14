@@ -1,4 +1,49 @@
 /**
+ * Extract chapter number from a chapter title using a hybrid approach.
+ *
+ * Rules based on number count in title:
+ * - 3+ numbers: look for decimal pattern (X.Y) - e.g., "Vol. 2 Chapter 27.1" → 27.1
+ * - 2 numbers: take the last one - e.g., "S2 - Episode 104" → 104
+ * - 1 number: use that number directly - e.g., "Chapter 5" → 5
+ * - 0 numbers: returns null (caller should use fallback like positional numbering)
+ *
+ * @param title - The chapter title to parse
+ * @returns The extracted chapter number, or null if no number found
+ */
+export const extractChapterNumber = (title: string): number | null => {
+	// Find all number sequences in the title (integers or decimals)
+	const allNumbers = [...title.matchAll(/(\d+(?:\.\d+)?)/g)]
+	const numberCount = allNumbers.length
+
+	if (numberCount >= 3) {
+		// Look for decimal pattern (X.Y)
+		const decimalMatch = title.match(/(\d+\.\d+)/)
+		if (decimalMatch?.[1]) {
+			return parseFloat(decimalMatch[1])
+		}
+	}
+
+	if (numberCount === 2) {
+		// Take the last number (avoids "S2 - Episode 104" → 2 issue)
+		const lastNumber = allNumbers[allNumbers.length - 1]
+		if (lastNumber?.[1]) {
+			return parseFloat(lastNumber[1])
+		}
+	}
+
+	if (numberCount === 1) {
+		// Use that single number directly
+		const singleNumber = allNumbers[0]
+		if (singleNumber?.[1]) {
+			return parseFloat(singleNumber[1])
+		}
+	}
+
+	// No numbers found
+	return null
+}
+
+/**
  * Calculate missing chapter numbers in a series based on existing chapter numbers.
  * Handles both whole chapters and sub-chapters (e.g., 1.1, 1.2).
  * Skips supplementary chapters (.5).
