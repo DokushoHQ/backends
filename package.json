@@ -1,6 +1,6 @@
 {
 	"name": "dokusho-backends",
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"packageManager": "pnpm@10.27.0",
 	"private": true,
 	"type": "module",
@@ -18,7 +18,9 @@
 		"db:migrate:dev": "prisma migrate dev --schema=./prisma/schema",
 		"db:migrate": "prisma migrate deploy --schema=./prisma/schema",
 		"db:studio": "prisma studio --schema=./prisma/schema",
-		"processor:dev": "nuxt-processor dev"
+		"processor:dev": "nuxt-processor dev",
+		"test": "vitest",
+		"test:run": "vitest run"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.965.0",
@@ -56,14 +58,18 @@
 	"devDependencies": {
 		"@iconify-json/lucide": "^1.2.83",
 		"@nuxt/eslint": "^1.12.1",
+		"@nuxt/test-utils": "^3.23.0",
 		"@types/nodemailer": "^7.0.5",
 		"@types/pg": "^8.16.0",
 		"@types/qrcode": "^1.5.6",
+		"@vue/test-utils": "^2.4.6",
 		"eslint": "^9.39.2",
+		"happy-dom": "^20.1.0",
 		"prisma": "^7.2.0",
 		"prisma-json-types-generator": "^4.0.1",
 		"typescript": "^5.9.3",
-		"vite-plugin-eslint2": "^5.0.4"
+		"vite-plugin-eslint2": "^5.0.4",
+		"vitest": "^3.2.4"
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [
