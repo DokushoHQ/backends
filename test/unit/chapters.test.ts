@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest"
-import { extractChapterNumber, calculateMissingChapters } from "../../shared/utils/chapters"
+import {
+	extractChapterNumber,
+	calculateMissingChapters,
+	extractSeasonAndEpisode,
+	assignSeasonedChapterNumbers,
+} from "../../shared/utils/chapters"
 
 describe("extractChapterNumber", () => {
 	describe("1 number in title - use directly", () => {
@@ -163,5 +168,183 @@ describe("calculateMissingChapters", () => {
 		// Mix of whole numbers and sub-chapters
 		const chapters = [1, 2, 3.1, 3.2, 4, 6]
 		expect(calculateMissingChapters(chapters)).toEqual([5])
+	})
+})
+
+describe("extractSeasonAndEpisode", () => {
+	describe("short season format (S1, S2)", () => {
+		it("parses 'S1 - Episode 96' → season 1, episode 96", () => {
+			expect(extractSeasonAndEpisode("S1 - Episode 96")).toEqual({ season: 1, episode: 96 })
+		})
+
+		it("parses 'S2 - Episode 104' → season 2, episode 104", () => {
+			expect(extractSeasonAndEpisode("S2 - Episode 104")).toEqual({ season: 2, episode: 104 })
+		})
+
+		it("parses 'S1 - Chapter 50' → season 1, episode 50", () => {
+			expect(extractSeasonAndEpisode("S1 - Chapter 50")).toEqual({ season: 1, episode: 50 })
+		})
+
+		it("parses 'S3 Episode 10.5' (no dash) → season 3, episode 10.5", () => {
+			expect(extractSeasonAndEpisode("S3 Episode 10.5")).toEqual({ season: 3, episode: 10.5 })
+		})
+
+		it("parses 'S1 10' (no keyword) → season 1, episode 10", () => {
+			expect(extractSeasonAndEpisode("S1 10")).toEqual({ season: 1, episode: 10 })
+		})
+	})
+
+	describe("long season format (Season 1, Season 2)", () => {
+		it("parses 'Season 2 Chapter 50' → season 2, episode 50", () => {
+			expect(extractSeasonAndEpisode("Season 2 Chapter 50")).toEqual({ season: 2, episode: 50 })
+		})
+
+		it("parses 'Season 1 - Episode 10' → season 1, episode 10", () => {
+			expect(extractSeasonAndEpisode("Season 1 - Episode 10")).toEqual({ season: 1, episode: 10 })
+		})
+
+		it("parses 'Season 3 25.5' (no keyword) → season 3, episode 25.5", () => {
+			expect(extractSeasonAndEpisode("Season 3 25.5")).toEqual({ season: 3, episode: 25.5 })
+		})
+	})
+
+	describe("non-season titles", () => {
+		it("returns null for 'Chapter 5'", () => {
+			expect(extractSeasonAndEpisode("Chapter 5")).toBeNull()
+		})
+
+		it("returns null for 'Vol 2 Ch 15'", () => {
+			expect(extractSeasonAndEpisode("Vol 2 Ch 15")).toBeNull()
+		})
+
+		it("returns null for 'Prologue'", () => {
+			expect(extractSeasonAndEpisode("Prologue")).toBeNull()
+		})
+
+		it("returns null for empty string", () => {
+			expect(extractSeasonAndEpisode("")).toBeNull()
+		})
+	})
+})
+
+describe("assignSeasonedChapterNumbers", () => {
+	describe("single season series", () => {
+		it("assigns sequential numbers for S1 episodes", () => {
+			const titles = ["S1 - Episode 1", "S1 - Episode 2", "S1 - Episode 3"]
+			const results = assignSeasonedChapterNumbers(titles)
+
+			expect(results).toEqual([
+				{ chapterNumber: 1, volumeNumber: 1, volumeName: "Season 1" },
+				{ chapterNumber: 2, volumeNumber: 1, volumeName: "Season 1" },
+				{ chapterNumber: 3, volumeNumber: 1, volumeName: "Season 1" },
+			])
+		})
+	})
+
+	describe("multi-season series with cumulative numbering", () => {
+		it("assigns cumulative numbers: S1 (1-100), S2 (101+)", () => {
+			const titles = [
+				"S1 - Episode 1",
+				"S1 - Episode 100",
+				"S2 - Episode 1",
+				"S2 - Episode 50",
+			]
+			const results = assignSeasonedChapterNumbers(titles)
+
+			expect(results).toEqual([
+				{ chapterNumber: 1, volumeNumber: 1, volumeName: "Season 1" },
+				{ chapterNumber: 100, volumeNumber: 1, volumeName: "Season 1" },
+				{ chapterNumber: 101, volumeNumber: 2, volumeName: "Season 2" }, // 100 + 1
+				{ chapterNumber: 150, volumeNumber: 2, volumeName: "Season 2" }, // 100 + 50
+			])
+		})
+
+		it("handles the original bug case: S1E96 vs S2E96", () => {
+			const titles = [
+				"S1 - Episode 96",
+				"S2 - Episode 96",
+			]
+			const results = assignSeasonedChapterNumbers(titles)
+
+			// S1 max is 96, so S2 offset is 96
+			expect(results[0]?.chapterNumber).toBe(96)
+			expect(results[1]?.chapterNumber).toBe(192) // 96 + 96
+			expect(results[0]?.chapterNumber).not.toBe(results[1]?.chapterNumber)
+		})
+
+		it("handles three seasons correctly", () => {
+			const titles = [
+				"S1 - Episode 50",
+				"S2 - Episode 30",
+				"S3 - Episode 20",
+			]
+			const results = assignSeasonedChapterNumbers(titles)
+
+			// S1 max=50 (offset 0), S2 max=30 (offset 50), S3 max=20 (offset 80)
+			expect(results).toEqual([
+				{ chapterNumber: 50, volumeNumber: 1, volumeName: "Season 1" },
+				{ chapterNumber: 80, volumeNumber: 2, volumeName: "Season 2" }, // 50 + 30
+				{ chapterNumber: 100, volumeNumber: 3, volumeName: "Season 3" }, // 50 + 30 + 20
+			])
+		})
+	})
+
+	describe("mixed season and non-season titles", () => {
+		it("uses extractChapterNumber for non-season titles", () => {
+			const titles = [
+				"Chapter 1",
+				"Chapter 2",
+				"S1 - Episode 5",
+			]
+			const results = assignSeasonedChapterNumbers(titles)
+
+			expect(results[0]).toEqual({ chapterNumber: 1 })
+			expect(results[1]).toEqual({ chapterNumber: 2 })
+			expect(results[2]).toEqual({ chapterNumber: 5, volumeNumber: 1, volumeName: "Season 1" })
+		})
+
+		it("uses positional fallback for titles without numbers", () => {
+			const titles = ["Prologue", "Chapter 1", "Chapter 2"]
+			const results = assignSeasonedChapterNumbers(titles)
+
+			// Prologue gets positional: totalChapters (3) - index (0) = 3
+			expect(results[0]).toEqual({ chapterNumber: 3 })
+			expect(results[1]).toEqual({ chapterNumber: 1 })
+			expect(results[2]).toEqual({ chapterNumber: 2 })
+		})
+	})
+
+	describe("decimal episodes", () => {
+		it("handles decimal episode numbers", () => {
+			const titles = [
+				"S1 - Episode 10",
+				"S1 - Episode 10.5",
+				"S1 - Episode 11",
+			]
+			const results = assignSeasonedChapterNumbers(titles)
+
+			expect(results).toEqual([
+				{ chapterNumber: 10, volumeNumber: 1, volumeName: "Season 1" },
+				{ chapterNumber: 10.5, volumeNumber: 1, volumeName: "Season 1" },
+				{ chapterNumber: 11, volumeNumber: 1, volumeName: "Season 1" },
+			])
+		})
+	})
+
+	describe("edge cases", () => {
+		it("handles empty array", () => {
+			expect(assignSeasonedChapterNumbers([])).toEqual([])
+		})
+
+		it("handles season 0 (specials)", () => {
+			const titles = ["S0 - Episode 1", "S1 - Episode 1"]
+			const results = assignSeasonedChapterNumbers(titles)
+
+			// S0 max=1 (offset 0), S1 max=1 (offset 1)
+			expect(results).toEqual([
+				{ chapterNumber: 1, volumeNumber: 0, volumeName: "Season 0" },
+				{ chapterNumber: 2, volumeNumber: 1, volumeName: "Season 1" },
+			])
+		})
 	})
 })
