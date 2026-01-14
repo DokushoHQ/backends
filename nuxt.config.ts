@@ -32,6 +32,7 @@ export default defineNuxtConfig({
 		softDeleteDelayDays: 7,
 		suwayomiUrl: "",
 		forceDisableSource: "",
+		importSimilarityThreshold: "0.8",
 		enabledLanguages: "En",
 		primaryLanguage: "En",
 		fallbackPrimaryLanguage: "En",
