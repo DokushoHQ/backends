@@ -1,4 +1,99 @@
 /**
+ * Result of chapter number assignment for a single chapter.
+ */
+export interface ChapterNumberResult {
+	chapterNumber: number
+	volumeNumber?: number
+	volumeName?: string
+}
+
+/**
+ * Extract season and episode from a chapter title.
+ * Detects patterns like "S1 - Episode 96", "Season 2 Chapter 50", etc.
+ *
+ * @param title - The chapter title to parse
+ * @returns Object with season and episode numbers, or null if no season pattern found
+ */
+export const extractSeasonAndEpisode = (title: string): { season: number, episode: number } | null => {
+	// Pattern: S1, S2, etc. followed by episode/chapter number
+	// Matches: "S1 - Episode 96", "S2 - Chapter 50", "S1 Episode 10.5"
+	const shortSeasonMatch = title.match(/\bS(\d+)\s*[-–—]?\s*(?:Episode|Chapter|Ep\.?|Ch\.?)?\s*(\d+(?:\.\d+)?)/i)
+	if (shortSeasonMatch?.[1] && shortSeasonMatch?.[2]) {
+		return {
+			season: parseInt(shortSeasonMatch[1], 10),
+			episode: parseFloat(shortSeasonMatch[2]),
+		}
+	}
+
+	// Pattern: Season 1, Season 2, etc. followed by episode/chapter number
+	// Matches: "Season 1 Chapter 50", "Season 2 - Episode 10"
+	const longSeasonMatch = title.match(/\bSeason\s*(\d+)\s*[-–—]?\s*(?:Episode|Chapter|Ep\.?|Ch\.?)?\s*(\d+(?:\.\d+)?)/i)
+	if (longSeasonMatch?.[1] && longSeasonMatch?.[2]) {
+		return {
+			season: parseInt(longSeasonMatch[1], 10),
+			episode: parseFloat(longSeasonMatch[2]),
+		}
+	}
+
+	return null
+}
+
+/**
+ * Assign chapter numbers for a batch of chapter titles, handling season patterns.
+ * Uses cumulative numbering for seasons: S1 episodes get 1-N, S2 episodes get N+1 to M, etc.
+ * Also extracts volume information from season data.
+ *
+ * @param titles - Array of chapter titles to process
+ * @param fallbackCount - Total count for positional fallback (used when no number found)
+ * @returns Array of ChapterNumberResult with chapterNumber and optional volume info
+ */
+export const assignSeasonedChapterNumbers = (titles: string[], fallbackCount?: number): ChapterNumberResult[] => {
+	// First pass: extract season/episode info for all titles
+	const parsed = titles.map((title, index) => ({
+		index,
+		title,
+		seasonInfo: extractSeasonAndEpisode(title),
+		simpleNumber: extractChapterNumber(title),
+	}))
+
+	// Find all seasons and their max episode numbers
+	const seasonMaxEpisodes = new Map<number, number>()
+	for (const p of parsed) {
+		if (p.seasonInfo) {
+			const current = seasonMaxEpisodes.get(p.seasonInfo.season) ?? 0
+			seasonMaxEpisodes.set(p.seasonInfo.season, Math.max(current, Math.ceil(p.seasonInfo.episode)))
+		}
+	}
+
+	// Calculate cumulative offsets for each season
+	const seasonOffsets = new Map<number, number>()
+	const sortedSeasons = [...seasonMaxEpisodes.keys()].sort((a, b) => a - b)
+	let cumulativeOffset = 0
+	for (const season of sortedSeasons) {
+		seasonOffsets.set(season, cumulativeOffset)
+		cumulativeOffset += seasonMaxEpisodes.get(season) ?? 0
+	}
+
+	// Second pass: assign chapter numbers
+	const totalChapters = fallbackCount ?? titles.length
+	return parsed.map((p, index) => {
+		if (p.seasonInfo) {
+			const offset = seasonOffsets.get(p.seasonInfo.season) ?? 0
+			return {
+				chapterNumber: offset + p.seasonInfo.episode,
+				volumeNumber: p.seasonInfo.season,
+				volumeName: `Season ${p.seasonInfo.season}`,
+			}
+		}
+
+		// Fall back to simple extraction or positional numbering
+		return {
+			chapterNumber: p.simpleNumber ?? totalChapters - index,
+		}
+	})
+}
+
+/**
  * Extract chapter number from a chapter title using a hybrid approach.
  *
  * Rules based on number count in title:
