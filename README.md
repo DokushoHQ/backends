@@ -1,4 +1,4 @@
-# Dokusho Backends
+# Dokusho Backends - Tsundoku
 
 With the latest DMCA thingy in mangadex I needed a way to archive what I am reading without it being a manual chore I have to run manually every day.
 That being said, this is for personal, and only for personal use. Do not use it to massively scrape every single source you know and massively download data please, we need those aggregator website to exist, same as translation group so consider donating to either or both of them. And more importantly supporting the official release of the manga you read by buying them when they are out in your country or even the japanese version, maybe.
@@ -51,31 +51,31 @@ The image supports three commands: `server` (default), `workers`, and `migrate`.
 ```yaml
 # compose.prod.yml
 services:
-  dokusho:
-    image: ghcr.io/dokushohq/dokusho-backends:latest
-    container_name: dokusho-server
-    command: server
-    env_file: [.env]
-    ports:
-      - "3000:3000"
-    depends_on:
-      dokusho-migrate:
-        condition: service_completed_successfully
+    dokusho:
+        image: ghcr.io/dokushohq/dokusho-backends:latest
+        container_name: dokusho-server
+        command: server
+        env_file: [.env]
+        ports:
+            - "3000:3000"
+        depends_on:
+            dokusho-migrate:
+                condition: service_completed_successfully
 
-  dokusho-workers:
-    image: ghcr.io/dokushohq/dokusho-backends:latest
-    container_name: dokusho-workers
-    command: workers
-    env_file: [.env]
-    depends_on:
-      dokusho-migrate:
-        condition: service_completed_successfully
+    dokusho-workers:
+        image: ghcr.io/dokushohq/dokusho-backends:latest
+        container_name: dokusho-workers
+        command: workers
+        env_file: [.env]
+        depends_on:
+            dokusho-migrate:
+                condition: service_completed_successfully
 
-  dokusho-migrate:
-    image: ghcr.io/dokushohq/dokusho-backends:latest
-    container_name: dokusho-migrate
-    command: migrate
-    env_file: [.env]
+    dokusho-migrate:
+        image: ghcr.io/dokushohq/dokusho-backends:latest
+        container_name: dokusho-migrate
+        command: migrate
+        env_file: [.env]
 ```
 
 Combine with `compose.yml` for the full stack:
@@ -102,3 +102,5 @@ As for the backend, I wrote the implementation of the weebcentral and mangadex s
 I am sorry if you don't like it, truly. But I am not sorry to say I don't have as much time as I would like to spend a month or two writing a fullstack app AND maintaining it nor do I want to spend every moment of my time when I have other hobbies and a ton of other things to do.
 
 I am more than happy to replace AI written code by human written code, most notably on dashboard, as long as it's improving things and/or implementing feature. Not rewriting code for the sake of it.
+
+As the first useable version is mostly done, I will try to replace some of the AI generated code around the backend part, as I think it's were it's the most valuable use of my time and where the functionnality really resides.
