@@ -52,7 +52,8 @@ async function testSerie(name: string, serieId: string) {
 	const duplicates = chapterNumbers.filter((num, idx) => chapterNumbers.indexOf(num) !== idx)
 	if (duplicates.length > 0) {
 		console.log(`\n⚠️  Duplicate chapter numbers found: ${[...new Set(duplicates)].join(", ")}`)
-	} else {
+	}
+	else {
 		console.log(`\n✅ No duplicate chapter numbers`)
 	}
 
