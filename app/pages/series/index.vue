@@ -36,9 +36,6 @@ const { data, pending, error, refresh } = await useFetch("/api/v1/serie", {
 // Fetch sources for filter
 const { data: sources } = await useFetch("/api/v1/sources")
 
-// Import dialog state
-const importDialogOpen = ref(false)
-
 // Computed values
 const series = computed(() => (data.value?.data ?? []).filter((s): s is NonNullable<typeof s> => s !== null))
 const pagination = computed(() => data.value?.pagination ?? { page: 1, pageSize: 24, total: 0, totalPages: 0 })
@@ -205,7 +202,7 @@ const filterItems = computed(() => {
 								v-if="isAdmin"
 								icon="i-lucide-plus"
 								class="shrink-0"
-								@click="importDialogOpen = true"
+								to="/series/import"
 							>
 								<span class="hidden sm:inline">Import</span>
 							</UButton>
@@ -385,13 +382,5 @@ const filterItems = computed(() => {
 				</div>
 			</template>
 		</UDashboardPanel>
-
-		<!-- Import Dialog -->
-		<SeriesImportDialog
-			v-if="isAdmin"
-			v-model:open="importDialogOpen"
-			:sources="sources ?? []"
-			@imported="refresh()"
-		/>
 	</div>
 </template>
