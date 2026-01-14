@@ -53,7 +53,7 @@ export class WeebCentral implements SourceProvider {
 			icon: new URL("https://weebcentral.com/favicon.ico"),
 			version: "1.0.0",
 			nsfw: true,
-			updatedAt: new Date("2025-08-14T17:10:00+02:00"),
+			updatedAt: new Date("2026-01-14T16:10:00+02:00"),
 			languages: [SourceLanguage.En],
 			enabledLanguages,
 			searchFilters: {
