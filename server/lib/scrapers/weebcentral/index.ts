@@ -1,5 +1,5 @@
 import { load } from "cheerio"
-import { extractChapterNumber } from "~~/shared/utils/chapters"
+import { assignSeasonedChapterNumbers, calculateMissingChapters } from "~~/shared/utils/chapters"
 import {
 	type FetchSearchSerieFilter,
 	type SourceProvider,
@@ -53,7 +53,7 @@ export class WeebCentral implements SourceProvider {
 			icon: new URL("https://weebcentral.com/favicon.ico"),
 			version: "1.0.0",
 			nsfw: true,
-			updatedAt: new Date("2025-08-14T17:10:00+02:00"),
+			updatedAt: new Date("2026-01-14T16:10:00+02:00"),
 			languages: [SourceLanguage.En],
 			enabledLanguages,
 			searchFilters: {
@@ -399,23 +399,28 @@ export class WeebCentral implements SourceProvider {
 			})
 		})
 
-		// Assign chapter numbers using extractChapterNumber utility
-		// Falls back to positional numbering if no number found in title
-		const totalChapters = chapterData.length
+		// Extract titles for batch processing
+		const titles = chapterData.map(chapter => Object.values(chapter.title).flat()[0] ?? "")
+
+		// Assign chapter numbers using season-aware batch processing
+		// Handles cumulative numbering for seasons (S1, S2, etc.)
+		const chapterNumbers = assignSeasonedChapterNumbers(titles, chapterData.length)
+
 		const chapters: SourceSerieChapter[] = chapterData.map((chapter, index) => {
-			const title = Object.values(chapter.title).flat()[0] ?? ""
-			const chapterNumber = extractChapterNumber(title)
+			const result = chapterNumbers[index]
+			if (!result) throw new Error(`Missing chapter number result for index ${index}`)
 
 			return {
 				...chapter,
-				chapterNumber: chapterNumber ?? totalChapters - index,
+				chapterNumber: result.chapterNumber,
+				volumeNumber: result.volumeNumber ?? chapter.volumeNumber,
+				volumeName: result.volumeName ?? chapter.volumeName,
 			}
 		})
 
 		return {
 			chapters,
-			// Can't calculate missing chapters - numbers are positional, not parsed
-			missingChapters: [],
+			missingChapters: calculateMissingChapters(chapters.map(c => c.chapterNumber)),
 		}
 	}
 
