@@ -1,6 +1,6 @@
 {
 	"name": "dokusho-backends",
-	"version": "0.1.9",
+	"version": "0.2.0",
 	"packageManager": "pnpm@10.27.0",
 	"private": true,
 	"type": "module",
@@ -47,6 +47,7 @@
 		"nuxt-nodemailer": "^1.1.4",
 		"p-limit": "^7.2.0",
 		"p-retry": "^7.1.1",
+		"papaparse": "^5.5.3",
 		"pg": "^8.16.3",
 		"qrcode": "^1.5.4",
 		"sharp": "^0.34.5",
@@ -60,6 +61,7 @@
 		"@nuxt/eslint": "^1.12.1",
 		"@nuxt/test-utils": "^3.23.0",
 		"@types/nodemailer": "^7.0.5",
+		"@types/papaparse": "^5.5.2",
 		"@types/pg": "^8.16.0",
 		"@types/qrcode": "^1.5.6",
 		"@vue/test-utils": "^2.4.6",
