@@ -25,6 +25,7 @@ export default defineNuxtConfig({
 		oidcRoleMap: "{ \"admin\": \"admin\", \"user\": \"user\" }",
 		schedulerFetchLatestCron: "*/30 * * * *",
 		schedulerRefreshAllCron: "0 3 * * 0",
+		schedulerRetryFailedPagesCron: "0 */6 * * *",
 		schedulerMaxPages: 5,
 		schedulerFingerprintSize: 50,
 		schedulerRecentlyCheckedMs: 900000, // 15 * 60 * 1000
