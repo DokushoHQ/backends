@@ -308,9 +308,9 @@ function getJobDefaultTabIndex(job: Job): number {
 		</template>
 
 		<template #body>
-			<!-- Loading state -->
+			<!-- Loading state (only on initial load, not refreshes) -->
 			<div
-				v-if="status === 'pending'"
+				v-if="status === 'pending' && !data"
 				class="flex items-center justify-center py-12"
 			>
 				<UIcon

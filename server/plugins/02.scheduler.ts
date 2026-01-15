@@ -33,6 +33,20 @@ export default defineNitroPlugin(async () => {
 			)
 			console.log(`Scheduled REFRESH_ALL with cron: ${refreshAllCron}`)
 		}
+
+		// Set up RETRY_FAILED_PAGES repeatable job (retry failed page downloads)
+		const retryFailedPagesCron = config.schedulerRetryFailedPagesCron
+		if (retryFailedPagesCron) {
+			await updateSchedulerQueue.upsertJobScheduler(
+				"retry-failed-pages-scheduler",
+				{ pattern: retryFailedPagesCron },
+				{
+					name: "update-scheduler",
+					data: { type: "RETRY_FAILED_PAGES" },
+				},
+			)
+			console.log(`Scheduled RETRY_FAILED_PAGES with cron: ${retryFailedPagesCron}`)
+		}
 	}
 	catch (error) {
 		console.error("Failed to set up scheduled jobs:", error)

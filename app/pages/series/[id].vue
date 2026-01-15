@@ -131,6 +131,11 @@ useHead({
 								:serie-title="title"
 								@deleted="handleRefresh"
 							/>
+							<ChaptersRetryFailedButton
+								scope="serie"
+								:serie-id="serieId"
+								@retried="() => refreshChapters()"
+							/>
 						</template>
 						<UButton
 							variant="outline"
