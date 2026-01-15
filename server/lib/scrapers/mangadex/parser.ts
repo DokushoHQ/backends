@@ -16,8 +16,8 @@ const NO_IMAGE_URL = new URL("https://i.imgur.com/6TrIues.jpeg")
 const mangaDexRelationship = z.object({
 	id: z.string(),
 	type: z.string(),
-	related: z.string().optional(),
-	attributes: z.record(z.string(), z.any()).optional(),
+	related: z.string().nullish(),
+	attributes: z.record(z.string(), z.any()).nullish(),
 })
 
 const mangaDexTagAttributes = z.object({
@@ -38,7 +38,7 @@ const mangaDexMangaAttributes = {
 	altTitles: z.array(z.record(z.string(), z.string())),
 	description: z.record(z.string(), z.string()),
 	isLocked: z.boolean(),
-	links: z.record(z.string(), z.string()).optional(),
+	links: z.record(z.string(), z.string()).nullish(),
 	originalLanguage: z.string(),
 	lastVolume: z.string().nullable().optional(),
 	lastChapter: z.string().nullable().optional(),
@@ -47,8 +47,8 @@ const mangaDexMangaAttributes = {
 	year: z.number().nullable().optional(),
 	contentRating: z.string(),
 	tags: z.array(mangaDexTag),
-	state: z.string().optional(),
-	chapterNumbersResetOnNewVolume: z.boolean().optional(),
+	state: z.string().nullish(),
+	chapterNumbersResetOnNewVolume: z.boolean().nullish(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
 	version: z.number(),
@@ -92,7 +92,7 @@ const mangadexManga = z
 		id: z.string(),
 		type: z.string(),
 		attributes: z.object(mangaDexMangaAttributes),
-		relationships: z.array(mangaDexRelationship).optional(),
+		relationships: z.array(mangaDexRelationship).nullish(),
 	})
 	.transform(({ id, attributes, relationships }) => {
 		const fileName = relationships?.find(el => el.type === "cover_art")?.attributes?.fileName
@@ -188,7 +188,7 @@ export const mangaDexAtHomeResponse = z
 	.object({
 		result: z.string(),
 		baseUrl: z.url(),
-		chapter: mangaDexAtHomeChapter.optional(),
+		chapter: mangaDexAtHomeChapter.nullish(),
 	})
 	.transform(({ baseUrl, chapter, result }) => {
 		return {

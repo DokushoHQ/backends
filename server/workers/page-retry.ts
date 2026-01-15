@@ -56,8 +56,9 @@ export default defineWorker<typeof QUEUE_NAME, PageRetryJobData, undefined>({
 			failedPages.map(page =>
 				limiter(async () => {
 					try {
+						const sourceUrl = page.source_url!
 						const basePath = join(chapter.serie_id, "chapters", chapter_id, `page-${page.index}`)
-						const result = await uploadImageFile(new URL(page.source_url!), basePath)
+						const result = await uploadImageFile(new URL(sourceUrl), basePath)
 
 						await db.chapterData.update({
 							where: { id: page.id },
@@ -70,16 +71,17 @@ export default defineWorker<typeof QUEUE_NAME, PageRetryJobData, undefined>({
 
 						successCount++
 
-						// Log warning for non-healthy images
+						// Log retry details
+						const { width, height } = result.metadata
+						job.log(`Page ${page.index} retry: ${width}x${height} → ${result.format} (${result.quality})`)
+
 						if (result.quality !== "healthy") {
-							job.log(`Page ${page.index} retry succeeded but quality: ${result.quality} - ${result.metadata.issues.join(", ")}`)
-						}
-						else {
-							job.log(`Page ${page.index} retry succeeded`)
+							job.log(`  Issues: ${result.metadata.issues.join(", ")}`)
 						}
 					}
 					catch (error) {
 						job.log(`Page ${page.index} retry failed: ${error}`)
+						job.log(`  Source URL: ${page.source_url}`)
 					}
 					finally {
 						processed++

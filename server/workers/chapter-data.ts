@@ -95,9 +95,13 @@ async function processChapterUpdate(
 			const progress = 20 + Math.floor((processed / images.length) * 70)
 			await job.updateProgress(progress)
 
+			// Log upload details
+			const { width, height } = result.metadata
+			job.log(`Page ${index}: ${width}x${height} → ${result.format} (${result.quality})`)
+
 			// Log warning for non-healthy images
 			if (result.quality !== "healthy") {
-				job.log(`Page ${index} quality: ${result.quality} - ${result.metadata.issues.join(", ")}`)
+				job.log(`  Issues: ${result.metadata.issues.join(", ")}`)
 			}
 
 			return {
@@ -118,7 +122,8 @@ async function processChapterUpdate(
 			const progress = 20 + Math.floor((processed / images.length) * 70)
 			await job.updateProgress(progress)
 
-			job.log(`Failed to upload page ${index}: ${error}`)
+			job.log(`Page ${index} failed: ${error}`)
+			job.log(`  Source URL: ${sourceUrl.toString()}`)
 			return {
 				success: false,
 				data: {
