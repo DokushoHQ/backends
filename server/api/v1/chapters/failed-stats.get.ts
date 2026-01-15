@@ -1,10 +1,15 @@
+import { z } from "zod"
 import type { Prisma } from "../../../utils/db"
+
+const querySchema = z.object({
+	serie_id: z.string().uuid().optional(),
+})
 
 export default defineEventHandler(async (event) => {
 	await requireAdmin(event)
 
-	const query = getQuery(event)
-	const serieId = query.serie_id as string | undefined
+	const query = await getValidatedQuery(event, querySchema.parse)
+	const serieId = query.serie_id
 
 	// Build where clause
 	const where: Prisma.ChapterWhereInput = {

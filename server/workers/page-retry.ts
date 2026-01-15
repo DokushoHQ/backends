@@ -82,12 +82,10 @@ export default defineWorker<typeof QUEUE_NAME, PageRetryJobData, undefined>({
 		await job.updateProgress(95)
 
 		// Update chapter status based on remaining failed pages
-		const remainingFailed = await db.chapterData.count({
-			where: { chapter_id, url: null },
-		})
-		const totalPages = await db.chapterData.count({
-			where: { chapter_id },
-		})
+		const [remainingFailed, totalPages] = await Promise.all([
+			db.chapterData.count({ where: { chapter_id, url: null } }),
+			db.chapterData.count({ where: { chapter_id } }),
+		])
 
 		let status: PageFetchStatus
 		if (remainingFailed === 0) {
