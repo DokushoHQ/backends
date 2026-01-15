@@ -43,9 +43,7 @@ function formatDate(date: Date | string): string {
 				v-if="error"
 				class="py-12 text-center"
 			>
-				<div
-					class="rounded-full bg-destructive/10 p-4 w-fit mx-auto mb-4"
-				>
+				<div class="size-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
 					<UIcon
 						name="i-lucide-alert-circle"
 						class="size-8 text-destructive"
@@ -68,7 +66,7 @@ function formatDate(date: Date | string): string {
 				v-else-if="!data?.users.length"
 				class="py-12 text-center"
 			>
-				<div class="rounded-full bg-muted p-4 w-fit mx-auto mb-4">
+				<div class="size-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
 					<UIcon
 						name="i-lucide-users"
 						class="size-8 text-muted-foreground"

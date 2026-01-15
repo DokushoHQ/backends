@@ -51,7 +51,7 @@ async function triggerSourceRefresh(sourceId: string) {
 				v-if="data && data.sources.length === 0"
 				class="flex flex-col items-center justify-center py-12"
 			>
-				<div class="rounded-full bg-muted p-4 mb-4">
+				<div class="size-16 rounded-full bg-muted flex items-center justify-center mb-4">
 					<UIcon
 						name="i-lucide-server"
 						class="h-8 w-8 text-muted-foreground"
@@ -73,7 +73,7 @@ async function triggerSourceRefresh(sourceId: string) {
 				<div class="grid gap-4 md:grid-cols-3">
 					<UCard>
 						<div class="flex items-center gap-4">
-							<div class="p-2 rounded-lg bg-primary/10">
+							<div class="size-9 rounded-lg bg-primary/10 flex items-center justify-center">
 								<UIcon
 									name="i-lucide-server"
 									class="h-5 w-5 text-primary"
@@ -94,7 +94,7 @@ async function triggerSourceRefresh(sourceId: string) {
 					</UCard>
 					<UCard>
 						<div class="flex items-center gap-4">
-							<div class="p-2 rounded-lg bg-destructive/10">
+							<div class="size-9 rounded-lg bg-destructive/10 flex items-center justify-center">
 								<UIcon
 									name="i-lucide-alert-triangle"
 									class="h-5 w-5 text-destructive"
@@ -115,7 +115,7 @@ async function triggerSourceRefresh(sourceId: string) {
 					</UCard>
 					<UCard>
 						<div class="flex items-center gap-4">
-							<div class="p-2 rounded-lg bg-muted">
+							<div class="size-9 rounded-lg bg-muted flex items-center justify-center">
 								<UIcon
 									name="i-lucide-clock"
 									class="h-5 w-5 text-muted-foreground"

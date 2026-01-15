@@ -72,7 +72,7 @@ function getIssueBadge(issue: string) {
 									In your library
 								</p>
 							</div>
-							<div class="rounded-full bg-primary/10 p-3">
+							<div class="size-11 rounded-full bg-primary/10 flex items-center justify-center">
 								<UIcon
 									name="i-lucide-book-open"
 									class="size-5 text-primary"
@@ -94,7 +94,7 @@ function getIssueBadge(issue: string) {
 									Across all series
 								</p>
 							</div>
-							<div class="rounded-full bg-primary/10 p-3">
+							<div class="size-11 rounded-full bg-primary/10 flex items-center justify-center">
 								<UIcon
 									name="i-lucide-file-text"
 									class="size-5 text-primary"
@@ -116,7 +116,7 @@ function getIssueBadge(issue: string) {
 									Active scrapers
 								</p>
 							</div>
-							<div class="rounded-full bg-primary/10 p-3">
+							<div class="size-11 rounded-full bg-primary/10 flex items-center justify-center">
 								<UIcon
 									name="i-lucide-server"
 									class="size-5 text-primary"
@@ -138,7 +138,7 @@ function getIssueBadge(issue: string) {
 									Registered accounts
 								</p>
 							</div>
-							<div class="rounded-full bg-primary/10 p-3">
+							<div class="size-11 rounded-full bg-primary/10 flex items-center justify-center">
 								<UIcon
 									name="i-lucide-users"
 									class="size-5 text-primary"
@@ -262,6 +262,7 @@ function getIssueBadge(issue: string) {
 									:src="serie.cover"
 									:alt="serie.title"
 									class="absolute inset-0 h-full w-full object-cover"
+									referrerpolicy="no-referrer"
 								>
 							</div>
 							<div class="flex-1 min-w-0">
@@ -333,6 +334,7 @@ function getIssueBadge(issue: string) {
 										:src="serie.cover"
 										:alt="serie.title"
 										class="absolute inset-0 h-full w-full object-cover"
+										referrerpolicy="no-referrer"
 									>
 								</div>
 								<div class="flex-1 min-w-0">
@@ -396,6 +398,7 @@ function getIssueBadge(issue: string) {
 										:src="activity.serie.cover"
 										:alt="activity.serie.title"
 										class="absolute inset-0 h-full w-full object-cover"
+										referrerpolicy="no-referrer"
 									>
 								</div>
 								<div class="flex-1 min-w-0">
