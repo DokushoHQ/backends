@@ -19,6 +19,10 @@ import indexerQueue, {
 	QUEUE_NAME as INDEXER_NAME,
 	DISPLAY_NAME as INDEXER_DISPLAY,
 } from "../queues/indexer"
+import pageRetryQueue, {
+	QUEUE_NAME as PAGE_RETRY_NAME,
+	DISPLAY_NAME as PAGE_RETRY_DISPLAY,
+} from "../queues/page-retry"
 import serieInserterQueue, {
 	QUEUE_NAME as SERIE_INSERTER_NAME,
 	DISPLAY_NAME as SERIE_INSERTER_DISPLAY,
@@ -36,6 +40,7 @@ const queues = {
 	updateScheduler: updateSchedulerQueue,
 	deleteSerie: deleteSerieQueue,
 	email: emailQueue,
+	pageRetry: pageRetryQueue,
 }
 
 export type QueueName = keyof typeof queues
@@ -59,6 +64,7 @@ export const queueConfig: Record<
 	updateScheduler: { name: UPDATE_SCHEDULER_NAME, displayName: UPDATE_SCHEDULER_DISPLAY },
 	deleteSerie: { name: DELETE_SERIE_NAME, displayName: DELETE_SERIE_DISPLAY },
 	email: { name: EMAIL_NAME, displayName: EMAIL_DISPLAY },
+	pageRetry: { name: PAGE_RETRY_NAME, displayName: PAGE_RETRY_DISPLAY },
 }
 
 export const allQueueNames = Object.keys(queueConfig) as QueueName[]
