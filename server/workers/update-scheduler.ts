@@ -1,5 +1,6 @@
 import { defineWorker } from "#processor"
 import { MetricsTime, type Job } from "bullmq"
+import pageRetryQueue from "../queues/page-retry"
 import serieInserterQueue from "../queues/serie-inserter"
 import type { UpdateSchedulerJobData } from "../queues/update-scheduler"
 import { QUEUE_NAME, updateSchedulerJobDataSchema } from "../queues/update-scheduler"
@@ -272,6 +273,46 @@ async function handleRefreshAll(job: Job<UpdateSchedulerJobData>) {
 	await job.updateProgress(100)
 }
 
+/**
+ * RETRY_FAILED_PAGES task: Queue page-retry jobs for chapters with failed pages.
+ */
+async function handleRetryFailedPages(job: Job<UpdateSchedulerJobData>) {
+	job.log("Starting RETRY_FAILED_PAGES task")
+	await job.updateProgress(5)
+
+	// Find chapters with Partial or Failed status that have retryable pages
+	const chapters = await db.chapter.findMany({
+		where: {
+			page_fetch_status: { in: ["Partial", "Failed"] },
+			data: {
+				some: {
+					url: null,
+					source_url: { not: null },
+				},
+			},
+		},
+		select: { id: true },
+		take: 100,
+	})
+
+	job.log(`Found ${chapters.length} chapters with failed pages to retry`)
+
+	// Queue page-retry jobs with staggered delays
+	for (const [i, chapter] of chapters.entries()) {
+		await pageRetryQueue.add(
+			`scheduled-retry-${chapter.id}`,
+			{ chapter_id: chapter.id },
+			{
+				delay: i * 5000,
+				jobId: `page-retry-${chapter.id}`,
+			},
+		)
+	}
+
+	job.log(`RETRY_FAILED_PAGES complete. Queued: ${chapters.length}`)
+	await job.updateProgress(100)
+}
+
 export default defineWorker<typeof QUEUE_NAME, UpdateSchedulerJobData, undefined>({
 	name: QUEUE_NAME,
 	options: {
@@ -286,6 +327,9 @@ export default defineWorker<typeof QUEUE_NAME, UpdateSchedulerJobData, undefined
 		}
 		else if (data.type === "REFRESH_ALL") {
 			await handleRefreshAll(job)
+		}
+		else if (data.type === "RETRY_FAILED_PAGES") {
+			await handleRetryFailedPages(job)
 		}
 	},
 })

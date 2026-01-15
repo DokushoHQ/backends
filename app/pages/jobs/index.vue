@@ -83,19 +83,22 @@ onUnmounted(() => {
 				:description="`${data?.totalJobs.toLocaleString() ?? 0} total jobs`"
 			>
 				<template #right>
-					<UButton
-						:variant="anyQueuePaused ? 'solid' : 'outline'"
-						:color="anyQueuePaused ? 'primary' : 'neutral'"
-						size="sm"
-						:loading="pauseAllPending"
-						@click="togglePauseAllQueues"
-					>
-						<UIcon
-							:name="anyQueuePaused ? 'i-lucide-play' : 'i-lucide-pause'"
-							class="size-4 mr-2"
-						/>
-						{{ anyQueuePaused ? 'Resume All Queues' : 'Pause All Queues' }}
-					</UButton>
+					<div class="flex items-center gap-2">
+						<ChaptersRetryFailedButton scope="global" />
+						<UButton
+							:variant="anyQueuePaused ? 'solid' : 'outline'"
+							:color="anyQueuePaused ? 'primary' : 'neutral'"
+							size="sm"
+							:loading="pauseAllPending"
+							@click="togglePauseAllQueues"
+						>
+							<UIcon
+								:name="anyQueuePaused ? 'i-lucide-play' : 'i-lucide-pause'"
+								class="size-4 mr-2"
+							/>
+							{{ anyQueuePaused ? 'Resume All Queues' : 'Pause All Queues' }}
+						</UButton>
+					</div>
 				</template>
 			</UDashboardNavbar>
 			<!-- Redis Info Bar -->
@@ -150,9 +153,9 @@ onUnmounted(() => {
 		</template>
 
 		<template #body>
-			<!-- Loading state -->
+			<!-- Loading state (only on initial load, not refreshes) -->
 			<div
-				v-if="status === 'pending'"
+				v-if="status === 'pending' && !data"
 				class="flex items-center justify-center py-12"
 			>
 				<UIcon
