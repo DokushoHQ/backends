@@ -99,7 +99,7 @@ onUnmounted(() => {
 				</div>
 
 				<!-- Results Area -->
-				<div class="flex-1 overflow-y-auto min-h-0">
+				<div class="flex-1 overflow-y-auto min-h-0 p-0.5 -m-0.5">
 					<!-- Loading -->
 					<div
 						v-if="wizard.searching.value && wizard.searchResults.value.length === 0"
