@@ -17,6 +17,10 @@ function getStatusBadge(status: PageFetchStatus) {
 			return { label: "Partial", color: "warning" as const, icon: "i-lucide-alert-triangle" }
 		case "Failed":
 			return { label: "Failed", color: "error" as const, icon: "i-lucide-x-circle" }
+		case "PermanentlyFailed":
+			return { label: "Perm. Failed", color: "error" as const, icon: "i-lucide-ban" }
+		case "Incomplete":
+			return { label: "Incomplete", color: "warning" as const, icon: "i-lucide-circle-alert" }
 	}
 }
 
@@ -342,6 +346,8 @@ const statusFilterItems = [
 	{ label: "In Progress", value: "InProgress" },
 	{ label: "Partial", value: "Partial" },
 	{ label: "Failed", value: "Failed" },
+	{ label: "Perm. Failed", value: "PermanentlyFailed" },
+	{ label: "Incomplete", value: "Incomplete" },
 ]
 
 // Source availability filter items (admin only)

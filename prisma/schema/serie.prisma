@@ -152,9 +152,10 @@ model ChapterData {
 
     // Image quality tracking
     /// [ImageQualityType]
-    image_quality   String?
+    image_quality      String?
     /// [ImageMetadataIssuesType]
-    metadata_issues Json?
+    metadata_issues    Json?
+    permanently_failed Boolean @default(false)
 
     chapter Chapter @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
 
@@ -252,6 +253,8 @@ enum PageFetchStatus {
     Success
     Partial
     Failed
+    PermanentlyFailed
+    Incomplete
 
     @@map("PageFetchStatus")
 }

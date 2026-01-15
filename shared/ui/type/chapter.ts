@@ -1,5 +1,5 @@
 // Page fetch status enum values
-export type PageFetchStatus = "Pending" | "InProgress" | "Success" | "Partial" | "Failed"
+export type PageFetchStatus = "Pending" | "InProgress" | "Success" | "Partial" | "Failed" | "PermanentlyFailed" | "Incomplete"
 
 // Chapter type for ChapterTable component
 export interface UIChapter {
@@ -36,4 +36,5 @@ export interface UIChapterPage {
 		channels: number | undefined
 		issues: string[]
 	} | null
+	permanently_failed: boolean
 }

@@ -6,7 +6,7 @@ import type { PageRetryJobData } from "../queues/page-retry"
 import { QUEUE_NAME, pageRetryJobDataSchema } from "../queues/page-retry"
 import { db } from "../utils/db"
 import type { PageFetchStatus } from "../utils/db"
-import { uploadImageFile } from "../utils/s3"
+import { GifTooLargeError, uploadImageFile } from "../utils/s3"
 
 export default defineWorker<typeof QUEUE_NAME, PageRetryJobData, undefined>({
 	name: QUEUE_NAME,
@@ -30,12 +30,13 @@ export default defineWorker<typeof QUEUE_NAME, PageRetryJobData, undefined>({
 			throw new Error(`Chapter ${chapter_id} not found`)
 		}
 
-		// Find failed pages (url is null but source_url exists)
+		// Find failed pages (url is null/empty but source_url exists, not permanently failed)
 		const failedPages = await db.chapterData.findMany({
 			where: {
 				chapter_id,
-				url: null,
+				OR: [{ url: null }, { url: "" }],
 				source_url: { not: null },
+				permanently_failed: false,
 			},
 		})
 
@@ -80,7 +81,18 @@ export default defineWorker<typeof QUEUE_NAME, PageRetryJobData, undefined>({
 						}
 					}
 					catch (error) {
-						job.log(`Page ${page.index} retry failed: ${error}`)
+						const isPermanent = error instanceof GifTooLargeError
+
+						if (isPermanent) {
+							job.log(`Page ${page.index} permanently failed: ${error}`)
+							await db.chapterData.update({
+								where: { id: page.id },
+								data: { permanently_failed: true },
+							})
+						}
+						else {
+							job.log(`Page ${page.index} retry failed: ${error}`)
+						}
 						job.log(`  Source URL: ${page.source_url}`)
 					}
 					finally {
@@ -94,18 +106,31 @@ export default defineWorker<typeof QUEUE_NAME, PageRetryJobData, undefined>({
 
 		await job.updateProgress(95)
 
-		// Update chapter status based on remaining failed pages
-		const [remainingFailed, totalPages] = await Promise.all([
-			db.chapterData.count({ where: { chapter_id, url: null } }),
-			db.chapterData.count({ where: { chapter_id } }),
+		// Update chapter status based on remaining failed pages (only count pages without URL as failed)
+		// Use NOT/OR to handle both null and empty string URLs
+		const [
+			successfulPages,
+			retryableFailedPages,
+			permanentlyFailedPages,
+		] = await Promise.all([
+			db.chapterData.count({ where: { chapter_id, NOT: { OR: [{ url: null }, { url: "" }] } } }),
+			db.chapterData.count({ where: { chapter_id, OR: [{ url: null }, { url: "" }], permanently_failed: false } }),
+			db.chapterData.count({ where: { chapter_id, OR: [{ url: null }, { url: "" }], permanently_failed: true } }),
 		])
 
+		// Determine status based on success/retryable/permanent failures
 		let status: PageFetchStatus
-		if (remainingFailed === 0) {
+		if (retryableFailedPages === 0 && permanentlyFailedPages === 0) {
 			status = "Success"
 		}
-		else if (remainingFailed === totalPages) {
+		else if (successfulPages === 0 && permanentlyFailedPages === 0) {
 			status = "Failed"
+		}
+		else if (successfulPages === 0 && retryableFailedPages === 0) {
+			status = "PermanentlyFailed"
+		}
+		else if (permanentlyFailedPages > 0) {
+			status = "Incomplete"
 		}
 		else {
 			status = "Partial"
@@ -118,6 +143,8 @@ export default defineWorker<typeof QUEUE_NAME, PageRetryJobData, undefined>({
 
 		await job.updateProgress(100)
 
-		job.log(`Retry complete: ${successCount}/${failedPages.length} pages fixed, status: ${status}`)
+		job.log(`Retry complete: ${successCount}/${failedPages.length} pages fixed`)
+		job.log(`Final counts - Success: ${successfulPages}, Retryable: ${retryableFailedPages}, Permanent: ${permanentlyFailedPages}`)
+		job.log(`Status: ${status}`)
 	},
 })

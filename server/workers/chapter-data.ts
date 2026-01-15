@@ -6,11 +6,12 @@ import type { ChapterDataJobData } from "../queues/chapter-data"
 import { QUEUE_NAME, chapterDataJobDataSchema } from "../queues/chapter-data"
 import { db } from "../utils/db"
 import type { Chapter, PageFetchStatus, Prisma } from "../utils/db"
-import { deleteByPrefix, uploadImageFile } from "../utils/s3"
+import { deleteByPrefix, GifTooLargeError, uploadImageFile } from "../utils/s3"
 import { createSources, getSourceById } from "../utils/sources"
 
 type PageUploadResult = {
 	success: boolean
+	permanentlyFailed: boolean
 	data: Prisma.ChapterDataCreateManyInput
 }
 
@@ -106,6 +107,7 @@ async function processChapterUpdate(
 
 			return {
 				success: true,
+				permanentlyFailed: false,
 				data: {
 					url: result.url,
 					source_url: sourceUrl.toString(),
@@ -122,16 +124,27 @@ async function processChapterUpdate(
 			const progress = 20 + Math.floor((processed / images.length) * 70)
 			await job.updateProgress(progress)
 
-			job.log(`Page ${index} failed: ${error}`)
+			// Check if this is a permanent failure (e.g., GIF too large)
+			const isPermanent = error instanceof GifTooLargeError
+
+			if (isPermanent) {
+				job.log(`Page ${index} permanently failed: ${error}`)
+			}
+			else {
+				job.log(`Page ${index} failed: ${error}`)
+			}
 			job.log(`  Source URL: ${sourceUrl.toString()}`)
+
 			return {
 				success: false,
+				permanentlyFailed: isPermanent,
 				data: {
 					url: null,
 					source_url: sourceUrl.toString(),
 					index,
 					type: "image",
 					chapter_id: chapterId,
+					permanently_failed: isPermanent,
 				},
 			}
 		}
@@ -142,24 +155,51 @@ async function processChapterUpdate(
 	)
 
 	const successCount = results.filter(r => r.success).length
-	const failedCount = results.filter(r => !r.success).length
-	const failedIndexes = results.filter(r => !r.success).map(r => r.data.index)
+	const retryableFailedCount = results.filter(r => !r.success && !r.permanentlyFailed).length
+	const permanentlyFailedCount = results.filter(r => r.permanentlyFailed).length
+	const failedIndexes = results.filter(r => !r.success && !r.permanentlyFailed).map(r => r.data.index)
+	const permanentlyFailedIndexes = results.filter(r => r.permanentlyFailed).map(r => r.data.index)
 
 	// Insert ALL pages (successful have url, failed have url=null but source_url set)
 	await db.chapterData.createMany({ data: results.map(r => r.data) })
 
 	await job.updateProgress(100)
 
-	// Determine final status
-	if (failedCount === 0) {
+	// Determine final status based on success/retryable/permanent failures
+	// All success → Success
+	// All retryable failures → Failed
+	// All permanent failures → PermanentlyFailed
+	// Some success + some retryable → Partial
+	// Some success + some permanent → Incomplete
+	// Mix of all three → Incomplete
+
+	if (retryableFailedCount === 0 && permanentlyFailedCount === 0) {
 		job.log(`Successfully uploaded all ${successCount} pages`)
 		return "Success"
 	}
-	if (successCount === 0) {
-		job.log(`All ${failedCount} pages failed to upload`)
+
+	if (successCount === 0 && permanentlyFailedCount === 0) {
+		job.log(`All ${retryableFailedCount} pages failed to upload (retryable)`)
 		return "Failed"
 	}
-	job.log(`Partial success: ${successCount} uploaded, ${failedCount} failed`)
+
+	if (successCount === 0 && retryableFailedCount === 0) {
+		job.log(`All ${permanentlyFailedCount} pages permanently failed`)
+		job.log(`Permanently failed pages: ${permanentlyFailedIndexes.join(", ")}`)
+		return "PermanentlyFailed"
+	}
+
+	// Mixed results
+	if (permanentlyFailedCount > 0) {
+		// Any permanent failure means Incomplete
+		job.log(`Incomplete: ${successCount} uploaded, ${retryableFailedCount} failed (retryable), ${permanentlyFailedCount} permanently failed`)
+		if (failedIndexes.length > 0) job.log(`Retryable failed pages: ${failedIndexes.join(", ")}`)
+		if (permanentlyFailedIndexes.length > 0) job.log(`Permanently failed pages: ${permanentlyFailedIndexes.join(", ")}`)
+		return "Incomplete"
+	}
+
+	// Only retryable failures mixed with success
+	job.log(`Partial success: ${successCount} uploaded, ${retryableFailedCount} failed (retryable)`)
 	job.log(`Failed pages: ${failedIndexes.join(", ")}`)
 	return "Partial"
 }

@@ -52,7 +52,17 @@ function getPublicUrl(filePath: string): string {
 // WebP max dimension is 16383 pixels
 const WEBP_MAX_DIMENSION = 16383
 
-export type ImageFormat = "webp" | "jpeg"
+export type ImageFormat = "webp" | "jpeg" | "gif"
+
+/**
+ * Error thrown when a GIF exceeds the size limit
+ */
+export class GifTooLargeError extends Error {
+	constructor(public sizeInMB: number, public limitMB: number) {
+		super(`GIF too large: ${sizeInMB.toFixed(2)}MB exceeds limit of ${limitMB}MB`)
+		this.name = "GifTooLargeError"
+	}
+}
 
 export type ImageUploadResult = {
 	url: string
@@ -94,7 +104,9 @@ function assessImageQuality(metadata: sharp.Metadata): { quality: ImageQuality, 
 }
 
 /**
- * Upload an image from a URL to S3, converting to WebP (or JPEG for oversized images)
+ * Upload an image from a URL to S3
+ * - GIFs: stored as-is if under size limit, throws GifTooLargeError if over
+ * - Other images: converted to WebP, or JPEG for oversized images (>16383px)
  * @param url - Source image URL
  * @param baseFilePath - File path without extension (extension will be added based on format used)
  */
@@ -102,6 +114,9 @@ export async function uploadImageFile(
 	url: string | URL,
 	baseFilePath: string,
 ): Promise<ImageUploadResult> {
+	const config = useRuntimeConfig()
+	const gifMaxSizeMb = config.gifMaxSizeMb || 10
+
 	return pRetry(
 		async () => {
 			const res = await fetch(url)
@@ -110,8 +125,9 @@ export async function uploadImageFile(
 			}
 
 			const buffer = await res.arrayBuffer()
+			const bufferNode = Buffer.from(buffer)
 
-			const pipeline = sharp(Buffer.from(buffer), {
+			const pipeline = sharp(bufferNode, {
 				animated: true,
 				failOn: "none", // Try to process truncated/corrupted images
 				limitInputPixels: false, // Disable limit for reading metadata
@@ -121,6 +137,41 @@ export async function uploadImageFile(
 
 			// Assess image quality
 			const { quality, issues } = assessImageQuality(metadata)
+
+			// Special handling for GIFs
+			if (metadata.format === "gif") {
+				const sizeInMB = buffer.byteLength / (1024 * 1024)
+
+				if (sizeInMB > gifMaxSizeMb) {
+					throw new GifTooLargeError(sizeInMB, gifMaxSizeMb)
+				}
+
+				// Store GIF as-is without conversion
+				const filePath = `${baseFilePath}.gif`
+				const s3 = getS3Client()
+				await s3.send(
+					new PutObjectCommand({
+						Bucket: getBucketName(),
+						Key: filePath,
+						Body: bufferNode,
+						ContentType: "image/gif",
+						ACL: "public-read",
+					}),
+				)
+
+				return {
+					url: getPublicUrl(filePath),
+					format: "gif" as ImageFormat,
+					quality,
+					metadata: {
+						width: metadata.width ?? 0,
+						height: metadata.height ?? 0,
+						format: metadata.format,
+						channels: metadata.channels,
+						issues,
+					},
+				}
+			}
 
 			// Determine format: WebP for normal images, JPEG for oversized (>16383px dimension)
 			const needsJpegFallback = metadata.width && metadata.height

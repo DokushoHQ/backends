@@ -5,7 +5,7 @@ import type { CoverUpdateJobData } from "../queues/cover-update"
 import { QUEUE_NAME, coverUpdateJobDataSchema } from "../queues/cover-update"
 import indexerQueue from "../queues/indexer"
 import { db } from "../utils/db"
-import { uploadImageFile } from "../utils/s3"
+import { GifTooLargeError, uploadImageFile } from "../utils/s3"
 import type { SerieField } from "../utils/serie"
 
 /**
@@ -23,32 +23,44 @@ async function processSourceCover(
 
 	await job.updateProgress(30)
 
-	// Upload to S3: {serie_id}/covers/{source_id}.(webp|jpeg)
+	// Upload to S3: {serie_id}/covers/{source_id}.(webp|jpeg|gif)
 	const basePath = join(
 		serieSource.serie_id,
 		"covers",
 		serieSource.source_id,
 	)
-	const result = await uploadImageFile(
-		serieSource.cover_source_url,
-		basePath,
-	)
 
-	await job.updateProgress(80)
+	try {
+		const result = await uploadImageFile(
+			serieSource.cover_source_url,
+			basePath,
+		)
 
-	// Log warning for non-healthy images
-	if (result.quality !== "healthy") {
-		job.log(`Cover quality: ${result.quality} - ${result.metadata.issues.join(", ")}`)
+		await job.updateProgress(80)
+
+		// Log warning for non-healthy images
+		if (result.quality !== "healthy") {
+			job.log(`Cover quality: ${result.quality} - ${result.metadata.issues.join(", ")}`)
+		}
+
+		// Update SerieSource with S3 URL
+		await db.serieSource.update({
+			where: { id: serieSourceId },
+			data: { cover: result.url },
+		})
+
+		await job.updateProgress(100)
+		job.log(`Source cover uploaded: ${result.url}`)
 	}
-
-	// Update SerieSource with S3 URL
-	await db.serieSource.update({
-		where: { id: serieSourceId },
-		data: { cover: result.url },
-	})
-
-	await job.updateProgress(100)
-	job.log(`Source cover uploaded: ${result.url}`)
+	catch (error) {
+		if (error instanceof GifTooLargeError) {
+			job.log(`Source cover skipped: ${error.message}`)
+			job.log(`  Source URL: ${serieSource.cover_source_url}`)
+			await job.updateProgress(100)
+			return
+		}
+		throw error
+	}
 }
 
 /**
@@ -71,30 +83,42 @@ async function processCustomCover(
 
 	await job.updateProgress(30)
 
-	// Upload to S3: {serie_id}/covers/custom.(webp|jpeg)
+	// Upload to S3: {serie_id}/covers/custom.(webp|jpeg|gif)
 	const basePath = join(serieId, "covers", "custom")
-	const result = await uploadImageFile(imageUrl, basePath)
 
-	await job.updateProgress(70)
+	try {
+		const result = await uploadImageFile(imageUrl, basePath)
 
-	// Log warning for non-healthy images
-	if (result.quality !== "healthy") {
-		job.log(`Custom cover quality: ${result.quality} - ${result.metadata.issues.join(", ")}`)
+		await job.updateProgress(70)
+
+		// Log warning for non-healthy images
+		if (result.quality !== "healthy") {
+			job.log(`Custom cover quality: ${result.quality} - ${result.metadata.issues.join(", ")}`)
+		}
+
+		// Update Serie with custom cover URL
+		await db.serie.update({
+			where: { id: serieId },
+			data: { custom_cover: result.url },
+		})
+
+		await job.updateProgress(80)
+
+		// Trigger indexer to pick up new cover
+		await indexerQueue.add("indexer", { serie_id: serieId, type: "UPDATE" })
+
+		await job.updateProgress(100)
+		job.log(`Custom cover uploaded: ${result.url}`)
 	}
-
-	// Update Serie with custom cover URL
-	await db.serie.update({
-		where: { id: serieId },
-		data: { custom_cover: result.url },
-	})
-
-	await job.updateProgress(80)
-
-	// Trigger indexer to pick up new cover
-	await indexerQueue.add("indexer", { serie_id: serieId, type: "UPDATE" })
-
-	await job.updateProgress(100)
-	job.log(`Custom cover uploaded: ${result.url}`)
+	catch (error) {
+		if (error instanceof GifTooLargeError) {
+			job.log(`Custom cover skipped: ${error.message}`)
+			job.log(`  Source URL: ${imageUrl}`)
+			await job.updateProgress(100)
+			return
+		}
+		throw error
+	}
 }
 
 export default defineWorker<typeof QUEUE_NAME, CoverUpdateJobData, undefined>({

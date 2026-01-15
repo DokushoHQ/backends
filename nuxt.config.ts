@@ -14,6 +14,7 @@ export default defineNuxtConfig({
 		s3SecretAccessKey: "",
 		s3BucketName: "",
 		s3PublicBaseUrl: "",
+		gifMaxSizeMb: 10,
 		authSecret: "",
 		enablePassword: false,
 		disableSignup: false,
