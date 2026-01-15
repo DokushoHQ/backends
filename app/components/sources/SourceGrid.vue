@@ -42,6 +42,7 @@ const emit = defineEmits<{
 					:src="source.icon"
 					:alt="source.name"
 					class="h-6 w-6 rounded"
+					referrerpolicy="no-referrer"
 				>
 				<UIcon
 					v-else

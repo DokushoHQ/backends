@@ -153,6 +153,7 @@ const imagePages = computed(() => pages.value.filter(p => p.type === "image" && 
 								:alt="`Page ${page.index + 1}`"
 								class="w-full h-auto"
 								loading="lazy"
+								referrerpolicy="no-referrer"
 								@load="handleImageLoad(page.index)"
 							>
 						</div>

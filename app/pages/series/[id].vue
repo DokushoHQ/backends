@@ -8,8 +8,8 @@ const serieId = computed(() => route.params.id as string)
 // Fetch serie detail
 const { data: serie, pending, error, refresh } = await useFetch(`/api/v1/serie/${serieId.value}`)
 
-// Fetch chapters separately
-const { data: chaptersData, refresh: refreshChapters } = await useFetch(
+// Fetch chapters separately (lazy to avoid blocking navigation)
+const { data: chaptersData, status: chaptersStatus, refresh: refreshChapters } = await useLazyFetch(
 	`/api/v1/serie/${serieId.value}/chapters`,
 	{ query: { includeDisabled: "true" } },
 )
@@ -388,24 +388,39 @@ useHead({
 											Chapters
 										</h3>
 										<p class="text-sm text-muted-foreground">
-											{{ enabledChapters.length }} chapters available
-											<span
-												v-if="disabledCount > 0"
-												class="text-muted-foreground ml-2"
-											>
-												({{ disabledCount }} disabled)
-											</span>
-											<span
-												v-if="missingChapters.length > 0"
-												class="text-orange-500 ml-2"
-											>
-												({{ missingChapters.length }} missing)
-											</span>
+											<template v-if="chaptersStatus === 'pending'">
+												Loading chapters...
+											</template>
+											<template v-else>
+												{{ enabledChapters.length }} chapters available
+												<span
+													v-if="disabledCount > 0"
+													class="text-muted-foreground ml-2"
+												>
+													({{ disabledCount }} disabled)
+												</span>
+												<span
+													v-if="missingChapters.length > 0"
+													class="text-orange-500 ml-2"
+												>
+													({{ missingChapters.length }} missing)
+												</span>
+											</template>
 										</p>
 									</div>
 								</div>
 							</template>
+							<div
+								v-if="chaptersStatus === 'pending'"
+								class="flex items-center justify-center py-12"
+							>
+								<UIcon
+									name="i-lucide-loader-2"
+									class="h-6 w-6 animate-spin text-muted-foreground"
+								/>
+							</div>
 							<SeriesChapterTable
+								v-else
 								:items="allItems"
 								:is-admin="isAdmin"
 								:serie-id="serieId"

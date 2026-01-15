@@ -39,6 +39,7 @@ const wizard = useImportWizardInjected()
 						:src="source.icon"
 						:alt="source.name"
 						class="w-12 h-12 rounded"
+						referrerpolicy="no-referrer"
 					>
 					<UIcon
 						v-else

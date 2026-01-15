@@ -63,8 +63,12 @@ async function processChapterUpdate(
 	job.log(`Found ${images.length} pages to upload`)
 
 	if (images.length === 0) {
-		job.log("No images found in chapter")
-		return "Failed"
+		job.log("No images found in chapter - marking as disabled")
+		await db.chapter.update({
+			where: { id: chapter.id },
+			data: { enabled: false },
+		})
+		return "Success"
 	}
 
 	// Clear existing data/S3 objects to make updates idempotent

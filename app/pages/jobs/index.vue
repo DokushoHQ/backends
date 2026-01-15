@@ -4,7 +4,7 @@ definePageMeta({
 	layout: "default",
 })
 
-const { data, error, refresh } = await useFetch("/api/jobs")
+const { data, error, status, refresh } = await useLazyFetch("/api/jobs")
 const { data: redisInfo } = await useFetch("/api/redis-info")
 
 if (error.value) {
@@ -150,12 +150,23 @@ onUnmounted(() => {
 		</template>
 
 		<template #body>
+			<!-- Loading state -->
+			<div
+				v-if="status === 'pending'"
+				class="flex items-center justify-center py-12"
+			>
+				<UIcon
+					name="i-lucide-loader-2"
+					class="h-8 w-8 animate-spin text-muted-foreground"
+				/>
+			</div>
+
 			<!-- Error state -->
 			<div
-				v-if="error"
+				v-else-if="error"
 				class="py-12 text-center"
 			>
-				<div class="rounded-full bg-destructive/10 p-4 w-fit mx-auto mb-4">
+				<div class="size-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
 					<UIcon
 						name="i-lucide-alert-circle"
 						class="size-8 text-destructive"
@@ -233,7 +244,7 @@ onUnmounted(() => {
 					v-if="data.stats.length === 0"
 					class="py-12 text-center"
 				>
-					<div class="rounded-full bg-muted p-4 w-fit mx-auto mb-4">
+					<div class="size-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
 						<UIcon
 							name="i-lucide-briefcase"
 							class="size-8 text-muted-foreground"
