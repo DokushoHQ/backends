@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
 		include: {
 			data: {
 				orderBy: { index: "asc" },
-				select: { index: true, type: true, url: true, content: true },
+				select: { index: true, type: true, url: true, content: true, image_quality: true, metadata_issues: true },
 			},
 		},
 	})

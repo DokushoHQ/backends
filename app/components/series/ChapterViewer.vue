@@ -38,6 +38,12 @@ function handleImageLoad(index: number) {
 }
 
 const imagePages = computed(() => pages.value.filter(p => p.type === "image" && p.url))
+
+const qualityIssues = computed(() => {
+	const degraded = imagePages.value.filter(p => p.image_quality === "degraded").length
+	const corrupted = imagePages.value.filter(p => p.image_quality === "corrupted").length
+	return { degraded, corrupted, hasIssues: degraded > 0 || corrupted > 0 }
+})
 </script>
 
 <template>
@@ -83,6 +89,28 @@ const imagePages = computed(() => pages.value.filter(p => p.type === "image" && 
 								class="h-3 w-3"
 							/>
 							{{ imagePages.length }} pages
+							<template v-if="qualityIssues.hasIssues">
+								<span
+									v-if="qualityIssues.degraded > 0"
+									class="text-warning flex items-center gap-0.5"
+								>
+									<UIcon
+										name="i-lucide-alert-triangle"
+										class="h-3 w-3"
+									/>
+									{{ qualityIssues.degraded }}
+								</span>
+								<span
+									v-if="qualityIssues.corrupted > 0"
+									class="text-error flex items-center gap-0.5"
+								>
+									<UIcon
+										name="i-lucide-alert-circle"
+										class="h-3 w-3"
+									/>
+									{{ qualityIssues.corrupted }}
+								</span>
+							</template>
 						</span>
 					</div>
 				</div>
@@ -148,6 +176,22 @@ const imagePages = computed(() => pages.value.filter(p => p.type === "image" && 
 									class="h-6 w-6 animate-spin text-muted-foreground"
 								/>
 							</div>
+							<!-- Quality indicator badge -->
+							<UTooltip
+								v-if="page.image_quality && page.image_quality !== 'healthy'"
+								:text="page.metadata_issues?.issues?.join(', ') || page.image_quality"
+							>
+								<div
+									class="absolute top-2 right-2 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
+									:class="page.image_quality === 'corrupted' ? 'bg-error text-error-foreground' : 'bg-warning text-warning-foreground'"
+								>
+									<UIcon
+										:name="page.image_quality === 'corrupted' ? 'i-lucide-alert-circle' : 'i-lucide-alert-triangle'"
+										class="h-3 w-3"
+									/>
+									{{ page.image_quality }}
+								</div>
+							</UTooltip>
 							<img
 								:src="page.url ?? ''"
 								:alt="`Page ${page.index + 1}`"

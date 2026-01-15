@@ -23,28 +23,33 @@ async function processSourceCover(
 
 	await job.updateProgress(30)
 
-	// Upload to S3: {serie_id}/covers/{source_id}.webp
+	// Upload to S3: {serie_id}/covers/{source_id}.avif
 	const filePath = join(
 		serieSource.serie_id,
 		"covers",
-		`${serieSource.source_id}.webp`,
+		`${serieSource.source_id}.avif`,
 	)
-	const s3Url = await uploadImageFile(
+	const result = await uploadImageFile(
 		serieSource.cover_source_url,
 		filePath,
-		"image/webp",
+		"image/avif",
 	)
 
 	await job.updateProgress(80)
 
+	// Log warning for non-healthy images
+	if (result.quality !== "healthy") {
+		job.log(`Cover quality: ${result.quality} - ${result.metadata.issues.join(", ")}`)
+	}
+
 	// Update SerieSource with S3 URL
 	await db.serieSource.update({
 		where: { id: serieSourceId },
-		data: { cover: s3Url },
+		data: { cover: result.url },
 	})
 
 	await job.updateProgress(100)
-	job.log(`Source cover uploaded: ${s3Url}`)
+	job.log(`Source cover uploaded: ${result.url}`)
 }
 
 /**
@@ -67,16 +72,21 @@ async function processCustomCover(
 
 	await job.updateProgress(30)
 
-	// Upload to S3: {serie_id}/covers/custom.webp
-	const filePath = join(serieId, "covers", "custom.webp")
-	const s3Url = await uploadImageFile(imageUrl, filePath, "image/webp")
+	// Upload to S3: {serie_id}/covers/custom.avif
+	const filePath = join(serieId, "covers", "custom.avif")
+	const result = await uploadImageFile(imageUrl, filePath, "image/avif")
 
 	await job.updateProgress(70)
+
+	// Log warning for non-healthy images
+	if (result.quality !== "healthy") {
+		job.log(`Custom cover quality: ${result.quality} - ${result.metadata.issues.join(", ")}`)
+	}
 
 	// Update Serie with custom cover URL
 	await db.serie.update({
 		where: { id: serieId },
-		data: { custom_cover: s3Url },
+		data: { custom_cover: result.url },
 	})
 
 	await job.updateProgress(80)
@@ -85,7 +95,7 @@ async function processCustomCover(
 	await indexerQueue.add("indexer", { serie_id: serieId, type: "UPDATE" })
 
 	await job.updateProgress(100)
-	job.log(`Custom cover uploaded: ${s3Url}`)
+	job.log(`Custom cover uploaded: ${result.url}`)
 }
 
 export default defineWorker<typeof QUEUE_NAME, CoverUpdateJobData, undefined>({

@@ -150,9 +150,16 @@ model ChapterData {
     source_url String? // Original source URL for retry
     content    String?
 
+    // Image quality tracking
+    /// [ImageQualityType]
+    image_quality   String?
+    /// [ImageMetadataIssuesType]
+    metadata_issues Json?
+
     chapter Chapter @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
 
     @@unique([chapter_id, index])
+    @@index([image_quality])
     @@map("chapter_data")
 }
 

@@ -28,4 +28,12 @@ export interface UIChapterPage {
 	type: string
 	url: string | null
 	content: string | null
+	image_quality: string | null // 'healthy' | 'degraded' | 'corrupted'
+	metadata_issues: {
+		width: number
+		height: number
+		format: string | undefined
+		channels: number | undefined
+		issues: string[]
+	} | null
 }
