@@ -6,6 +6,7 @@ import {
 } from "@aws-sdk/client-s3"
 import pRetry from "p-retry"
 import sharp from "sharp"
+import type { ImageQuality } from "./prisma-json"
 
 let _s3: S3Client | null = null
 
@@ -48,14 +49,55 @@ function getPublicUrl(filePath: string): string {
 	return `${normalizedBase}/${getBucketName()}/${normalizedPath}`
 }
 
+// AVIF max dimension is 65535 pixels
+const AVIF_MAX_DIMENSION = 65535
+
+export type ImageUploadResult = {
+	url: string
+	quality: ImageQuality
+	metadata: {
+		width: number
+		height: number
+		format: string | undefined
+		channels: number | undefined
+		issues: string[]
+	}
+}
+
 /**
- * Upload an image from a URL to S3, converting to WebP format
+ * Assess image quality based on metadata
+ */
+function assessImageQuality(metadata: sharp.Metadata): { quality: ImageQuality, issues: string[] } {
+	const issues: string[] = []
+
+	// Check for corrupted header (no dimensions)
+	if (!metadata.width || !metadata.height || metadata.width === 0 || metadata.height === 0) {
+		issues.push("Missing or zero dimensions - corrupted header")
+		return { quality: "corrupted", issues }
+	}
+
+	// Check for missing format
+	if (!metadata.format) {
+		issues.push("Unable to detect image format")
+		return { quality: "corrupted", issues }
+	}
+
+	// Check for suspiciously small dimensions
+	if (metadata.width < 10 || metadata.height < 10) {
+		issues.push(`Suspiciously small dimensions: ${metadata.width}x${metadata.height}`)
+	}
+
+	return { quality: issues.length > 0 ? "degraded" : "healthy", issues }
+}
+
+/**
+ * Upload an image from a URL to S3, converting to AVIF format
  */
 export async function uploadImageFile(
 	url: string | URL,
 	filePath: string,
-	contentType: "image/webp" = "image/webp",
-): Promise<string> {
+	contentType: "image/avif" = "image/avif",
+): Promise<ImageUploadResult> {
 	return pRetry(
 		async () => {
 			const res = await fetch(url)
@@ -64,7 +106,30 @@ export async function uploadImageFile(
 			}
 
 			const buffer = await res.arrayBuffer()
-			const image = await sharp(Buffer.from(buffer), { animated: true }).webp().toBuffer()
+
+			let pipeline = sharp(Buffer.from(buffer), {
+				animated: true,
+				failOn: "none", // Try to process truncated/corrupted images
+			})
+
+			// Check dimensions and resize if exceeding AVIF limits
+			const metadata = await pipeline.metadata()
+
+			// Assess image quality
+			const { quality, issues } = assessImageQuality(metadata)
+
+			if (metadata.width && metadata.height) {
+				if (metadata.width > AVIF_MAX_DIMENSION || metadata.height > AVIF_MAX_DIMENSION) {
+					pipeline = pipeline.resize({
+						width: Math.min(metadata.width, AVIF_MAX_DIMENSION),
+						height: Math.min(metadata.height, AVIF_MAX_DIMENSION),
+						fit: "inside",
+						withoutEnlargement: true,
+					})
+				}
+			}
+
+			const image = await pipeline.avif({ quality: 60 }).toBuffer()
 
 			const s3 = getS3Client()
 			await s3.send(
@@ -77,7 +142,17 @@ export async function uploadImageFile(
 				}),
 			)
 
-			return getPublicUrl(filePath)
+			return {
+				url: getPublicUrl(filePath),
+				quality,
+				metadata: {
+					width: metadata.width ?? 0,
+					height: metadata.height ?? 0,
+					format: metadata.format,
+					channels: metadata.channels,
+					issues,
+				},
+			}
 		},
 		{ retries: 5 },
 	)

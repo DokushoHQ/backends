@@ -88,21 +88,28 @@ async function processChapterUpdate(
 		index: number,
 	): Promise<PageUploadResult> => {
 		try {
-			const filePath = join(chapter.serie_id, "chapters", chapterId, `page-${index}.webp`)
-			const fileUrl = await uploadImageFile(sourceUrl, filePath, "image/webp")
+			const filePath = join(chapter.serie_id, "chapters", chapterId, `page-${index}.avif`)
+			const result = await uploadImageFile(sourceUrl, filePath, "image/avif")
 
 			processed++
 			const progress = 20 + Math.floor((processed / images.length) * 70)
 			await job.updateProgress(progress)
 
+			// Log warning for non-healthy images
+			if (result.quality !== "healthy") {
+				job.log(`Page ${index} quality: ${result.quality} - ${result.metadata.issues.join(", ")}`)
+			}
+
 			return {
 				success: true,
 				data: {
-					url: fileUrl,
+					url: result.url,
 					source_url: sourceUrl.toString(),
 					index,
 					type: "image",
 					chapter_id: chapterId,
+					image_quality: result.quality,
+					metadata_issues: result.metadata,
 				},
 			}
 		}

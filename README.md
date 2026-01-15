@@ -30,6 +30,24 @@ PRs welcome - if your code works, manual test is passing and isn't a complete di
 - More sources, if I ever get around to it, otherwise suwayomi source should work fine for now I think
 - Suwayomi extension management from dashboard
 - IA/ML/Other, at some point I would like to implement image upscaling or even translation since I can say what I want it's just a plan with no date
+- WebP to AVIF migration script (see below)
+
+## Planned: WebP to AVIF Migration
+
+New uploads now use AVIF (lossy, quality 60) instead of WebP for better compression and higher dimension limits (65535px vs 16383px). Existing images in S3 remain as WebP and need migration.
+
+**Scale:** Potentially millions of images (covers + chapter pages)
+
+**Approach considerations:**
+- Batch processing with cursor-based pagination through ChapterData/SerieSource records
+- Stream images directly from S3 to S3 (download → convert → upload) to avoid disk I/O
+- Parallel processing with concurrency limits to avoid overwhelming S3/memory
+- Progress tracking and resumability (store last processed ID)
+- Option to run as a BullMQ job or standalone script
+- Delete old WebP files after successful conversion (or keep for rollback)
+- Update database URLs atomically after successful upload
+
+**Not started yet.** PRs welcome if you want to tackle this.
 
 ## Running
 
