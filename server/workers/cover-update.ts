@@ -23,16 +23,15 @@ async function processSourceCover(
 
 	await job.updateProgress(30)
 
-	// Upload to S3: {serie_id}/covers/{source_id}.avif
-	const filePath = join(
+	// Upload to S3: {serie_id}/covers/{source_id}.(webp|jpeg)
+	const basePath = join(
 		serieSource.serie_id,
 		"covers",
-		`${serieSource.source_id}.avif`,
+		serieSource.source_id,
 	)
 	const result = await uploadImageFile(
 		serieSource.cover_source_url,
-		filePath,
-		"image/avif",
+		basePath,
 	)
 
 	await job.updateProgress(80)
@@ -72,9 +71,9 @@ async function processCustomCover(
 
 	await job.updateProgress(30)
 
-	// Upload to S3: {serie_id}/covers/custom.avif
-	const filePath = join(serieId, "covers", "custom.avif")
-	const result = await uploadImageFile(imageUrl, filePath, "image/avif")
+	// Upload to S3: {serie_id}/covers/custom.(webp|jpeg)
+	const basePath = join(serieId, "covers", "custom")
+	const result = await uploadImageFile(imageUrl, basePath)
 
 	await job.updateProgress(70)
 

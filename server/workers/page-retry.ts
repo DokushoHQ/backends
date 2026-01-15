@@ -56,8 +56,8 @@ export default defineWorker<typeof QUEUE_NAME, PageRetryJobData, undefined>({
 			failedPages.map(page =>
 				limiter(async () => {
 					try {
-						const filePath = join(chapter.serie_id, "chapters", chapter_id, `page-${page.index}.avif`)
-						const result = await uploadImageFile(new URL(page.source_url!), filePath, "image/avif")
+						const basePath = join(chapter.serie_id, "chapters", chapter_id, `page-${page.index}`)
+						const result = await uploadImageFile(new URL(page.source_url!), basePath)
 
 						await db.chapterData.update({
 							where: { id: page.id },

@@ -42,7 +42,6 @@ export default defineEventHandler(async (event) => {
 			{ chapter_id: chapter.id },
 			{
 				delay: i * 3000,
-				jobId: `page-retry-${chapter.id}`,
 			},
 		)
 		if (job.id) jobIds.push(job.id)

@@ -304,7 +304,6 @@ async function handleRetryFailedPages(job: Job<UpdateSchedulerJobData>) {
 			{ chapter_id: chapter.id },
 			{
 				delay: i * 5000,
-				jobId: `page-retry-${chapter.id}`,
 			},
 		)
 	}

@@ -10,7 +10,7 @@ export const pageRetryJobDataSchema = z.object({
 
 export type PageRetryJobData = z.infer<typeof pageRetryJobDataSchema>
 
-export default defineQueue<PageRetryJobData, undefined, typeof QUEUE_NAME>({
+export default defineQueue<PageRetryJobData, undefined, typeof QUEUE_NAME | `scheduled-retry-${string}` | `retry-${string}`>({
 	name: QUEUE_NAME,
 	options: {
 		defaultJobOptions: {

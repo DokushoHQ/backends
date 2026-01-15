@@ -88,8 +88,8 @@ async function processChapterUpdate(
 		index: number,
 	): Promise<PageUploadResult> => {
 		try {
-			const filePath = join(chapter.serie_id, "chapters", chapterId, `page-${index}.avif`)
-			const result = await uploadImageFile(sourceUrl, filePath, "image/avif")
+			const basePath = join(chapter.serie_id, "chapters", chapterId, `page-${index}`)
+			const result = await uploadImageFile(sourceUrl, basePath)
 
 			processed++
 			const progress = 20 + Math.floor((processed / images.length) * 70)

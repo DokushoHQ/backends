@@ -49,11 +49,14 @@ function getPublicUrl(filePath: string): string {
 	return `${normalizedBase}/${getBucketName()}/${normalizedPath}`
 }
 
-// AVIF max dimension is 65535 pixels
-const AVIF_MAX_DIMENSION = 65535
+// WebP max dimension is 16383 pixels
+const WEBP_MAX_DIMENSION = 16383
+
+export type ImageFormat = "webp" | "jpeg"
 
 export type ImageUploadResult = {
 	url: string
+	format: ImageFormat
 	quality: ImageQuality
 	metadata: {
 		width: number
@@ -91,12 +94,13 @@ function assessImageQuality(metadata: sharp.Metadata): { quality: ImageQuality, 
 }
 
 /**
- * Upload an image from a URL to S3, converting to AVIF format
+ * Upload an image from a URL to S3, converting to WebP (or JPEG for oversized images)
+ * @param url - Source image URL
+ * @param baseFilePath - File path without extension (extension will be added based on format used)
  */
 export async function uploadImageFile(
 	url: string | URL,
-	filePath: string,
-	contentType: "image/avif" = "image/avif",
+	baseFilePath: string,
 ): Promise<ImageUploadResult> {
 	return pRetry(
 		async () => {
@@ -107,29 +111,35 @@ export async function uploadImageFile(
 
 			const buffer = await res.arrayBuffer()
 
-			let pipeline = sharp(Buffer.from(buffer), {
+			const pipeline = sharp(Buffer.from(buffer), {
 				animated: true,
 				failOn: "none", // Try to process truncated/corrupted images
+				limitInputPixels: false, // Disable limit for reading metadata
 			})
 
-			// Check dimensions and resize if exceeding AVIF limits
 			const metadata = await pipeline.metadata()
 
 			// Assess image quality
 			const { quality, issues } = assessImageQuality(metadata)
 
-			if (metadata.width && metadata.height) {
-				if (metadata.width > AVIF_MAX_DIMENSION || metadata.height > AVIF_MAX_DIMENSION) {
-					pipeline = pipeline.resize({
-						width: Math.min(metadata.width, AVIF_MAX_DIMENSION),
-						height: Math.min(metadata.height, AVIF_MAX_DIMENSION),
-						fit: "inside",
-						withoutEnlargement: true,
-					})
-				}
-			}
+			// Determine format: WebP for normal images, JPEG for oversized (>16383px dimension)
+			const needsJpegFallback = metadata.width && metadata.height
+				&& (metadata.width > WEBP_MAX_DIMENSION || metadata.height > WEBP_MAX_DIMENSION)
 
-			const image = await pipeline.avif({ quality: 60 }).toBuffer()
+			const outputFormat: ImageFormat = needsJpegFallback ? "jpeg" : "webp"
+			const filePath = `${baseFilePath}.${outputFormat}`
+			const contentType = outputFormat === "webp" ? "image/webp" : "image/jpeg"
+
+			let image: Buffer
+			if (outputFormat === "jpeg") {
+				// JPEG for oversized images (supports up to 65535px)
+				// High quality to avoid compounding compression artifacts on already-compressed sources
+				image = await pipeline.jpeg({ quality: 95 }).toBuffer()
+			}
+			else {
+				// WebP for normal images
+				image = await pipeline.webp({ quality: 80 }).toBuffer()
+			}
 
 			const s3 = getS3Client()
 			await s3.send(
@@ -144,6 +154,7 @@ export async function uploadImageFile(
 
 			return {
 				url: getPublicUrl(filePath),
+				format: outputFormat,
 				quality,
 				metadata: {
 					width: metadata.width ?? 0,
