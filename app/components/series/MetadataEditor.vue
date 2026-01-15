@@ -457,6 +457,7 @@ const coverButtonText = computed(() => {
 									:src="serie.cover"
 									alt="Cover"
 									class="w-24 h-36 object-cover rounded mt-1"
+									referrerpolicy="no-referrer"
 								>
 							</div>
 
@@ -478,6 +479,7 @@ const coverButtonText = computed(() => {
 											:src="sc.url"
 											:alt="`${sc.sourceName} cover`"
 											class="w-24 h-36 object-cover rounded cursor-pointer"
+											referrerpolicy="no-referrer"
 										>
 									</button>
 								</div>

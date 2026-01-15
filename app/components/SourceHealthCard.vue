@@ -42,7 +42,7 @@ const healthPercentage = computed(() => {
 			<!-- Header -->
 			<div class="flex items-start justify-between">
 				<div class="flex items-center gap-3">
-					<div :class="['rounded-md p-2', source.enabled ? 'bg-primary/10' : 'bg-muted']">
+					<div :class="['size-8 rounded-md flex items-center justify-center', source.enabled ? 'bg-primary/10' : 'bg-muted']">
 						<UIcon
 							name="i-lucide-server"
 							:class="['h-4 w-4', source.enabled ? 'text-primary' : 'text-muted-foreground']"
