@@ -56,13 +56,12 @@ defineEmits<{
 				>
 					<!-- Cover -->
 					<div class="aspect-[2/3] max-w-[200px] mx-auto rounded-lg overflow-hidden bg-muted">
-						<img
+						<NuxtImg
 							v-if="detail.cover"
 							:src="detail.cover"
 							:alt="detail.title"
 							class="w-full h-full object-cover"
-							referrerpolicy="no-referrer"
-						>
+						/>
 						<div
 							v-else
 							class="w-full h-full flex items-center justify-center"

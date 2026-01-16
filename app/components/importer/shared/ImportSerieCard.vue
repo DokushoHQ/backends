@@ -46,13 +46,12 @@ function handleCheckboxClick(e: Event) {
 
 		<!-- Cover -->
 		<div class="flex-shrink-0 w-12 h-16 rounded overflow-hidden bg-muted">
-			<img
+			<NuxtImg
 				v-if="cover"
 				:src="cover"
 				:alt="title"
 				class="w-full h-full object-cover"
-				referrerpolicy="no-referrer"
-			>
+			/>
 			<div
 				v-else
 				class="w-full h-full flex items-center justify-center"

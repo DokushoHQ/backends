@@ -288,14 +288,13 @@ const pageStats = computed(() => {
 										{{ page.image_quality }}
 									</div>
 								</UTooltip>
-								<img
+								<NuxtImg
 									:src="page.url"
 									:alt="`Page ${page.index + 1}`"
 									class="w-full h-auto"
 									loading="lazy"
-									referrerpolicy="no-referrer"
 									@load="handleImageLoad(page.index)"
-								>
+								/>
 							</template>
 						</div>
 					</div>

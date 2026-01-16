@@ -1,6 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-	modules: ["@nuxt/ui", "@dokushohq/nuxt-processor", "@vueuse/nuxt", "@nuxt/eslint", "nuxt-nodemailer", "nuxt-email-renderer", "nuxt-charts", "@nuxt/test-utils/module"],
+	modules: ["@nuxt/ui", "@dokushohq/nuxt-processor", "@vueuse/nuxt", "@nuxt/eslint", "nuxt-nodemailer", "nuxt-email-renderer", "nuxt-charts", "@nuxt/test-utils/module", "@nuxt/image"],
 	devtools: { enabled: true },
 	css: ["~/assets/css/main.css"],
 	runtimeConfig: {
@@ -42,6 +42,7 @@ export default defineNuxtConfig({
 		public: {
 			baseUrl: "http://localhost:3000",
 			oidcProviderName: "",
+			allowedImageProxy: "", // Comma-separated hosts, e.g. "localhost:4567,uploads.mangadex.org"
 		},
 	},
 	compatibilityDate: "2026-01-12",
@@ -54,6 +55,15 @@ export default defineNuxtConfig({
 			typescript: { strict: true },
 		},
 		checker: true,
+	},
+	image: {
+		provider: "smart",
+		providers: {
+			smart: {
+				name: "smart",
+				provider: "~/providers/smart",
+			},
+		},
 	},
 	nodemailer: {
 		from: "", // Set via NUXT_NODEMAILER_FROM env var

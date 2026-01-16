@@ -34,13 +34,12 @@ const wizard = useImportWizardInjected()
 				@click="wizard.selectSource(source)"
 			>
 				<div class="flex flex-col items-center gap-3">
-					<img
+					<NuxtImg
 						v-if="source.icon"
 						:src="source.icon"
 						:alt="source.name"
 						class="w-12 h-12 rounded"
-						referrerpolicy="no-referrer"
-					>
+					/>
 					<UIcon
 						v-else
 						name="i-lucide-globe"

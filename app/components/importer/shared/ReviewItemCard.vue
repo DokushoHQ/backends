@@ -65,13 +65,12 @@ const isActionComplete = computed(() => {
 			<div class="flex items-start gap-3 md:w-64 md:flex-shrink-0">
 				<!-- Cover -->
 				<div class="flex-shrink-0 w-12 h-16 rounded overflow-hidden bg-muted">
-					<img
+					<NuxtImg
 						v-if="serie.cover"
 						:src="serie.cover"
 						:alt="serie.title"
 						class="w-full h-full object-cover"
-						referrerpolicy="no-referrer"
-					>
+					/>
 					<div
 						v-else
 						class="w-full h-full flex items-center justify-center"
@@ -268,13 +267,12 @@ const isActionComplete = computed(() => {
 						class="mt-3 p-2 rounded-lg border border-border bg-muted/30 flex items-center gap-2"
 					>
 						<div class="flex-shrink-0 w-8 h-11 rounded overflow-hidden bg-muted">
-							<img
+							<NuxtImg
 								v-if="serie.linkToSerieCover"
 								:src="serie.linkToSerieCover"
 								:alt="serie.linkToSerieTitle"
 								class="w-full h-full object-cover"
-								referrerpolicy="no-referrer"
-							>
+							/>
 							<div
 								v-else
 								class="w-full h-full flex items-center justify-center"

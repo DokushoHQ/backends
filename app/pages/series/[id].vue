@@ -200,12 +200,12 @@ useHead({
 					<!-- Cover and metadata sidebar -->
 					<div class="space-y-4">
 						<UCard class="overflow-hidden p-0 gap-0 border-0">
-							<img
+							<NuxtImg
 								v-if="serie.cover"
 								:src="serie.cover"
 								:alt="title"
 								class="w-full aspect-2/3 object-cover"
-							>
+							/>
 							<div
 								v-else
 								class="w-full aspect-2/3 bg-muted flex items-center justify-center"

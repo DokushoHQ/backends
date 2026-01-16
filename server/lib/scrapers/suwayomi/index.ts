@@ -115,7 +115,6 @@ export class SuwayomiSource implements SourceProvider {
 	async fetchLatestUpdates(page: number): Promise<SourcePaginatedSmallSerie> {
 		const result = await this.#client.searchManga(this.#suwayomiSourceId, "", page, "LATEST")
 
-		console.log(result)
 		return this.#mapMangaPage(result)
 	}
 
