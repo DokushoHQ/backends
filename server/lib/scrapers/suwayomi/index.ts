@@ -139,9 +139,21 @@ export class SuwayomiSource implements SourceProvider {
 		}
 	}
 
-	async fetchChapterData(_serieId: SourceSerieId, chapterId: SourceSerieChapterId): Promise<SourceSerieChapterData> {
-		const numericChapterId = parseInt(chapterId)
-		const pages = await this.#client.fetchChapterPages(numericChapterId)
+	async fetchChapterData(serieId: SourceSerieId, chapterId: SourceSerieChapterId): Promise<SourceSerieChapterData> {
+		// chapterId is now a URL path (e.g., "/one_piece/chapitre-1")
+		// We need to resolve the manga and find the chapter's current cache ID
+
+		// Resolve manga ID from serie
+		const mangaId = await this.#resolveMangaId(serieId)
+
+		// Query Suwayomi for the chapter by URL to get current cache ID
+		const chapter = await this.#client.findChapterByUrl(mangaId, chapterId)
+		if (!chapter) {
+			throw new Error(`Chapter not found in Suwayomi: ${chapterId}`)
+		}
+
+		// Use resolved cache ID to fetch pages
+		const pages = await this.#client.fetchChapterPages(chapter.id)
 		return pages.map((pageUrl, index) => ({
 			type: "image" as const,
 			index,
@@ -233,7 +245,8 @@ export class SuwayomiSource implements SourceProvider {
 		const baseUrl = this.#discoveredBaseUrl || this.#information.url
 		const externalUrl = chapter.realUrl ? new URL(chapter.realUrl) : new URL(chapter.url, baseUrl)
 		return {
-			id: String(chapter.id) as SourceSerieChapterId,
+			// Use chapter URL as ID - stable across Suwayomi cache rebuilds
+			id: chapter.url as SourceSerieChapterId,
 			title: chapter.name ? { [lang]: [chapter.name] } : {},
 			chapterNumber: chapter.chapterNumber,
 			volumeNumber: null,

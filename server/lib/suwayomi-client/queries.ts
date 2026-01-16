@@ -109,3 +109,16 @@ query MangaByUrl($sourceId: LongString!, $url: String!) {
   }
 }
 `
+
+export const CHAPTER_BY_URL_QUERY = `
+query ChapterByUrl($mangaId: Int!, $url: String!) {
+  chapters(filter: {
+    mangaId: { equalTo: $mangaId }
+    url: { equalTo: $url }
+  }) {
+    nodes {
+      id
+    }
+  }
+}
+`

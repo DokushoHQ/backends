@@ -1,4 +1,5 @@
 import {
+	CHAPTER_BY_URL_QUERY,
 	FETCH_CHAPTER_PAGES_MUTATION,
 	FETCH_CHAPTERS_MUTATION,
 	FETCH_MANGA_MUTATION,
@@ -7,6 +8,7 @@ import {
 	SOURCES_QUERY,
 } from "./queries"
 import type {
+	ChapterByUrlResponse,
 	FetchChapterPagesResponse,
 	FetchChaptersResponse,
 	FetchMangaResponse,
@@ -123,5 +125,19 @@ export class SuwayomiClient {
 
 		const manga = data.mangas.nodes[0]
 		return manga ?? null
+	}
+
+	/**
+	 * Find a chapter by its URL within a manga
+	 * Returns the chapter's cache ID if found, null otherwise
+	 */
+	async findChapterByUrl(mangaId: number, url: string): Promise<{ id: number } | null> {
+		const data = await this.graphql<ChapterByUrlResponse>(CHAPTER_BY_URL_QUERY, {
+			mangaId,
+			url,
+		})
+
+		const chapter = data.chapters.nodes[0]
+		return chapter ?? null
 	}
 }
