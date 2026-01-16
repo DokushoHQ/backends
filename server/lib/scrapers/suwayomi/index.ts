@@ -1,25 +1,25 @@
 import type {
-	SuwayomiChapter,
-	SuwayomiClient,
-	SuwayomiManga,
-	SuwayomiMangaPage,
-	SuwayomiSourceInfo,
-} from "../../suwayomi-client"
-import type {
 	FetchSearchSerieFilter,
-	SourceProvider,
 	SourceApiInformation,
 	SourceChapters,
 	SourceEnv,
 	SourceId,
 	SourceInformation,
 	SourcePaginatedSmallSerie,
+	SourceProvider,
 	SourceSerie,
 	SourceSerieChapter,
 	SourceSerieChapterData,
 	SourceSerieChapterId,
 	SourceSerieId,
 } from "../../../utils/sources/core"
+import type {
+	SuwayomiChapter,
+	SuwayomiClient,
+	SuwayomiManga,
+	SuwayomiMangaPage,
+	SuwayomiSourceInfo,
+} from "../../suwayomi-client"
 import { inferSerieType, mapSuwayomiGenre, mapSuwayomiLang, mapSuwayomiStatus } from "./types"
 
 export class SuwayomiSource implements SourceProvider {
@@ -33,11 +33,12 @@ export class SuwayomiSource implements SourceProvider {
 		this.#client = client
 		this.#suwayomiSourceId = suwayomiSourceId
 
-		const sourceLang = mapSuwayomiLang(suwayomiSource.lang)
+		// Factory filters out unsupported languages, so this should never be null
+		const sourceLang = mapSuwayomiLang(suwayomiSource.lang)!
 
 		this.#information = {
 			id: `suwayomi-${suwayomiSource.id}` as SourceId,
-			name: `${suwayomiSource.name} (Suwayomi)`,
+			name: `${suwayomiSource.name} (${suwayomiSource.lang})`,
 			url: new URL("https://unknown.local"), // Will be discovered from manga realUrl
 			icon: new URL(`${client.baseUrl}${suwayomiSource.iconUrl}`),
 			languages: [sourceLang],
@@ -113,6 +114,8 @@ export class SuwayomiSource implements SourceProvider {
 
 	async fetchLatestUpdates(page: number): Promise<SourcePaginatedSmallSerie> {
 		const result = await this.#client.searchManga(this.#suwayomiSourceId, "", page, "LATEST")
+
+		console.log(result)
 		return this.#mapMangaPage(result)
 	}
 

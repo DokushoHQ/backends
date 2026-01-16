@@ -2,7 +2,8 @@ import type { SuwayomiMangaStatus } from "../../suwayomi-client"
 import { SourceLanguage, SourceSerieGenre, SourceSerieStatus, SourceSerieType } from "../../../utils/sources/core"
 
 // Map Suwayomi language codes to SourceLanguage
-export function mapSuwayomiLang(lang: string): SourceLanguage {
+// Returns null for unsupported languages so they can be filtered out
+export function mapSuwayomiLang(lang: string): SourceLanguage | null {
 	const langMap: Record<string, SourceLanguage> = {
 		"en": SourceLanguage.En,
 		"ja": SourceLanguage.Jp,
@@ -15,7 +16,7 @@ export function mapSuwayomiLang(lang: string): SourceLanguage {
 		"zh-hans": SourceLanguage.Zh,
 		"zh-hant": SourceLanguage.ZhHk,
 	}
-	return langMap[lang.toLowerCase()] ?? SourceLanguage.En
+	return langMap[lang.toLowerCase()] ?? null
 }
 
 // Map Suwayomi status to SourceSerieStatus

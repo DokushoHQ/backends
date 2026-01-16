@@ -1,5 +1,5 @@
+import type { SourceEnv, SourceProvider } from "../../../utils/sources/core"
 import type { SuwayomiClient } from "../../suwayomi-client"
-import type { SourceProvider, SourceEnv } from "../../../utils/sources/core"
 import { SuwayomiSource } from "./index"
 import { mapSuwayomiLang } from "./types"
 
@@ -28,18 +28,18 @@ export async function createSuwayomiSources(
 
 		return (
 			availableSources
-			// Exclude Suwayomi's internal "Local source"
+				// Exclude Suwayomi's internal "Local source"
 				.filter(s => s.id !== "0" && s.name !== "Local source")
-			// Exclude native implementations by name (case-insensitive)
+				// Exclude native implementations by name (case-insensitive)
 				.filter(s => !nativeSourceNames.has(s.name.toLowerCase()))
-			// Filter by enabled languages
+				// Filter by enabled languages (null means unsupported language)
 				.filter((s) => {
 					const sourceLang = mapSuwayomiLang(s.lang)
-					return env.ENABLED_LANGUAGE.includes(sourceLang)
+					return sourceLang !== null && env.ENABLED_LANGUAGE.includes(sourceLang)
 				})
-			// Exclude disabled sources
+				// Exclude disabled sources
 				.filter(s => !env.SUWAYOMI_DISABLED_SOURCES?.includes(s.id))
-			// Create SuwayomiSource instances
+				// Create SuwayomiSource instances
 				.map(s => new SuwayomiSource(client, s.id, s, env))
 		)
 	}
