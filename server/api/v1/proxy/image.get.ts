@@ -33,6 +33,10 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 403, message: "Forbidden host" })
 	}
 
+	// Strip Referer/Origin to avoid hotlink protection (e.g. MangaDex)
+	delete event.node.req.headers["referer"]
+	delete event.node.req.headers["origin"]
+
 	// Proxy the request directly (no body reading, streams directly)
 	return proxyRequest(event, url, {
 		headers: {
