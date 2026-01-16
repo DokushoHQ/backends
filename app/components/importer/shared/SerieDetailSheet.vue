@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SerieDetail } from "~/composables/useSourceBrowser"
+import type { SerieDetail } from "~/composables/useImportWizard"
 
 const open = defineModel<boolean>("open", { default: false })
 

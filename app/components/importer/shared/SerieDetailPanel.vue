@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SerieDetail } from "~/composables/useSourceBrowser"
+import type { SerieDetail } from "~/composables/useImportWizard"
 
 defineProps<{
 	detail: SerieDetail | null
