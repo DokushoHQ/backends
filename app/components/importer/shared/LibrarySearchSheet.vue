@@ -104,13 +104,12 @@ watch(open, (isOpen) => {
 								@click="emit('select', serie.id, serie.title, serie.cover)"
 							>
 								<div class="flex-shrink-0 w-10 h-14 rounded overflow-hidden bg-muted">
-									<img
+									<NuxtImg
 										v-if="serie.cover"
 										:src="serie.cover"
 										:alt="serie.title"
 										class="w-full h-full object-cover"
-										referrerpolicy="no-referrer"
-									>
+									/>
 								</div>
 								<div class="flex-1 min-w-0">
 									<div class="font-medium truncate">
@@ -161,13 +160,12 @@ watch(open, (isOpen) => {
 								@click="emit('select', serie.id, serie.title, serie.cover)"
 							>
 								<div class="flex-shrink-0 w-10 h-14 rounded overflow-hidden bg-muted">
-									<img
+									<NuxtImg
 										v-if="serie.cover"
 										:src="serie.cover"
 										:alt="serie.title"
 										class="w-full h-full object-cover"
-										referrerpolicy="no-referrer"
-									>
+									/>
 								</div>
 								<div class="flex-1 min-w-0">
 									<div class="font-medium truncate">

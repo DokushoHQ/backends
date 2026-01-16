@@ -1,5 +1,32 @@
 import type { InjectionKey } from "vue"
-import type { Source, SearchResult, SerieDetail } from "./useSourceBrowser"
+
+export interface Source {
+	id: string
+	name: string
+	external_id: string
+	icon: string | null
+}
+
+export interface SearchResult {
+	id: string
+	title: string
+	cover: string | null
+	imported: boolean
+	serieId: string | null
+}
+
+export interface SerieDetail {
+	id: string
+	title: string
+	alternateTitles: string[]
+	cover: string | null
+	synopsis: string | null
+	status: string[]
+	type: string
+	genres: string[]
+	authors: string[]
+	artists: string[]
+}
 
 interface ParseUrlsResponse {
 	results: Array<{
@@ -306,12 +333,15 @@ export function useImportWizard() {
 		searchError.value = null
 
 		try {
-			const data = await $fetch(`/api/v1/sources/${selectedSource.value.id}/search`, {
-				query: { q: query.trim() || undefined, page },
+			const data = await fetchSourceSeriesWithRetry({
+				sourceId: selectedSource.value.id,
+				query,
+				page,
 			})
+
 			searchResults.value = append ? [...searchResults.value, ...data.series] : data.series
 			hasMore.value = data.hasNextPage
-			searchPage.value = page
+			searchPage.value = data.actualPage
 		}
 		catch (e: unknown) {
 			const fetchError = e as { data?: { message?: string }, message?: string }

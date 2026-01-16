@@ -257,13 +257,12 @@ function getIssueBadge(issue: string) {
 										class="size-5 text-muted-foreground"
 									/>
 								</div>
-								<img
+								<NuxtImg
 									v-if="serie.cover"
 									:src="serie.cover"
 									:alt="serie.title"
 									class="absolute inset-0 h-full w-full object-cover"
-									referrerpolicy="no-referrer"
-								>
+								/>
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="truncate font-medium">{{ serie.title }}</p>
@@ -329,13 +328,12 @@ function getIssueBadge(issue: string) {
 											class="size-5 text-muted-foreground"
 										/>
 									</div>
-									<img
+									<NuxtImg
 										v-if="serie.cover"
 										:src="serie.cover"
 										:alt="serie.title"
 										class="absolute inset-0 h-full w-full object-cover"
-										referrerpolicy="no-referrer"
-									>
+									/>
 								</div>
 								<div class="flex-1 min-w-0">
 									<p class="truncate font-medium">{{ serie.title }}</p>
@@ -393,13 +391,12 @@ function getIssueBadge(issue: string) {
 											class="size-4 text-muted-foreground"
 										/>
 									</div>
-									<img
+									<NuxtImg
 										v-if="activity.serie.cover"
 										:src="activity.serie.cover"
 										:alt="activity.serie.title"
 										class="absolute inset-0 h-full w-full object-cover"
-										referrerpolicy="no-referrer"
-									>
+									/>
 								</div>
 								<div class="flex-1 min-w-0">
 									<p class="text-sm font-medium truncate">{{ activity.serie.title }}</p>

@@ -19,9 +19,6 @@ const { data: deletionStatus, refresh: refreshDeletionStatus } = await useFetch(
 	`/api/v1/serie/${serieId.value}/deletion-status`,
 )
 
-// Fetch sources for link source dialog
-const { data: allSources } = await useFetch("/api/v1/sources")
-
 // Computed values
 const title = computed(() => serie.value?.title ?? "")
 const synopsis = computed(() => serie.value?.synopsis ?? "")
@@ -69,18 +66,12 @@ const allItems = computed(() => {
 
 // Dialog states
 const metadataEditorOpen = ref(false)
-const linkSourceOpen = ref(false)
 const deleteDialogOpen = ref(false)
 
 // Handle successful actions
 async function handleRefresh() {
 	await Promise.all([refresh(), refreshChapters(), refreshDeletionStatus()])
 }
-
-// Get linked source IDs for link source dialog
-const linkedSourceIds = computed(() =>
-	(serie.value?.sources ?? []).map((s: { source_id: string }) => s.source_id),
-)
 
 // Page meta
 definePageMeta({
@@ -116,14 +107,6 @@ useHead({
 								v-model:open="metadataEditorOpen"
 								:serie="serie"
 								@updated="handleRefresh"
-							/>
-							<SeriesLinkSourceDialog
-								v-model:open="linkSourceOpen"
-								:serie-id="serieId"
-								:serie-title="title"
-								:linked-source-ids="linkedSourceIds"
-								:sources="allSources ?? []"
-								@linked="handleRefresh"
 							/>
 							<SeriesDeleteButton
 								v-model:open="deleteDialogOpen"
@@ -217,12 +200,12 @@ useHead({
 					<!-- Cover and metadata sidebar -->
 					<div class="space-y-4">
 						<UCard class="overflow-hidden p-0 gap-0 border-0">
-							<img
+							<NuxtImg
 								v-if="serie.cover"
 								:src="serie.cover"
 								:alt="title"
 								class="w-full aspect-2/3 object-cover"
-							>
+							/>
 							<div
 								v-else
 								class="w-full aspect-2/3 bg-muted flex items-center justify-center"

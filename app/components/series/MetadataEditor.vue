@@ -453,12 +453,11 @@ const coverButtonText = computed(() => {
 								<p class="text-sm text-muted-foreground">
 									Current Display
 								</p>
-								<img
+								<NuxtImg
 									:src="serie.cover"
 									alt="Cover"
 									class="w-24 h-36 object-cover rounded mt-1"
-									referrerpolicy="no-referrer"
-								>
+								/>
 							</div>
 
 							<template v-if="isCoverLocked">
@@ -475,12 +474,11 @@ const coverButtonText = computed(() => {
 										class="block mt-1 rounded focus:outline-none focus:ring-2 ring-primary hover:ring-2"
 										@click="handleUploadCover(sc.url)"
 									>
-										<img
+										<NuxtImg
 											:src="sc.url"
 											:alt="`${sc.sourceName} cover`"
 											class="w-24 h-36 object-cover rounded cursor-pointer"
-											referrerpolicy="no-referrer"
-										>
+										/>
 									</button>
 								</div>
 							</template>

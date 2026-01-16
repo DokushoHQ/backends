@@ -46,13 +46,12 @@ const statusIcon = computed(() => {
 		@click="$emit('click')"
 	>
 		<div class="aspect-[2/3] relative bg-muted overflow-hidden">
-			<img
+			<NuxtImg
 				v-if="serie.cover"
 				:src="serie.cover"
 				:alt="serie.title"
 				class="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-				referrerpolicy="no-referrer"
-			>
+			/>
 			<div
 				v-else
 				class="absolute inset-0 flex items-center justify-center"

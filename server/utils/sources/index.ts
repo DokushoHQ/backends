@@ -1,13 +1,21 @@
 // Core types and enums
-import type { SourceProvider, SourceEnv, SourceId } from "./core"
-import { SuwayomiClient } from "../../lib/suwayomi-client"
 import { Japscan } from "../../lib/scrapers/japscan"
 import { Mangadex } from "../../lib/scrapers/mangadex"
 import { createSuwayomiSources } from "../../lib/scrapers/suwayomi/factory"
 import { WeebCentral } from "../../lib/scrapers/weebcentral"
+import { SuwayomiClient } from "../../lib/suwayomi-client"
+import type { SourceEnv, SourceId, SourceProvider } from "./core"
 
+export { parseSerieUrl, type ParsedSerieUrl } from "../../lib/url-parser"
 export * from "./core"
-export { type ParsedSerieUrl, parseSerieUrl } from "../../lib/url-parser"
+
+// Module-level cache for sources
+let cachedSources: SourceProvider[] | null = null
+
+// Invalidate source cache (e.g., when Suwayomi extensions change)
+export function invalidateSourceCache(): void {
+	cachedSources = null
+}
 
 // Extended env type with Suwayomi options
 export type SourceEnvWithSuwayomi = SourceEnv & {
@@ -17,6 +25,11 @@ export type SourceEnvWithSuwayomi = SourceEnv & {
 
 // Factory function to create all sources (async to support Suwayomi)
 export const createSources = async (env: SourceEnvWithSuwayomi): Promise<SourceProvider[]> => {
+	// Return cached sources if available
+	if (cachedSources) {
+		return cachedSources
+	}
+
 	const nativeSources: SourceProvider[] = [new WeebCentral(env), new Mangadex(env), new Japscan(env)]
 
 	// Optionally add Suwayomi sources if configured
@@ -25,7 +38,8 @@ export const createSources = async (env: SourceEnvWithSuwayomi): Promise<SourceP
 			const client = new SuwayomiClient(env.SUWAYOMI_URL)
 			// Pass native sources so factory can exclude them dynamically
 			const suwayomiSources = await createSuwayomiSources(client, env, nativeSources)
-			return [...nativeSources, ...suwayomiSources]
+			cachedSources = [...nativeSources, ...suwayomiSources]
+			return cachedSources
 		}
 		catch (error) {
 			console.error("Failed to initialize Suwayomi sources:", error)
@@ -33,7 +47,8 @@ export const createSources = async (env: SourceEnvWithSuwayomi): Promise<SourceP
 		}
 	}
 
-	return nativeSources
+	cachedSources = nativeSources
+	return cachedSources
 }
 
 // Helper to get a specific source by ID

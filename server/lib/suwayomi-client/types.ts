@@ -91,3 +91,11 @@ export type MangaByUrlResponse = {
 		}>
 	}
 }
+
+export type ChapterByUrlResponse = {
+	chapters: {
+		nodes: Array<{
+			id: number
+		}>
+	}
+}

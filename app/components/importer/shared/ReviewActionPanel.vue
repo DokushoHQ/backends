@@ -100,13 +100,12 @@ watch(() => props.serie?.externalId, () => {
 			<div class="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
 				<!-- Cover -->
 				<div class="aspect-[2/3] max-w-[140px] mx-auto rounded-lg overflow-hidden bg-muted">
-					<img
+					<NuxtImg
 						v-if="serie.cover"
 						:src="serie.cover"
 						:alt="serie.title"
 						class="w-full h-full object-cover"
-						referrerpolicy="no-referrer"
-					>
+					/>
 					<div
 						v-else
 						class="w-full h-full flex items-center justify-center"
@@ -281,13 +280,12 @@ watch(() => props.serie?.externalId, () => {
 						</p>
 						<div class="flex items-center gap-3">
 							<div class="flex-shrink-0 w-10 h-14 rounded overflow-hidden bg-muted">
-								<img
+								<NuxtImg
 									v-if="serie.linkToSerieCover"
 									:src="serie.linkToSerieCover"
 									:alt="serie.linkToSerieTitle"
 									class="w-full h-full object-cover"
-									referrerpolicy="no-referrer"
-								>
+								/>
 								<div
 									v-else
 									class="w-full h-full flex items-center justify-center"
