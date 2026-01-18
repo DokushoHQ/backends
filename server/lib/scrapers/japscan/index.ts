@@ -1,6 +1,7 @@
 import { load } from "cheerio"
 import { ByparrClient } from "../../../utils/sources/byparr"
 import {
+	ChapterNotFoundError,
 	type FetchSearchSerieFilter,
 	type SourceProvider,
 	type SourceApiInformation,
@@ -457,7 +458,7 @@ export class Japscan implements SourceProvider {
 		const imageUrls = solution.jsResult as string[] | null
 
 		if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
-			throw new Error("Could not extract chapter images. imagesLink not captured.")
+			throw new ChapterNotFoundError(chapterId, `Chapter ${chapterId} not found on Japscan`)
 		}
 
 		// Filter to japscan CDN and add ?y=1 parameter (like Mihon does)
@@ -479,7 +480,7 @@ export class Japscan implements SourceProvider {
 			}))
 
 		if (images.length === 0) {
-			throw new Error("No valid chapter images found from japscan CDN.")
+			throw new ChapterNotFoundError(chapterId, `Chapter ${chapterId} has no valid images on Japscan CDN`)
 		}
 
 		return images

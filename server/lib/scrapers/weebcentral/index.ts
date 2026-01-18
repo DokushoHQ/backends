@@ -1,6 +1,7 @@
 import { load } from "cheerio"
 import { assignSeasonedChapterNumbers, calculateMissingChapters } from "~~/shared/utils/chapters"
 import {
+	ChapterNotFoundError,
 	type FetchSearchSerieFilter,
 	type SourceProvider,
 	type SourceApiInformation,
@@ -446,6 +447,9 @@ export class WeebCentral implements SourceProvider {
 		const data = await fetch(url, { method: "GET" })
 
 		if (!data.ok) {
+			if (data.status === 404) {
+				throw new ChapterNotFoundError(chapterId, `Chapter ${chapterId} not found on WeebCentral`)
+			}
 			throw new Error(`WeebCentral HTTP error: ${data.status} ${data.statusText}`)
 		}
 
