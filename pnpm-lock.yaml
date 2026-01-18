@@ -15,8 +15,8 @@ importers:
         specifier: ^3.965.0
         version: 3.965.0(@aws-sdk/client-s3@3.965.0)
       '@dokushohq/nuxt-processor':
-        specifier: ^0.0.14
-        version: 0.0.14(magicast@0.5.1)
+        specifier: ^0.0.16
+        version: 0.0.16(magicast@0.5.1)
       '@nuxt/image':
         specifier: ^2.0.0
         version: 2.0.0(db0@0.3.4(@electric-sql/pglite@0.3.2)(mysql2@3.15.3))(ioredis@5.9.1)(magicast@0.5.1)
@@ -657,8 +657,8 @@ packages:
     resolution: {integrity: sha512-Nu8ahitGFFJztxUml9oD/DLb7Z28C8cd8F46IVQ7y5Btz575pvMY8AqZsXkX7Gds29eCKdMgIHjIvzskHgPSFg==}
     engines: {node: '>=18.0.0'}
 
-  '@dokushohq/nuxt-processor@0.0.14':
-    resolution: {integrity: sha512-UJHJGUek+cnC7YbmfEoyFEgKkt5Eyloz4TbopR+hy92agneqMc7leN4THviQTm5NFny4fzagL8zfLl2XioI+4A==}
+  '@dokushohq/nuxt-processor@0.0.16':
+    resolution: {integrity: sha512-ND0XfLrytgUHapPjC9H6A64KeehgOHe+BkimECY38wIWIEYYYVBt7C/PbuA6qlsbPY68IgpR4+2N2jiQ4N+eXw==}
     hasBin: true
 
   '@dxup/nuxt@0.2.2':
@@ -8558,7 +8558,7 @@ snapshots:
     dependencies:
       mime: 3.0.0
 
-  '@dokushohq/nuxt-processor@0.0.14(magicast@0.5.1)':
+  '@dokushohq/nuxt-processor@0.0.16(magicast@0.5.1)':
     dependencies:
       '@nuxt/kit': 4.2.2(magicast@0.5.1)
       bullmq: 5.66.4
