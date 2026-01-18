@@ -1,6 +1,7 @@
 import { setTimeout } from "node:timers/promises"
 
 import {
+	ChapterNotFoundError,
 	type FetchSearchSerieFilter,
 	type SourceProvider,
 	type SourceApiInformation,
@@ -329,6 +330,10 @@ export class Mangadex implements SourceProvider {
 		params.append("order[volume]", "desc")
 		params.append("order[chapter]", "desc")
 		params.append("limit", limit.toString())
+		params.append("contentRating[]", "safe")
+		params.append("contentRating[]", "suggestive")
+		params.append("contentRating[]", "erotica")
+		params.append("contentRating[]", "pornographic")
 
 		this.#information.enabledLanguages
 			.map(transformSourceLang)
@@ -382,6 +387,9 @@ export class Mangadex implements SourceProvider {
 		const data = await fetch(url, { method: "GET" })
 
 		if (!data.ok) {
+			if (data.status === 404) {
+				throw new ChapterNotFoundError(chapterId, `Chapter ${chapterId} not found on MangaDex`)
+			}
 			throw new Error(`MangaDex API HTTP error: ${data.status} ${data.statusText}`)
 		}
 

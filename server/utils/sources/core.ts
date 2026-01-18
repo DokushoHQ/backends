@@ -293,3 +293,11 @@ export type SourceEnv = {
 	ENABLED_LANGUAGE: SourceLanguage[]
 	BYPARR_URL?: string
 }
+
+// Custom errors
+export class ChapterNotFoundError extends Error {
+	constructor(chapterId: string, message?: string) {
+		super(message ?? `Chapter ${chapterId} not found or unavailable`)
+		this.name = "ChapterNotFoundError"
+	}
+}

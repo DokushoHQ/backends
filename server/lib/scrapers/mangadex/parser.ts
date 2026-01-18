@@ -187,10 +187,15 @@ const mangaDexAtHomeChapter = z.object({
 export const mangaDexAtHomeResponse = z
 	.object({
 		result: z.string(),
-		baseUrl: z.url(),
+		baseUrl: z.string().optional(),
 		chapter: mangaDexAtHomeChapter.nullish(),
 	})
 	.transform(({ baseUrl, chapter, result }) => {
+		// Handle error responses from MangaDex at-home API (e.g., 404 chapter not found)
+		if (result !== "ok" || !baseUrl) {
+			return { data: undefined, result }
+		}
+
 		return {
 			data: chapter?.data.map<SourceSerieChapterImage>((filename, index) => ({
 				index: index + 1,

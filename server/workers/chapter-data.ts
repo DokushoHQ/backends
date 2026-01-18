@@ -1,5 +1,5 @@
 import { defineWorker } from "#processor"
-import { MetricsTime, type Job } from "bullmq"
+import { MetricsTime, UnrecoverableError, type Job } from "bullmq"
 import { join } from "node:path"
 import pLimit from "p-limit"
 import type { ChapterDataJobData } from "../queues/chapter-data"
@@ -8,6 +8,7 @@ import type { Chapter, PageFetchStatus, Prisma } from "../utils/db"
 import { db } from "../utils/db"
 import { deleteByPrefix, GifTooLargeError, uploadImageFile } from "../utils/s3"
 import { getSourceById } from "../utils/sources"
+import { ChapterNotFoundError } from "../utils/sources/core"
 
 type PageUploadResult = {
 	success: boolean
@@ -48,6 +49,16 @@ async function processChapterUpdate(
 	}
 	catch (error) {
 		job.log(`Failed to fetch chapter data: ${error}`)
+
+		// Chapter not found errors are permanent - don't retry
+		if (error instanceof ChapterNotFoundError) {
+			await db.chapter.update({
+				where: { id: chapter.id },
+				data: { page_fetch_status: "PermanentlyFailed" },
+			})
+			throw new UnrecoverableError(error.message)
+		}
+
 		return "Failed"
 	}
 

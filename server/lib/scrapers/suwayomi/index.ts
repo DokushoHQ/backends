@@ -1,17 +1,18 @@
-import type {
-	FetchSearchSerieFilter,
-	SourceApiInformation,
-	SourceChapters,
-	SourceEnv,
-	SourceId,
-	SourceInformation,
-	SourcePaginatedSmallSerie,
-	SourceProvider,
-	SourceSerie,
-	SourceSerieChapter,
-	SourceSerieChapterData,
-	SourceSerieChapterId,
-	SourceSerieId,
+import {
+	ChapterNotFoundError,
+	type FetchSearchSerieFilter,
+	type SourceApiInformation,
+	type SourceChapters,
+	type SourceEnv,
+	type SourceId,
+	type SourceInformation,
+	type SourcePaginatedSmallSerie,
+	type SourceProvider,
+	type SourceSerie,
+	type SourceSerieChapter,
+	type SourceSerieChapterData,
+	type SourceSerieChapterId,
+	type SourceSerieId,
 } from "../../../utils/sources/core"
 import type {
 	SuwayomiChapter,
@@ -148,7 +149,7 @@ export class SuwayomiSource implements SourceProvider {
 		// Query Suwayomi for the chapter by URL to get current cache ID
 		const chapter = await this.#client.findChapterByUrl(mangaId, chapterId)
 		if (!chapter) {
-			throw new Error(`Chapter not found in Suwayomi: ${chapterId}`)
+			throw new ChapterNotFoundError(chapterId, `Chapter ${chapterId} not found in Suwayomi`)
 		}
 
 		// Use resolved cache ID to fetch pages
