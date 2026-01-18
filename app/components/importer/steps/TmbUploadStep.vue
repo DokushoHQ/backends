@@ -30,12 +30,19 @@ function handleDragLeave() {
 	isDragging.value = false
 }
 
+const supportedExtensions = [".tmb", ".json"]
+
+function isSupportedFile(filename: string): boolean {
+	const lowerName = filename.toLowerCase()
+	return supportedExtensions.some(ext => lowerName.endsWith(ext))
+}
+
 async function handleDrop(event: DragEvent) {
 	event.preventDefault()
 	isDragging.value = false
 
 	const file = event.dataTransfer?.files?.[0]
-	if (file && file.name.toLowerCase().endsWith(".tmb")) {
+	if (file && isSupportedFile(file.name)) {
 		await wizard.uploadTmbFile(file)
 	}
 }
@@ -138,7 +145,7 @@ const stageLabel = computed(() => {
 					<input
 						ref="fileInputRef"
 						type="file"
-						accept=".tmb"
+						accept=".tmb,.json"
 						class="hidden"
 						@change="handleFileUpload"
 					>
@@ -151,10 +158,10 @@ const stageLabel = computed(() => {
 					</div>
 
 					<h3 class="text-lg font-semibold mb-2">
-						Upload Tachimanga Backup
+						Upload Backup File
 					</h3>
 					<p class="text-sm text-muted-foreground mb-4">
-						Drag and drop your .tmb backup file here, or click to browse
+						Drag and drop your backup file here, or click to browse
 					</p>
 
 					<UButton variant="outline">
@@ -173,13 +180,16 @@ const stageLabel = computed(() => {
 							name="i-lucide-info"
 							class="w-4 h-4 text-primary"
 						/>
-						What is a .tmb file?
+						Supported formats
 					</h4>
-					<p class="text-xs text-muted-foreground">
-						A .tmb file is a Tachimanga backup that contains your manga library,
-						categories, and reading progress. You can create one from
-						Settings → Backup & Restore in the Tachimanga app.
-					</p>
+					<ul class="text-xs text-muted-foreground space-y-1">
+						<li>
+							<strong>.tmb</strong> - Tachimanga backup (Settings → Backup & Restore)
+						</li>
+						<li>
+							<strong>.json</strong> - Dokusho iOS backup
+						</li>
+					</ul>
 				</div>
 			</div>
 		</div>

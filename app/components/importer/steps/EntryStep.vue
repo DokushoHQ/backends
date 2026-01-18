@@ -68,7 +68,7 @@ const wizard = useImportWizardInjected()
 							Import Backup
 						</div>
 						<div class="text-sm text-muted-foreground mt-1">
-							Import from Tachimanga .tmb backup file
+							Import from backup file (.tmb, .json)
 						</div>
 					</div>
 				</div>
