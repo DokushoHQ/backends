@@ -7,6 +7,8 @@ export const DISPLAY_NAME = "Serie Inserter"
 export const serieInserterJobDataSchema = z.object({
 	source_serie_id: z.string(),
 	source_id: z.string(),
+	target_serie_id: z.string().optional(), // If provided, link to existing serie instead of creating new
+	is_primary: z.boolean().optional(), // For linking, whether this should be the primary source
 })
 
 export type SerieInserterJobData = z.infer<typeof serieInserterJobDataSchema>

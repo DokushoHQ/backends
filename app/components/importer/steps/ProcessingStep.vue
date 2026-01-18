@@ -7,21 +7,53 @@ const emit = defineEmits<{
 	close: []
 }>()
 
+// Categorize items into three groups
+const importItems = computed(() =>
+	wizard.cartItems.value.filter(s =>
+		s.isPrimaryInGroup || (s.action === "import" && !s.cartDuplicates?.length),
+	),
+)
+const linkExistingItems = computed(() =>
+	wizard.cartItems.value.filter(s =>
+		s.action === "link" && s.linkToSerieId,
+	),
+)
+const postImportLinkItems = computed(() =>
+	wizard.cartItems.value.filter(s =>
+		s.linkToCartKey && !s.linkToSerieId,
+	),
+)
+
 function getStatusIcon(state?: string) {
 	switch (state) {
-		case "success": return "i-lucide-check-circle"
+		case "done": return "i-lucide-check-circle"
 		case "error": return "i-lucide-x-circle"
 		case "processing": return "i-lucide-loader-2"
+		case "queued": return "i-lucide-clock"
 		default: return "i-lucide-circle"
 	}
 }
 
 function getStatusColor(state?: string) {
 	switch (state) {
-		case "success": return "text-success"
+		case "done": return "text-success"
 		case "error": return "text-destructive"
 		case "processing": return "text-primary animate-spin"
+		case "queued": return "text-amber-500"
 		default: return "text-muted-foreground"
+	}
+}
+
+function getStatusLabel(state?: string, linkToCartKey?: string) {
+	switch (state) {
+		case "done": return "Complete"
+		case "error": return "Failed"
+		case "processing": return "Processing..."
+		case "queued": return "Queued"
+		case "pending":
+			if (linkToCartKey) return "Waiting for primary"
+			return "Pending"
+		default: return "Waiting..."
 	}
 }
 </script>
@@ -68,7 +100,7 @@ function getStatusColor(state?: string) {
 				Importing...
 			</h4>
 			<p class="text-muted-foreground text-sm">
-				{{ wizard.cartItems.value.filter(s => s.processingState === 'success' || s.processingState === 'error').length }}
+				{{ wizard.cartItems.value.filter(s => s.processingState === 'done' || s.processingState === 'error').length }}
 				of {{ wizard.cartCount.value }} complete
 			</p>
 		</div>
@@ -81,26 +113,106 @@ function getStatusColor(state?: string) {
 			/>
 		</div>
 
-		<!-- Item List -->
-		<div class="border border-border rounded-lg divide-y divide-border max-h-[300px] overflow-y-auto">
-			<div
-				v-for="serie in wizard.cartItems.value"
-				:key="`${serie.sourceId}:${serie.externalId}`"
-				class="p-3 flex items-center gap-3"
-			>
-				<UIcon
-					:name="getStatusIcon(serie.processingState)"
-					:class="['w-5 h-5', getStatusColor(serie.processingState)]"
-				/>
-				<div class="flex-1 min-w-0">
-					<div class="text-sm font-medium truncate">
-						{{ serie.title }}
-					</div>
-					<div class="text-xs text-muted-foreground">
-						{{ serie.processingMessage || 'Waiting...' }}
+		<!-- Three-group item list -->
+		<div class="space-y-4 max-h-[400px] overflow-y-auto">
+			<!-- Group 1: Import (new series) -->
+			<section v-if="importItems.length > 0">
+				<h5 class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+					<UIcon
+						name="i-lucide-download"
+						class="w-3.5 h-3.5"
+					/>
+					Importing ({{ importItems.length }})
+				</h5>
+				<div class="border border-border rounded-lg divide-y divide-border">
+					<div
+						v-for="serie in importItems"
+						:key="`${serie.sourceId}:${serie.externalId}`"
+						class="p-3 flex items-center gap-3"
+					>
+						<UIcon
+							:name="getStatusIcon(serie.processingState)"
+							:class="['w-5 h-5', getStatusColor(serie.processingState)]"
+						/>
+						<div class="flex-1 min-w-0">
+							<div class="text-sm font-medium truncate">
+								{{ serie.title }}
+							</div>
+							<div class="text-xs text-muted-foreground">
+								{{ serie.processingMessage || getStatusLabel(serie.processingState) }}
+							</div>
+						</div>
+						<span
+							v-if="serie.isPrimaryInGroup"
+							class="px-1.5 py-0.5 bg-primary text-primary-foreground rounded text-[10px] font-semibold flex-shrink-0"
+						>
+							PRIMARY
+						</span>
 					</div>
 				</div>
-			</div>
+			</section>
+
+			<!-- Group 2: Link to existing library series -->
+			<section v-if="linkExistingItems.length > 0">
+				<h5 class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+					<UIcon
+						name="i-lucide-link"
+						class="w-3.5 h-3.5"
+					/>
+					Linking to existing ({{ linkExistingItems.length }})
+				</h5>
+				<div class="border border-border rounded-lg divide-y divide-border">
+					<div
+						v-for="serie in linkExistingItems"
+						:key="`${serie.sourceId}:${serie.externalId}`"
+						class="p-3 flex items-center gap-3"
+					>
+						<UIcon
+							:name="getStatusIcon(serie.processingState)"
+							:class="['w-5 h-5', getStatusColor(serie.processingState)]"
+						/>
+						<div class="flex-1 min-w-0">
+							<div class="text-sm font-medium truncate">
+								{{ serie.title }}
+							</div>
+							<div class="text-xs text-muted-foreground truncate">
+								{{ serie.processingMessage || `Linking to ${serie.linkToSerieTitle || 'existing'}` }}
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Group 3: Post-import link (linking to series from this import batch) -->
+			<section v-if="postImportLinkItems.length > 0">
+				<h5 class="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+					<UIcon
+						name="i-lucide-link-2"
+						class="w-3.5 h-3.5"
+					/>
+					Linking after import ({{ postImportLinkItems.length }})
+				</h5>
+				<div class="border border-border rounded-lg divide-y divide-border">
+					<div
+						v-for="serie in postImportLinkItems"
+						:key="`${serie.sourceId}:${serie.externalId}`"
+						class="p-3 flex items-center gap-3"
+					>
+						<UIcon
+							:name="getStatusIcon(serie.processingState)"
+							:class="['w-5 h-5', getStatusColor(serie.processingState)]"
+						/>
+						<div class="flex-1 min-w-0">
+							<div class="text-sm font-medium truncate">
+								{{ serie.title }}
+							</div>
+							<div class="text-xs text-muted-foreground">
+								{{ serie.processingMessage || getStatusLabel(serie.processingState, serie.linkToCartKey) }}
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
 		</div>
 
 		<!-- Footer -->

@@ -5,11 +5,11 @@ import type { CoverUpdateJobData } from "../queues/cover-update"
 import type { IndexerJobData } from "../queues/indexer"
 import type { SerieInserterJobData, SerieInserterJobResult } from "../queues/serie-inserter"
 import { QUEUE_NAME, serieInserterJobDataSchema } from "../queues/serie-inserter"
+import type { Language, Prisma } from "../utils/db"
 import { db } from "../utils/db"
 import { getFlowProducer } from "../utils/flow-producer"
-import type { Language, Prisma } from "../utils/db"
 import { resolveMultiLanguage } from "../utils/serie"
-import { createSources, getSourceById } from "../utils/sources"
+import { getSourceById } from "../utils/sources"
 
 export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInserterJobResult>({
 	name: QUEUE_NAME,
@@ -20,7 +20,12 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 	},
 	async processor(job) {
 		const log = (msg: string) => job.log(`[Attempt ${job.attemptsMade + 1}] ${msg}`)
-		const { source_id: sourceId, source_serie_id: sourceSerieId } = serieInserterJobDataSchema.parse(job.data)
+		const {
+			source_id: sourceId,
+			source_serie_id: sourceSerieId,
+			target_serie_id: targetSerieId,
+			is_primary: isPrimary,
+		} = serieInserterJobDataSchema.parse(job.data)
 
 		await job.updateProgress(5)
 
@@ -41,16 +46,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 		})
 
 		// Get source instance
-		const config = useRuntimeConfig()
-		const enabledLanguages = config.enabledLanguages
-			?.split(",")
-			.map((lang: string) => lang.trim())
-			.filter(Boolean) as ("En" | "Fr")[]
-		const sources = await createSources({
-			ENABLED_LANGUAGE: enabledLanguages?.length ? enabledLanguages : ["En"],
-			BYPARR_URL: config.byparrUrl,
-			SUWAYOMI_URL: config.suwayomiUrl,
-		})
+		const sources = await getSources()
 		const source = getSourceById(sources, sourceRecord.external_id)
 
 		await job.updateProgress(10)
@@ -135,7 +131,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 				let serieSourceId: string
 
 				if (existingSerieSource) {
-					// UPDATE PATH
+					// UPDATE PATH - SerieSource already exists
 					serieId = existingSerieSource.serie_id
 					serieSourceId = existingSerieSource.id
 
@@ -153,8 +149,37 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 						},
 					})
 				}
+				else if (targetSerieId) {
+					// LINK PATH - Create SerieSource linked to existing Serie
+					// Validate that target serie exists
+					const targetSerie = await tx.serie.findUnique({
+						where: { id: targetSerieId },
+						select: { id: true },
+					})
+					if (!targetSerie) {
+						throw new Error(`Target serie ${targetSerieId} not found`)
+					}
+
+					serieId = targetSerieId
+					const newSerieSource = await tx.serieSource.create({
+						data: {
+							serie_id: targetSerieId,
+							source_id: sourceId,
+							external_id: sourceSerieId,
+							title: serieData.title as Prisma.InputJsonValue,
+							alternates_titles: serieData.alternatesTitles as Prisma.InputJsonValue,
+							synopsis: serieData.synopsis as Prisma.InputJsonValue,
+							cover_source_url: serieData.cover.toString(),
+							status: serieData.status,
+							type: serieData.type,
+							is_primary: isPrimary ?? false,
+							...(serieData.externalUrl && { external_url: serieData.externalUrl.toString() }),
+						},
+					})
+					serieSourceId = newSerieSource.id
+				}
 				else {
-					// CREATE PATH
+					// CREATE PATH - New Serie + SerieSource
 					const newSerie = await tx.serie.create({
 						data: {
 							title: resolveMultiLanguage(serieData.title),
@@ -176,7 +201,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 							cover_source_url: serieData.cover.toString(),
 							status: serieData.status,
 							type: serieData.type,
-							is_primary: true,
+							is_primary: isPrimary ?? true,
 							...(serieData.externalUrl && { external_url: serieData.externalUrl.toString() }),
 						},
 					})
@@ -286,7 +311,8 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 			})
 
 			await job.updateProgress(70)
-			log(`${existingSerieSource ? "Updated" : "Created"} serie ${serie_id} with ${chapter_ids.length} chapters to process`)
+			const mode = existingSerieSource ? "Updated" : targetSerieId ? "Linked to" : "Created"
+			log(`${mode} serie ${serie_id} with ${chapter_ids.length} chapters to process`)
 
 			// Build child jobs: Chapter Data + Cover Update
 			const children: FlowChildJob[] = [

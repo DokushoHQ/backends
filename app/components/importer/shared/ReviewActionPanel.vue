@@ -10,6 +10,7 @@ const emit = defineEmits<{
 	setAction: [action: "import" | "link", linkToSerieId?: string, linkToSerieTitle?: string, linkToSerieCover?: string | null]
 	remove: []
 	openLibrarySearch: []
+	setGroupPrimary: [cartKey: string]
 }>()
 
 const showMoreMatches = ref(false)
@@ -17,6 +18,8 @@ const showMoreMatches = ref(false)
 const topMatch = computed(() => props.serie?.similarMatches?.[0])
 const additionalMatches = computed(() => props.serie?.similarMatches?.slice(1) || [])
 const hasMatches = computed(() => (props.serie?.similarMatches?.length || 0) > 0)
+const hasCartDuplicates = computed(() => (props.serie?.cartDuplicates?.length || 0) > 0)
+const currentCartKey = computed(() => props.serie ? `${props.serie.sourceId}:${props.serie.externalId}` : "")
 
 function handleActionChange(value: string) {
 	if (value === "import") {
@@ -48,10 +51,11 @@ const selectedValue = computed(() => {
 
 const radioGroupName = computed(() => props.serie ? `panel-action-${props.serie.sourceId}-${props.serie.externalId}` : "panel-action")
 
-// Check if action is complete (import, or link with linkToSerieId)
+// Check if action is complete (import, or link with linkToSerieId, or linkToCartKey set)
 const isActionComplete = computed(() => {
 	if (props.serie?.action === "import") return true
 	if (props.serie?.action === "link" && props.serie.linkToSerieId) return true
+	if (props.serie?.linkToCartKey) return true // Linked to another cart item
 	return false
 })
 
@@ -129,7 +133,17 @@ watch(() => props.serie?.externalId, () => {
 
 				<!-- Status -->
 				<div
-					v-if="hasMatches"
+					v-if="hasCartDuplicates"
+					class="flex items-center justify-center gap-1.5 text-sm text-warning"
+				>
+					<UIcon
+						name="i-lucide-copy"
+						class="w-4 h-4"
+					/>
+					Same series from {{ serie.cartDuplicates!.length + 1 }} sources
+				</div>
+				<div
+					v-else-if="hasMatches"
 					class="flex items-center justify-center gap-1.5 text-sm text-warning"
 				>
 					<UIcon
@@ -149,8 +163,89 @@ watch(() => props.serie?.externalId, () => {
 					No duplicates found
 				</div>
 
-				<!-- Action Options -->
-				<div class="space-y-3 pt-2">
+				<!-- Cart Duplicates Section -->
+				<div
+					v-if="hasCartDuplicates"
+					class="space-y-3 pt-2"
+				>
+					<p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+						Select primary source
+					</p>
+					<p class="text-xs text-muted-foreground">
+						The primary source's metadata will be used for the series display. Other sources will be linked.
+					</p>
+
+					<!-- Current item as primary option -->
+					<label class="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors">
+						<input
+							type="radio"
+							:name="`primary-${currentCartKey}`"
+							:checked="serie.isPrimaryInGroup"
+							class="w-4 h-4"
+							@change="emit('setGroupPrimary', currentCartKey)"
+						>
+						<div class="flex-1 min-w-0">
+							<span class="text-sm font-medium">
+								{{ serie.sourceName }}
+							</span>
+							<span
+								v-if="serie.isPrimaryInGroup"
+								class="ml-2 px-1.5 py-0.5 bg-primary text-primary-foreground rounded text-[10px] font-semibold"
+							>
+								PRIMARY
+							</span>
+							<p class="text-xs text-muted-foreground">
+								Current selection
+							</p>
+						</div>
+					</label>
+
+					<!-- Other sources in the duplicate group -->
+					<label
+						v-for="dup in serie.cartDuplicates"
+						:key="dup.cartKey"
+						class="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors"
+					>
+						<input
+							type="radio"
+							:name="`primary-${currentCartKey}`"
+							:checked="serie.linkToCartKey === dup.cartKey"
+							class="w-4 h-4"
+							@change="emit('setGroupPrimary', dup.cartKey)"
+						>
+						<div class="flex-shrink-0 w-8 h-11 rounded overflow-hidden bg-muted">
+							<NuxtImg
+								v-if="dup.cover"
+								:src="dup.cover"
+								:alt="dup.title"
+								class="w-full h-full object-cover"
+							/>
+							<div
+								v-else
+								class="w-full h-full flex items-center justify-center"
+							>
+								<UIcon
+									name="i-lucide-book-open"
+									class="w-3 h-3 text-muted-foreground"
+								/>
+							</div>
+						</div>
+						<div class="flex-1 min-w-0">
+							<span class="text-sm font-medium truncate block">
+								{{ dup.sourceName }}
+							</span>
+							<p class="text-xs text-muted-foreground truncate">
+								{{ Math.round(dup.similarity * 100) }}% match
+							</p>
+						</div>
+					</label>
+				</div>
+
+				<!-- Action Options (only show when not a cart duplicate) -->
+				<div
+					v-if="!hasCartDuplicates"
+					class="space-y-3 pt-2"
+				>
 					<p class="text-xs font-medium text-muted-foreground uppercase tracking-wide">
 						Choose action
 					</p>
