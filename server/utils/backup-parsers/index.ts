@@ -1,6 +1,7 @@
 import type { BackupParser } from "./types"
 import { TmbBackupParser } from "./tmb"
 import { DokushoBackupParser } from "./dokusho"
+import { TachiyomiBackupParser } from "./tachiyomi"
 
 export * from "./types"
 
@@ -12,6 +13,7 @@ const parsers: Map<string, BackupParser> = new Map()
 // Register built-in parsers
 registerParser(new TmbBackupParser())
 registerParser(new DokushoBackupParser())
+registerParser(new TachiyomiBackupParser())
 
 /**
  * Register a backup parser

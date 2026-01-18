@@ -68,7 +68,7 @@ const wizard = useImportWizardInjected()
 							Import Backup
 						</div>
 						<div class="text-sm text-muted-foreground mt-1">
-							Import from backup file (.tmb, .json)
+							Tachiyomi, Mihon, Tachimanga, Dokusho
 						</div>
 					</div>
 				</div>

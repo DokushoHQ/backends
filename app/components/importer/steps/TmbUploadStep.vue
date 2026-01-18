@@ -30,7 +30,7 @@ function handleDragLeave() {
 	isDragging.value = false
 }
 
-const supportedExtensions = [".tmb", ".json"]
+const supportedExtensions = [".tmb", ".json", ".tachibk", ".proto.gz"]
 
 function isSupportedFile(filename: string): boolean {
 	const lowerName = filename.toLowerCase()
@@ -145,7 +145,7 @@ const stageLabel = computed(() => {
 					<input
 						ref="fileInputRef"
 						type="file"
-						accept=".tmb,.json"
+						accept=".tmb,.json,.tachibk,.proto.gz"
 						class="hidden"
 						@change="handleFileUpload"
 					>
@@ -184,7 +184,10 @@ const stageLabel = computed(() => {
 					</h4>
 					<ul class="text-xs text-muted-foreground space-y-1">
 						<li>
-							<strong>.tmb</strong> - Tachimanga backup (Settings → Backup & Restore)
+							<strong>.tachibk</strong> - Tachiyomi/Mihon backup
+						</li>
+						<li>
+							<strong>.tmb</strong> - Tachimanga backup
 						</li>
 						<li>
 							<strong>.json</strong> - Dokusho iOS backup
