@@ -115,5 +115,4 @@ All external images (covers, chapter pages) are downloaded and uploaded to S3. S
 
 - Always work inside a feature branch, never commit directly to main
 - Make a single commit with a clear message when adding a significant change
-- Before finishing work on a PR branch, bump the version in `package.json` (patch for fixes, minor for features)
-- CI enforces version bump check on PRs to main
+- When releasing a new version, bump the version in `package.json` (patch for fixes, minor for features) - this triggers the release workflow
