@@ -1,7 +1,5 @@
 import { z } from "zod"
 import serieInserterQueue from "../../../../queues/serie-inserter"
-import { getSource } from "../../../../utils/sources"
-import type { Prisma } from "../../../../utils/db"
 
 const linkSchema = z.object({
 	sourceId: z.string(),
@@ -56,37 +54,15 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, message: "This source entry is already linked to a different serie" })
 	}
 
-	// 4. Fetch source data
-	const source = await getSource(dbSource.external_id)
-	let serieData: Awaited<ReturnType<typeof source.fetchSerieDetail>>
-	try {
-		serieData = await source.fetchSerieDetail(externalId)
-	}
-	catch (e) {
-		console.error("Failed to fetch source data:", e)
-		throw createError({ statusCode: 500, message: "Failed to fetch source data" })
-	}
-
-	// 5. Create SerieSource with is_primary=false
-	await db.serieSource.create({
-		data: {
-			serie_id: id,
-			source_id: sourceId,
-			external_id: externalId,
-			title: serieData.title as Prisma.InputJsonValue,
-			alternates_titles: serieData.alternatesTitles as Prisma.InputJsonValue,
-			synopsis: serieData.synopsis as Prisma.InputJsonValue,
-			cover_source_url: serieData.cover.toString(),
-			status: serieData.status,
-			type: serieData.type,
-			is_primary: false,
-		},
-	})
-
-	// 6. Queue serie_inserter job (will run in UPDATE mode, importing chapters)
+	// 4. Queue serie_inserter job with target_serie_id (will run in LINK mode)
 	const job = await serieInserterQueue.add(
 		"serie-inserter",
-		{ source_id: sourceId, source_serie_id: externalId },
+		{
+			source_id: sourceId,
+			source_serie_id: externalId,
+			target_serie_id: id,
+			is_primary: false,
+		},
 	)
 
 	return { success: true, status: "queued", jobId: job.id ?? "" }

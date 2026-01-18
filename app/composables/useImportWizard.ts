@@ -82,6 +82,14 @@ export interface SimilarMatch {
 	cover: string | null
 }
 
+export interface CartDuplicateMatch {
+	cartKey: string
+	title: string
+	sourceName: string
+	cover: string | null
+	similarity: number
+}
+
 export interface SelectedSerie {
 	// Identification
 	sourceId: string
@@ -95,18 +103,23 @@ export interface SelectedSerie {
 	status: string[]
 	chapterCount?: number
 
-	// Duplicate detection (populated in review step)
+	// Library duplicate detection (populated in review step)
 	similarMatches?: SimilarMatch[]
 	loadingSimilarity?: boolean
+
+	// Cart duplicate detection (populated in review step)
+	cartDuplicates?: CartDuplicateMatch[]
+	isPrimaryInGroup?: boolean
 
 	// User decision
 	action?: "import" | "link"
 	linkToSerieId?: string
 	linkToSerieTitle?: string
 	linkToSerieCover?: string | null
+	linkToCartKey?: string // For linking to another cart item
 
 	// Processing state
-	processingState?: "pending" | "processing" | "success" | "error"
+	processingState?: "pending" | "queued" | "processing" | "done" | "error"
 	processingMessage?: string
 	jobId?: string
 }
@@ -129,6 +142,60 @@ export interface RecentSerie {
 	sources: string[]
 	chapterCount: number
 	importedAt: string
+}
+
+// ==================== Title Similarity Utils ====================
+
+function normalizeTitle(title: string): string {
+	return title
+		.toLowerCase()
+		.replace(/[^\w\s]/g, "") // Remove special chars
+		.replace(/\s+/g, " ") // Normalize whitespace
+		.trim()
+}
+
+function levenshteinDistance(a: string, b: string): number {
+	if (a.length === 0) return b.length
+	if (b.length === 0) return a.length
+
+	const matrix: number[][] = []
+
+	for (let i = 0; i <= b.length; i++) {
+		matrix[i] = [i]
+	}
+	for (let j = 0; j <= a.length; j++) {
+		matrix[0]![j] = j
+	}
+
+	for (let i = 1; i <= b.length; i++) {
+		for (let j = 1; j <= a.length; j++) {
+			if (b.charAt(i - 1) === a.charAt(j - 1)) {
+				matrix[i]![j] = matrix[i - 1]![j - 1]!
+			}
+			else {
+				matrix[i]![j] = Math.min(
+					matrix[i - 1]![j - 1]! + 1, // substitution
+					matrix[i]![j - 1]! + 1, // insertion
+					matrix[i - 1]![j]! + 1, // deletion
+				)
+			}
+		}
+	}
+
+	return matrix[b.length]![a.length]!
+}
+
+function calculateTitleSimilarity(a: string, b: string): number {
+	const normA = normalizeTitle(a)
+	const normB = normalizeTitle(b)
+
+	if (normA === normB) return 1
+
+	const maxLen = Math.max(normA.length, normB.length)
+	if (maxLen === 0) return 1
+
+	const distance = levenshteinDistance(normA, normB)
+	return 1 - distance / maxLen
 }
 
 // ==================== Composable ====================
@@ -187,35 +254,49 @@ export function useImportWizard() {
 	const allDecisionsMade = computed(() => {
 		if (cartCount.value === 0) return false
 		// Check that each item has a complete action:
-		// - "import" is always complete
-		// - "link" requires a linkToSerieId
+		// - "import" is always complete (if isPrimaryInGroup or no cart duplicates)
+		// - "link" requires a linkToSerieId or linkToCartKey
 		return cartItems.value.every((s) => {
 			if (s.action === "import") return true
-			if (s.action === "link" && s.linkToSerieId) return true
+			if (s.action === "link" && (s.linkToSerieId || s.linkToCartKey)) return true
 			return false
 		})
 	})
 
+	const hasCartDuplicates = computed(() =>
+		cartItems.value.some(s => s.cartDuplicates && s.cartDuplicates.length > 0),
+	)
+
 	const processingProgress = computed(() => {
 		if (cartCount.value === 0) return 0
 		const completed = cartItems.value.filter(s =>
-			s.processingState === "success" || s.processingState === "error",
+			s.processingState === "done" || s.processingState === "error",
 		).length
 		return Math.round((completed / cartCount.value) * 100)
 	})
 
 	const processingComplete = computed(() => {
 		return cartItems.value.every(s =>
-			s.processingState === "success" || s.processingState === "error",
+			s.processingState === "done" || s.processingState === "error",
 		)
 	})
 
 	const processingStats = computed(() => {
 		const items = cartItems.value
+		// Imported: Primary items (isPrimaryInGroup) or regular imports without cart duplicates
+		const imported = items.filter(s =>
+			s.processingState === "done"
+			&& (s.isPrimaryInGroup || (s.action === "import" && !s.cartDuplicates?.length)),
+		).length
+		// Linked: Link to existing library series OR link to cart item (post-import link)
+		const linked = items.filter(s =>
+			s.processingState === "done"
+			&& ((s.action === "link" && s.linkToSerieId) || s.linkToCartKey),
+		).length
 		return {
 			total: items.length,
-			linked: items.filter(s => s.action === "link" && s.processingState === "success").length,
-			imported: items.filter(s => s.action === "import" && s.processingState === "success").length,
+			linked,
+			imported,
 			errors: items.filter(s => s.processingState === "error").length,
 		}
 	})
@@ -562,7 +643,129 @@ export function useImportWizard() {
 		})
 
 		await Promise.all(promises)
+
+		// After library similarity checks, detect cart-to-cart duplicates
+		detectCartDuplicates()
+
 		loadingSimilarities.value = false
+	}
+
+	// ==================== Cart Duplicate Detection ====================
+	const SIMILARITY_THRESHOLD = 0.85
+
+	function detectCartDuplicates() {
+		const items = cartItems.value
+		const itemKeys = items.map(s => getCartKey(s.sourceId, s.externalId))
+
+		// Clear existing cart duplicates
+		for (const item of items) {
+			item.cartDuplicates = []
+			item.isPrimaryInGroup = undefined
+		}
+
+		// Compare each item with all others
+		for (let i = 0; i < items.length; i++) {
+			const itemA = items[i]!
+			const keyA = itemKeys[i]!
+
+			for (let j = i + 1; j < items.length; j++) {
+				const itemB = items[j]!
+				const keyB = itemKeys[j]!
+
+				// Skip if same source (can't be duplicate from same source)
+				if (itemA.sourceId === itemB.sourceId) continue
+
+				const similarity = calculateTitleSimilarity(itemA.title, itemB.title)
+
+				if (similarity >= SIMILARITY_THRESHOLD) {
+					// Add mutual references
+					const selectedA = selectedSeries.value.get(keyA)
+					const selectedB = selectedSeries.value.get(keyB)
+
+					if (selectedA) {
+						if (!selectedA.cartDuplicates) selectedA.cartDuplicates = []
+						selectedA.cartDuplicates.push({
+							cartKey: keyB,
+							title: itemB.title,
+							sourceName: itemB.sourceName,
+							cover: itemB.cover,
+							similarity,
+						})
+					}
+
+					if (selectedB) {
+						if (!selectedB.cartDuplicates) selectedB.cartDuplicates = []
+						selectedB.cartDuplicates.push({
+							cartKey: keyA,
+							title: itemA.title,
+							sourceName: itemA.sourceName,
+							cover: itemA.cover,
+							similarity,
+						})
+					}
+				}
+			}
+		}
+
+		// Auto-set first item in each duplicate group as primary
+		const processed = new Set<string>()
+		for (const item of items) {
+			const key = getCartKey(item.sourceId, item.externalId)
+			if (processed.has(key)) continue
+
+			if (item.cartDuplicates && item.cartDuplicates.length > 0) {
+				// This item is part of a duplicate group - make it primary
+				const selectedItem = selectedSeries.value.get(key)
+				if (selectedItem) {
+					selectedItem.isPrimaryInGroup = true
+					selectedItem.action = "import"
+					processed.add(key)
+
+					// Set all duplicates as non-primary and link to this one
+					for (const dup of item.cartDuplicates) {
+						const dupItem = selectedSeries.value.get(dup.cartKey)
+						if (dupItem && !processed.has(dup.cartKey)) {
+							dupItem.isPrimaryInGroup = false
+							dupItem.action = "link"
+							dupItem.linkToCartKey = key
+							processed.add(dup.cartKey)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	function setGroupPrimary(newPrimaryCartKey: string) {
+		const newPrimary = selectedSeries.value.get(newPrimaryCartKey)
+		if (!newPrimary || !newPrimary.cartDuplicates) return
+
+		// Collect all cart keys in this duplicate group
+		const groupKeys = new Set<string>([newPrimaryCartKey])
+		for (const dup of newPrimary.cartDuplicates) {
+			groupKeys.add(dup.cartKey)
+		}
+
+		// Update all items in the group
+		for (const cartKey of groupKeys) {
+			const item = selectedSeries.value.get(cartKey)
+			if (!item) continue
+
+			if (cartKey === newPrimaryCartKey) {
+				// This is the new primary
+				item.isPrimaryInGroup = true
+				item.action = "import"
+				item.linkToCartKey = undefined
+				item.linkToSerieId = undefined
+			}
+			else {
+				// This links to the new primary
+				item.isPrimaryInGroup = false
+				item.action = "link"
+				item.linkToCartKey = newPrimaryCartKey
+				item.linkToSerieId = undefined
+			}
+		}
 	}
 
 	// ==================== Library Search ====================
@@ -655,43 +858,216 @@ export function useImportWizard() {
 		step.value = "processing"
 		processingStarted.value = true
 
-		// Process each item
-		for (const serie of cartItems.value) {
+		// Categorize items by processing type
+		const importItems = cartItems.value.filter(s =>
+			s.isPrimaryInGroup || (s.action === "import" && !s.cartDuplicates?.length),
+		)
+		const linkExistingItems = cartItems.value.filter(s =>
+			s.action === "link" && s.linkToSerieId,
+		)
+		const postImportLinkItems = cartItems.value.filter(s =>
+			s.linkToCartKey && !s.linkToSerieId,
+		)
+
+		// Track: cartKey -> { jobId, serieId (when done) }
+		const importJobs = new Map<string, { jobId: string, serieId?: string }>()
+		const linkJobs = new Map<string, { jobId: string }>()
+
+		// Step 1: Queue all import jobs
+		for (const serie of importItems) {
 			const key = getCartKey(serie.sourceId, serie.externalId)
 			const item = selectedSeries.value.get(key)
 			if (!item) continue
 
-			item.processingState = "processing"
-			item.processingMessage = item.action === "link" ? "Linking..." : "Importing..."
+			item.processingState = "queued"
+			item.processingMessage = "Queued for import..."
 
 			try {
-				if (item.action === "link" && item.linkToSerieId) {
-					// Link to existing serie
-					await $fetch(`/api/v1/serie/${item.linkToSerieId}/link-source`, {
-						method: "POST",
-						body: {
-							sourceId: item.sourceId,
-							externalId: item.externalId,
-						},
-					})
-					item.processingState = "success"
-					item.processingMessage = "Linked to existing series"
+				const result = await $fetch<{ status: string, serieId?: string, jobId?: string }>(`/api/v1/sources/${item.sourceId}/import`, {
+					method: "POST",
+					body: { serieId: item.externalId },
+				})
+
+				if (result.status === "exists" && result.serieId) {
+					// Already exists - mark as done immediately
+					item.processingState = "done"
+					item.processingMessage = "Already exists"
+					importJobs.set(key, { jobId: "", serieId: result.serieId })
 				}
-				else {
-					// Import as new
-					const result = await $fetch<{ status: string, serieId?: string, jobId?: string }>(`/api/v1/sources/${item.sourceId}/import`, {
-						method: "POST",
-						body: { serieId: item.externalId },
-					})
+				else if (result.jobId) {
 					item.jobId = result.jobId
-					item.processingState = "success"
-					item.processingMessage = result.status === "exists" ? "Already exists" : "Import queued"
+					importJobs.set(key, { jobId: result.jobId })
 				}
 			}
 			catch (e: unknown) {
 				const fetchError = e as { data?: { message?: string }, message?: string }
 				item.processingState = "error"
-				item.processingMessage = fetchError.data?.message || fetchError.message || "Failed"
+				item.processingMessage = fetchError.data?.message || fetchError.message || "Failed to queue"
+			}
+		}
+
+		// Step 2: Queue all link-to-existing jobs
+		for (const serie of linkExistingItems) {
+			const key = getCartKey(serie.sourceId, serie.externalId)
+			const item = selectedSeries.value.get(key)
+			if (!item || !item.linkToSerieId) continue
+
+			item.processingState = "queued"
+			item.processingMessage = "Queued for linking..."
+
+			try {
+				const result = await $fetch<{ status: string, jobId?: string }>(`/api/v1/serie/${item.linkToSerieId}/link-source`, {
+					method: "POST",
+					body: {
+						sourceId: item.sourceId,
+						externalId: item.externalId,
+					},
+				})
+
+				if (result.status === "already_linked") {
+					item.processingState = "done"
+					item.processingMessage = "Already linked"
+				}
+				else if (result.jobId) {
+					item.jobId = result.jobId
+					linkJobs.set(key, { jobId: result.jobId })
+				}
+			}
+			catch (e: unknown) {
+				const fetchError = e as { data?: { message?: string }, message?: string }
+				item.processingState = "error"
+				item.processingMessage = fetchError.data?.message || fetchError.message || "Failed to queue"
+			}
+		}
+
+		// Step 3: Poll jobs and trigger post-import links progressively
+		await pollAllJobsProgressively(importItems, linkExistingItems, postImportLinkItems, importJobs, linkJobs)
+	}
+
+	async function pollAllJobsProgressively(
+		importItems: SelectedSerie[],
+		linkExistingItems: SelectedSerie[],
+		postImportLinkItems: SelectedSerie[],
+		importJobs: Map<string, { jobId: string, serieId?: string }>,
+		linkJobs: Map<string, { jobId: string }>,
+	) {
+		// Combine all jobs that need polling
+		const pendingJobs = new Map<string, { item: SelectedSerie, jobId: string, type: "import" | "link" }>()
+
+		for (const item of importItems) {
+			const key = getCartKey(item.sourceId, item.externalId)
+			const job = importJobs.get(key)
+			// Only add if job exists and not already completed (e.g., "already exists")
+			if (job?.jobId && selectedSeries.value.get(key)?.processingState !== "done") {
+				pendingJobs.set(key, { item, jobId: job.jobId, type: "import" })
+			}
+		}
+		for (const item of linkExistingItems) {
+			const key = getCartKey(item.sourceId, item.externalId)
+			const job = linkJobs.get(key)
+			if (job?.jobId && selectedSeries.value.get(key)?.processingState !== "done") {
+				pendingJobs.set(key, { item, jobId: job.jobId, type: "link" })
+			}
+		}
+
+		// Mark post-import links as pending
+		for (const item of postImportLinkItems) {
+			const selectedItem = selectedSeries.value.get(getCartKey(item.sourceId, item.externalId))
+			if (selectedItem) {
+				selectedItem.processingState = "pending"
+				selectedItem.processingMessage = "Waiting for primary import..."
+			}
+		}
+
+		while (pendingJobs.size > 0) {
+			for (const [cartKey, { jobId, type }] of pendingJobs) {
+				const selectedItem = selectedSeries.value.get(cartKey)
+				if (!selectedItem) {
+					pendingJobs.delete(cartKey)
+					continue
+				}
+
+				try {
+					const status = await $fetch<{
+						id: string
+						state: string
+						progress: unknown
+						returnvalue?: { serie_id?: string }
+						failedReason?: string
+					}>(`/api/jobs/serieInserter/${jobId}`)
+
+					if (status.state === "active") {
+						selectedItem.processingState = "processing"
+						selectedItem.processingMessage = type === "import" ? "Importing..." : "Linking..."
+					}
+					else if (status.state === "completed") {
+						selectedItem.processingState = "done"
+						selectedItem.processingMessage = type === "import" ? "Import complete" : "Linked successfully"
+						pendingJobs.delete(cartKey)
+
+						// If this was an import, get the serieId and trigger dependent links
+						if (type === "import") {
+							const serieId = status.returnvalue?.serie_id
+							if (serieId) {
+								const jobInfo = importJobs.get(cartKey)
+								if (jobInfo) jobInfo.serieId = serieId
+
+								// Queue post-import links waiting for this import
+								for (const linkItem of postImportLinkItems) {
+									const linkSelectedItem = selectedSeries.value.get(getCartKey(linkItem.sourceId, linkItem.externalId))
+									if (linkSelectedItem && linkSelectedItem.linkToCartKey === cartKey && linkSelectedItem.processingState === "pending") {
+										linkSelectedItem.processingState = "queued"
+										linkSelectedItem.processingMessage = "Queued for linking..."
+
+										try {
+											const result = await $fetch<{ status: string, jobId?: string }>(`/api/v1/serie/${serieId}/link-source`, {
+												method: "POST",
+												body: {
+													sourceId: linkItem.sourceId,
+													externalId: linkItem.externalId,
+												},
+											})
+
+											if (result.jobId) {
+												linkSelectedItem.jobId = result.jobId
+												const linkKey = getCartKey(linkItem.sourceId, linkItem.externalId)
+												pendingJobs.set(linkKey, { item: linkItem, jobId: result.jobId, type: "link" })
+											}
+										}
+										catch (e: unknown) {
+											const fetchError = e as { data?: { message?: string }, message?: string }
+											linkSelectedItem.processingState = "error"
+											linkSelectedItem.processingMessage = fetchError.data?.message || fetchError.message || "Failed to queue"
+										}
+									}
+								}
+							}
+						}
+					}
+					else if (status.state === "failed") {
+						selectedItem.processingState = "error"
+						selectedItem.processingMessage = status.failedReason || "Job failed"
+						pendingJobs.delete(cartKey)
+
+						// Mark dependent links as failed
+						if (type === "import") {
+							for (const linkItem of postImportLinkItems) {
+								const linkSelectedItem = selectedSeries.value.get(getCartKey(linkItem.sourceId, linkItem.externalId))
+								if (linkSelectedItem && linkSelectedItem.linkToCartKey === cartKey) {
+									linkSelectedItem.processingState = "error"
+									linkSelectedItem.processingMessage = "Primary import failed"
+								}
+							}
+						}
+					}
+				}
+				catch {
+					// Ignore polling errors, will retry on next iteration
+				}
+			}
+
+			if (pendingJobs.size > 0) {
+				await new Promise(r => setTimeout(r, 2000)) // Poll every 2 seconds
 			}
 		}
 	}
@@ -783,6 +1159,10 @@ export function useImportWizard() {
 		// Similarity
 		loadingSimilarities,
 		fetchSimilaritiesForCart,
+
+		// Cart Duplicates
+		hasCartDuplicates,
+		setGroupPrimary,
 
 		// Library Search
 		librarySearchQuery,

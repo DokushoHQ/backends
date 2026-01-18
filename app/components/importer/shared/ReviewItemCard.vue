@@ -9,6 +9,7 @@ const emit = defineEmits<{
 	setAction: [action: "import" | "link", linkToSerieId?: string, linkToSerieTitle?: string, linkToSerieCover?: string | null]
 	remove: []
 	openLibrarySearch: []
+	setGroupPrimary: [cartKey: string]
 }>()
 
 const showMoreMatches = ref(false)
@@ -16,6 +17,8 @@ const showMoreMatches = ref(false)
 const topMatch = computed(() => props.serie.similarMatches?.[0])
 const additionalMatches = computed(() => props.serie.similarMatches?.slice(1) || [])
 const hasMatches = computed(() => (props.serie.similarMatches?.length || 0) > 0)
+const hasCartDuplicates = computed(() => (props.serie.cartDuplicates?.length || 0) > 0)
+const currentCartKey = computed(() => `${props.serie.sourceId}:${props.serie.externalId}`)
 
 function handleActionChange(value: string) {
 	if (value === "import") {
@@ -49,10 +52,11 @@ const selectedValue = computed(() => {
 // Unique radio group name per item
 const radioGroupName = computed(() => `action-${props.serie.sourceId}-${props.serie.externalId}`)
 
-// Check if action is complete (import, or link with linkToSerieId)
+// Check if action is complete (import, or link with linkToSerieId, or linkToCartKey set)
 const isActionComplete = computed(() => {
 	if (props.serie.action === "import") return true
 	if (props.serie.action === "link" && props.serie.linkToSerieId) return true
+	if (props.serie.linkToCartKey) return true // Linked to another cart item
 	return false
 })
 </script>
@@ -95,7 +99,16 @@ const isActionComplete = computed(() => {
 						v-if="!serie.loadingSimilarity"
 						class="hidden md:flex items-center gap-1 mt-2"
 					>
-						<template v-if="hasMatches">
+						<template v-if="hasCartDuplicates">
+							<UIcon
+								name="i-lucide-copy"
+								class="w-3.5 h-3.5 text-warning"
+							/>
+							<span class="text-xs text-warning">
+								{{ serie.cartDuplicates!.length + 1 }} sources
+							</span>
+						</template>
+						<template v-else-if="hasMatches">
 							<UIcon
 								name="i-lucide-alert-triangle"
 								class="w-3.5 h-3.5 text-warning"
@@ -113,6 +126,15 @@ const isActionComplete = computed(() => {
 								No duplicates
 							</span>
 						</template>
+					</div>
+					<!-- Primary badge on desktop -->
+					<div
+						v-if="serie.isPrimaryInGroup"
+						class="hidden md:block mt-1"
+					>
+						<span class="px-1.5 py-0.5 bg-primary text-primary-foreground rounded text-[10px] font-semibold">
+							PRIMARY
+						</span>
 					</div>
 				</div>
 			</div>
@@ -137,7 +159,23 @@ const isActionComplete = computed(() => {
 				>
 					<!-- Status message (mobile only) -->
 					<div
-						v-if="hasMatches"
+						v-if="hasCartDuplicates"
+						class="flex md:hidden items-center gap-1.5 text-sm text-warning mb-2"
+					>
+						<UIcon
+							name="i-lucide-copy"
+							class="w-4 h-4"
+						/>
+						Same series from {{ serie.cartDuplicates!.length + 1 }} sources
+						<span
+							v-if="serie.isPrimaryInGroup"
+							class="ml-1 px-1.5 py-0.5 bg-primary text-primary-foreground rounded text-[10px] font-semibold"
+						>
+							PRIMARY
+						</span>
+					</div>
+					<div
+						v-else-if="hasMatches"
 						class="flex md:hidden items-center gap-1.5 text-sm text-warning mb-2"
 					>
 						<UIcon
@@ -157,8 +195,57 @@ const isActionComplete = computed(() => {
 						No similar series found
 					</div>
 
-					<!-- Radio Options - horizontal on desktop -->
-					<div class="flex flex-col md:flex-row md:flex-wrap gap-x-4 gap-y-1.5">
+					<!-- Cart duplicates: Primary selection (replaces action options) -->
+					<div
+						v-if="hasCartDuplicates"
+						class="space-y-2"
+					>
+						<p class="text-xs text-muted-foreground">
+							Select the primary source for this series:
+						</p>
+
+						<!-- Current item as primary option -->
+						<label class="flex items-center gap-2 cursor-pointer p-2 rounded border border-border hover:bg-muted/50">
+							<input
+								type="radio"
+								:name="`primary-mobile-${currentCartKey}`"
+								:checked="serie.isPrimaryInGroup"
+								@change="emit('setGroupPrimary', currentCartKey)"
+							>
+							<span class="text-sm font-medium">
+								{{ serie.sourceName }}
+							</span>
+							<span class="text-xs text-muted-foreground">
+								(this source)
+							</span>
+						</label>
+
+						<!-- Other sources in the duplicate group -->
+						<label
+							v-for="dup in serie.cartDuplicates"
+							:key="dup.cartKey"
+							class="flex items-center gap-2 cursor-pointer p-2 rounded border border-border hover:bg-muted/50"
+						>
+							<input
+								type="radio"
+								:name="`primary-mobile-${currentCartKey}`"
+								:checked="serie.linkToCartKey === dup.cartKey"
+								@change="emit('setGroupPrimary', dup.cartKey)"
+							>
+							<span class="text-sm font-medium">
+								{{ dup.sourceName }}
+							</span>
+							<span class="text-xs text-muted-foreground">
+								{{ Math.round(dup.similarity * 100) }}% match
+							</span>
+						</label>
+					</div>
+
+					<!-- Radio Options - horizontal on desktop (only show when not cart duplicate) -->
+					<div
+						v-if="!hasCartDuplicates"
+						class="flex flex-col md:flex-row md:flex-wrap gap-x-4 gap-y-1.5"
+					>
 						<!-- Import as new -->
 						<label class="flex items-center gap-2 cursor-pointer">
 							<input
@@ -212,9 +299,9 @@ const isActionComplete = computed(() => {
 						</label>
 					</div>
 
-					<!-- Show more matches -->
+					<!-- Show more matches (only when not cart duplicate) -->
 					<div
-						v-if="additionalMatches.length > 0 && !showMoreMatches"
+						v-if="!hasCartDuplicates && additionalMatches.length > 0 && !showMoreMatches"
 						class="pt-1"
 					>
 						<button
@@ -225,9 +312,9 @@ const isActionComplete = computed(() => {
 						</button>
 					</div>
 
-					<!-- Additional matches -->
+					<!-- Additional matches (only when not cart duplicate) -->
 					<div
-						v-if="showMoreMatches"
+						v-if="!hasCartDuplicates && showMoreMatches"
 						class="flex flex-col md:flex-row md:flex-wrap gap-x-4 gap-y-1.5 pt-1"
 					>
 						<label
@@ -249,9 +336,9 @@ const isActionComplete = computed(() => {
 						</label>
 					</div>
 
-					<!-- Validation error -->
+					<!-- Validation error (only when not cart duplicate) -->
 					<div
-						v-if="!isActionComplete"
+						v-if="!hasCartDuplicates && !isActionComplete"
 						class="flex items-center gap-1.5 text-sm text-destructive pt-1"
 					>
 						<UIcon
@@ -261,9 +348,9 @@ const isActionComplete = computed(() => {
 						{{ serie.action === 'link' && !serie.linkToSerieId ? 'Please select a series to link' : 'Please select an option' }}
 					</div>
 
-					<!-- Linked serie preview -->
+					<!-- Linked serie preview (only when not cart duplicate) -->
 					<div
-						v-if="serie.action === 'link' && serie.linkToSerieId && serie.linkToSerieTitle"
+						v-if="!hasCartDuplicates && serie.action === 'link' && serie.linkToSerieId && serie.linkToSerieTitle"
 						class="mt-3 p-2 rounded-lg border border-border bg-muted/30 flex items-center gap-2"
 					>
 						<div class="flex-shrink-0 w-8 h-11 rounded overflow-hidden bg-muted">
