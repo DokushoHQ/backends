@@ -7,6 +7,17 @@ const wizard = useImportWizardInjected()
 // Track selected item for desktop panel
 const selectedKey = ref<string | null>(null)
 
+// Section collapse state (all expanded by default)
+const sectionsExpanded = ref({
+	cartDuplicates: true,
+	libraryDuplicates: true,
+	clean: true,
+})
+
+function toggleSection(section: keyof typeof sectionsExpanded.value) {
+	sectionsExpanded.value[section] = !sectionsExpanded.value[section]
+}
+
 const selectedSerie = computed(() => {
 	if (!selectedKey.value) return null
 	return wizard.cartItems.value.find(s => getCartKey(s.sourceId, s.externalId) === selectedKey.value) || null
@@ -94,7 +105,16 @@ watch(() => wizard.cartItems.value, (items) => {
 					<div class="flex-1 overflow-y-auto min-h-0 space-y-6">
 						<!-- Category 1: Cart Duplicates (same series from different sources in cart) -->
 						<section v-if="cartDuplicateItems.length > 0">
-							<div class="flex items-center gap-2 mb-3">
+							<button
+								type="button"
+								class="w-full flex items-center gap-2 mb-3 text-left hover:opacity-80 transition-opacity"
+								@click="toggleSection('cartDuplicates')"
+							>
+								<UIcon
+									name="i-lucide-chevron-right"
+									class="w-4 h-4 text-warning transition-transform duration-200"
+									:class="{ 'rotate-90': sectionsExpanded.cartDuplicates }"
+								/>
 								<UIcon
 									name="i-lucide-copy"
 									class="w-5 h-5 text-warning"
@@ -102,37 +122,51 @@ watch(() => wizard.cartItems.value, (items) => {
 								<h3 class="font-semibold text-warning">
 									Duplicates in your selection ({{ cartDuplicateItems.length }})
 								</h3>
-							</div>
-							<p class="text-sm text-muted-foreground mb-3">
-								These appear to be the same series from different sources. Choose which becomes primary.
-							</p>
-							<!-- Desktop: Grid -->
-							<div class="hidden lg:grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
-								<ImporterSharedReviewItemCompact
-									v-for="serie in cartDuplicateItems"
-									:key="getCartKey(serie.sourceId, serie.externalId)"
-									:serie="serie"
-									:selected="selectedKey === getCartKey(serie.sourceId, serie.externalId)"
-									@click="selectSerie(serie)"
-								/>
-							</div>
-							<!-- Mobile: Full cards -->
-							<div class="lg:hidden space-y-4">
-								<ImporterSharedReviewItemCard
-									v-for="serie in cartDuplicateItems"
-									:key="getCartKey(serie.sourceId, serie.externalId)"
-									:serie="serie"
-									@set-action="(action: 'import' | 'link', linkTo?: string, linkToTitle?: string, linkToCover?: string | null) => wizard.setAction(serie.sourceId, serie.externalId, action, linkTo, linkToTitle, linkToCover)"
-									@remove="wizard.removeFromCart(serie.sourceId, serie.externalId)"
-									@open-library-search="wizard.openLibrarySearch(getCartKey(serie.sourceId, serie.externalId))"
-									@set-group-primary="handleSetGroupPrimary"
-								/>
+							</button>
+							<div
+								v-show="sectionsExpanded.cartDuplicates"
+								class="pl-6"
+							>
+								<p class="text-sm text-muted-foreground mb-3">
+									These appear to be the same series from different sources. Choose which becomes primary.
+								</p>
+								<!-- Desktop: Grid -->
+								<div class="hidden lg:grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+									<ImporterSharedReviewItemCompact
+										v-for="serie in cartDuplicateItems"
+										:key="getCartKey(serie.sourceId, serie.externalId)"
+										:serie="serie"
+										:selected="selectedKey === getCartKey(serie.sourceId, serie.externalId)"
+										@click="selectSerie(serie)"
+									/>
+								</div>
+								<!-- Mobile: Full cards -->
+								<div class="lg:hidden space-y-4">
+									<ImporterSharedReviewItemCard
+										v-for="serie in cartDuplicateItems"
+										:key="getCartKey(serie.sourceId, serie.externalId)"
+										:serie="serie"
+										@set-action="(action: 'import' | 'link', linkTo?: string, linkToTitle?: string, linkToCover?: string | null) => wizard.setAction(serie.sourceId, serie.externalId, action, linkTo, linkToTitle, linkToCover)"
+										@remove="wizard.removeFromCart(serie.sourceId, serie.externalId)"
+										@open-library-search="wizard.openLibrarySearch(getCartKey(serie.sourceId, serie.externalId))"
+										@set-group-primary="handleSetGroupPrimary"
+									/>
+								</div>
 							</div>
 						</section>
 
 						<!-- Category 2: Library Duplicates (matches existing library entries) -->
 						<section v-if="libraryDuplicateItems.length > 0">
-							<div class="flex items-center gap-2 mb-3">
+							<button
+								type="button"
+								class="w-full flex items-center gap-2 mb-3 text-left hover:opacity-80 transition-opacity"
+								@click="toggleSection('libraryDuplicates')"
+							>
+								<UIcon
+									name="i-lucide-chevron-right"
+									class="w-4 h-4 text-amber-500 transition-transform duration-200"
+									:class="{ 'rotate-90': sectionsExpanded.libraryDuplicates }"
+								/>
 								<UIcon
 									name="i-lucide-alert-triangle"
 									class="w-5 h-5 text-amber-500"
@@ -140,36 +174,50 @@ watch(() => wizard.cartItems.value, (items) => {
 								<h3 class="font-semibold text-amber-500">
 									Matches in your library ({{ libraryDuplicateItems.length }})
 								</h3>
-							</div>
-							<p class="text-sm text-muted-foreground mb-3">
-								These may already exist in your library. Choose to link or import as new.
-							</p>
-							<!-- Desktop: Grid -->
-							<div class="hidden lg:grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
-								<ImporterSharedReviewItemCompact
-									v-for="serie in libraryDuplicateItems"
-									:key="getCartKey(serie.sourceId, serie.externalId)"
-									:serie="serie"
-									:selected="selectedKey === getCartKey(serie.sourceId, serie.externalId)"
-									@click="selectSerie(serie)"
-								/>
-							</div>
-							<!-- Mobile: Full cards -->
-							<div class="lg:hidden space-y-4">
-								<ImporterSharedReviewItemCard
-									v-for="serie in libraryDuplicateItems"
-									:key="getCartKey(serie.sourceId, serie.externalId)"
-									:serie="serie"
-									@set-action="(action: 'import' | 'link', linkTo?: string, linkToTitle?: string, linkToCover?: string | null) => wizard.setAction(serie.sourceId, serie.externalId, action, linkTo, linkToTitle, linkToCover)"
-									@remove="wizard.removeFromCart(serie.sourceId, serie.externalId)"
-									@open-library-search="wizard.openLibrarySearch(getCartKey(serie.sourceId, serie.externalId))"
-								/>
+							</button>
+							<div
+								v-show="sectionsExpanded.libraryDuplicates"
+								class="pl-6"
+							>
+								<p class="text-sm text-muted-foreground mb-3">
+									These may already exist in your library. Choose to link or import as new.
+								</p>
+								<!-- Desktop: Grid -->
+								<div class="hidden lg:grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+									<ImporterSharedReviewItemCompact
+										v-for="serie in libraryDuplicateItems"
+										:key="getCartKey(serie.sourceId, serie.externalId)"
+										:serie="serie"
+										:selected="selectedKey === getCartKey(serie.sourceId, serie.externalId)"
+										@click="selectSerie(serie)"
+									/>
+								</div>
+								<!-- Mobile: Full cards -->
+								<div class="lg:hidden space-y-4">
+									<ImporterSharedReviewItemCard
+										v-for="serie in libraryDuplicateItems"
+										:key="getCartKey(serie.sourceId, serie.externalId)"
+										:serie="serie"
+										@set-action="(action: 'import' | 'link', linkTo?: string, linkToTitle?: string, linkToCover?: string | null) => wizard.setAction(serie.sourceId, serie.externalId, action, linkTo, linkToTitle, linkToCover)"
+										@remove="wizard.removeFromCart(serie.sourceId, serie.externalId)"
+										@open-library-search="wizard.openLibrarySearch(getCartKey(serie.sourceId, serie.externalId))"
+									/>
+								</div>
 							</div>
 						</section>
 
 						<!-- Category 3: All Good (no duplicates) -->
 						<section v-if="cleanItems.length > 0">
-							<div class="flex items-center gap-2 mb-3">
+							<button
+								type="button"
+								class="w-full flex items-center gap-2 mb-3 text-left hover:opacity-80 transition-opacity"
+								@click="toggleSection('clean')"
+							>
+								<UIcon
+									name="i-lucide-chevron-right"
+									class="w-4 h-4 text-success transition-transform duration-200"
+									:class="{ 'rotate-90': sectionsExpanded.clean }"
+								/>
 								<UIcon
 									name="i-lucide-check-circle"
 									class="w-5 h-5 text-success"
@@ -177,27 +225,32 @@ watch(() => wizard.cartItems.value, (items) => {
 								<h3 class="font-semibold text-success">
 									Ready to import ({{ cleanItems.length }})
 								</h3>
-							</div>
-							<!-- Desktop: Grid -->
-							<div class="hidden lg:grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
-								<ImporterSharedReviewItemCompact
-									v-for="serie in cleanItems"
-									:key="getCartKey(serie.sourceId, serie.externalId)"
-									:serie="serie"
-									:selected="selectedKey === getCartKey(serie.sourceId, serie.externalId)"
-									@click="selectSerie(serie)"
-								/>
-							</div>
-							<!-- Mobile: Full cards -->
-							<div class="lg:hidden space-y-4">
-								<ImporterSharedReviewItemCard
-									v-for="serie in cleanItems"
-									:key="getCartKey(serie.sourceId, serie.externalId)"
-									:serie="serie"
-									@set-action="(action: 'import' | 'link', linkTo?: string, linkToTitle?: string, linkToCover?: string | null) => wizard.setAction(serie.sourceId, serie.externalId, action, linkTo, linkToTitle, linkToCover)"
-									@remove="wizard.removeFromCart(serie.sourceId, serie.externalId)"
-									@open-library-search="wizard.openLibrarySearch(getCartKey(serie.sourceId, serie.externalId))"
-								/>
+							</button>
+							<div
+								v-show="sectionsExpanded.clean"
+								class="pl-6"
+							>
+								<!-- Desktop: Grid -->
+								<div class="hidden lg:grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+									<ImporterSharedReviewItemCompact
+										v-for="serie in cleanItems"
+										:key="getCartKey(serie.sourceId, serie.externalId)"
+										:serie="serie"
+										:selected="selectedKey === getCartKey(serie.sourceId, serie.externalId)"
+										@click="selectSerie(serie)"
+									/>
+								</div>
+								<!-- Mobile: Full cards -->
+								<div class="lg:hidden space-y-4">
+									<ImporterSharedReviewItemCard
+										v-for="serie in cleanItems"
+										:key="getCartKey(serie.sourceId, serie.externalId)"
+										:serie="serie"
+										@set-action="(action: 'import' | 'link', linkTo?: string, linkToTitle?: string, linkToCover?: string | null) => wizard.setAction(serie.sourceId, serie.externalId, action, linkTo, linkToTitle, linkToCover)"
+										@remove="wizard.removeFromCart(serie.sourceId, serie.externalId)"
+										@open-library-search="wizard.openLibrarySearch(getCartKey(serie.sourceId, serie.externalId))"
+									/>
+								</div>
 							</div>
 						</section>
 					</div>

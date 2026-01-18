@@ -1,5 +1,7 @@
 import {
+	DeleteObjectCommand,
 	DeleteObjectsCommand,
+	GetObjectCommand,
 	ListObjectsV2Command,
 	PutObjectCommand,
 	S3Client,
@@ -217,6 +219,69 @@ export async function uploadImageFile(
 			}
 		},
 		{ retries: 5 },
+	)
+}
+
+/**
+ * Upload a raw file buffer to S3 (for temporary storage like TMB backups)
+ * @param buffer - File buffer to upload
+ * @param key - S3 object key
+ * @param contentType - MIME type of the file
+ */
+export async function uploadRawFile(
+	buffer: Buffer,
+	key: string,
+	contentType: string = "application/octet-stream",
+): Promise<string> {
+	const s3 = getS3Client()
+	await s3.send(
+		new PutObjectCommand({
+			Bucket: getBucketName(),
+			Key: key,
+			Body: buffer,
+			ContentType: contentType,
+		}),
+	)
+	return key
+}
+
+/**
+ * Download a raw file from S3
+ * @param key - S3 object key
+ * @returns File buffer
+ */
+export async function downloadRawFile(key: string): Promise<Buffer> {
+	const s3 = getS3Client()
+	const response = await s3.send(
+		new GetObjectCommand({
+			Bucket: getBucketName(),
+			Key: key,
+		}),
+	)
+
+	if (!response.Body) {
+		throw new Error(`S3 object ${key} has no body`)
+	}
+
+	// Convert stream to buffer
+	const chunks: Uint8Array[] = []
+	for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+		chunks.push(chunk)
+	}
+	return Buffer.concat(chunks)
+}
+
+/**
+ * Delete a single S3 object
+ * @param key - S3 object key
+ */
+export async function deleteFile(key: string): Promise<void> {
+	const s3 = getS3Client()
+	await s3.send(
+		new DeleteObjectCommand({
+			Bucket: getBucketName(),
+			Key: key,
+		}),
 	)
 }
 

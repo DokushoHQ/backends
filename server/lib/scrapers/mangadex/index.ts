@@ -188,9 +188,13 @@ export class Mangadex implements SourceProvider {
 
 		const data = await fetch(url, { method: "GET" })
 
+		if (!data.ok) {
+			throw new Error(`MangaDex API HTTP error: ${data.status} ${data.statusText}`)
+		}
+
 		const json = await data.json()
 		const response = await mangadexMultipleMangaResponse.parseAsync(json)
-		if (response.result !== "ok") throw new Error(`Invalid response: ${response.result}`)
+		if (response.result !== "ok") throw new Error(`MangaDex API error: ${response.result}`)
 
 		return {
 			hasNextPage: response.offset + response.limit < response.total,
@@ -228,6 +232,11 @@ export class Mangadex implements SourceProvider {
 
 		const chapterUrl = new URL(`chapter?${chapterParams}`, this.#apiInformation.api_url)
 		const chapterData = await fetch(chapterUrl, { method: "GET" })
+
+		if (!chapterData.ok) {
+			throw new Error(`MangaDex API HTTP error: ${chapterData.status} ${chapterData.statusText}`)
+		}
+
 		const chapterJson = await chapterData.json()
 		const chapterResponse = await mangadexLatestChaptersResponse.parseAsync(chapterJson)
 
@@ -262,6 +271,11 @@ export class Mangadex implements SourceProvider {
 
 		const mangaUrl = new URL(`manga?${mangaParams}`, this.#apiInformation.api_url)
 		const mangaData = await fetch(mangaUrl, { method: "GET" })
+
+		if (!mangaData.ok) {
+			throw new Error(`MangaDex API HTTP error: ${mangaData.status} ${mangaData.statusText}`)
+		}
+
 		const mangaJson = await mangaData.json()
 		const mangaResponse = await mangadexMultipleMangaResponse.parseAsync(mangaJson)
 
@@ -293,6 +307,11 @@ export class Mangadex implements SourceProvider {
 		const url = new URL(`manga/${serie_id}?${params}`, this.#apiInformation.api_url)
 
 		const data = await fetch(url, { method: "GET" })
+
+		if (!data.ok) {
+			throw new Error(`MangaDex API HTTP error: ${data.status} ${data.statusText}`)
+		}
+
 		const json = await data.json()
 		const response = await mangaDexSingleMangaResponse.parseAsync(json)
 
@@ -325,6 +344,11 @@ export class Mangadex implements SourceProvider {
 			const url = new URL(`manga/${serieId}/feed?${params}`, this.#apiInformation.api_url)
 
 			const data = await fetch(url, { method: "GET" })
+
+			if (!data.ok) {
+				throw new Error(`MangaDex API HTTP error: ${data.status} ${data.statusText}`)
+			}
+
 			const json = await data.json()
 			const response = await mangadexMultipleChapterResponse.parseAsync(json)
 
@@ -356,6 +380,11 @@ export class Mangadex implements SourceProvider {
 		const url = new URL(`at-home/server/${chapterId}?${params}`, this.#apiInformation.api_url)
 
 		const data = await fetch(url, { method: "GET" })
+
+		if (!data.ok) {
+			throw new Error(`MangaDex API HTTP error: ${data.status} ${data.statusText}`)
+		}
+
 		const json = await data.json()
 
 		const response = await mangaDexAtHomeResponse.parseAsync(json)

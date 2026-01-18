@@ -194,6 +194,11 @@ export class WeebCentral implements SourceProvider {
 
 		const url = new URL(`/search/data?${params}`, this.#apiInformation.api_url)
 		const data = await fetch(url, { method: "GET" })
+
+		if (!data.ok) {
+			throw new Error(`WeebCentral HTTP error: ${data.status} ${data.statusText}`)
+		}
+
 		const html = await data.text()
 		const $ = load(html)
 
@@ -268,6 +273,11 @@ export class WeebCentral implements SourceProvider {
 		const url = this.serieUrl(serieId)
 
 		const data = await fetch(url, { method: "GET" })
+
+		if (!data.ok) {
+			throw new Error(`WeebCentral HTTP error: ${data.status} ${data.statusText}`)
+		}
+
 		const html = await data.text()
 		const $ = load(html)
 
@@ -357,6 +367,11 @@ export class WeebCentral implements SourceProvider {
 		const url = new URL(`series/${serieId}/full-chapter-list`, this.#information.url)
 
 		const data = await fetch(url, { method: "GET" })
+
+		if (!data.ok) {
+			throw new Error(`WeebCentral HTTP error: ${data.status} ${data.statusText}`)
+		}
+
 		const html = await data.text()
 		const $ = load(html)
 
@@ -429,6 +444,11 @@ export class WeebCentral implements SourceProvider {
 		url.searchParams.append("reading_style", "long_strip")
 
 		const data = await fetch(url, { method: "GET" })
+
+		if (!data.ok) {
+			throw new Error(`WeebCentral HTTP error: ${data.status} ${data.statusText}`)
+		}
+
 		const html = await data.text()
 		const $ = load(html)
 

@@ -53,6 +53,7 @@
 		"qrcode": "^1.5.4",
 		"sharp": "^0.34.5",
 		"tailwindcss": "^4.1.18",
+		"unzipper": "^0.12.3",
 		"vue": "latest",
 		"vue-chrts": "^2.0.0",
 		"zod": "^4.3.5"
@@ -65,6 +66,7 @@
 		"@types/papaparse": "^5.5.2",
 		"@types/pg": "^8.16.0",
 		"@types/qrcode": "^1.5.6",
+		"@types/unzipper": "^0.10.11",
 		"@vue/test-utils": "^2.4.6",
 		"eslint": "^9.39.2",
 		"happy-dom": "^20.1.0",

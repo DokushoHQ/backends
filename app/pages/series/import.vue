@@ -18,6 +18,8 @@ const stepTitle = computed(() => {
 		case "url-paste": return "Paste URLs"
 		case "source-select": return "Select Source"
 		case "browse": return wizard.selectedSource.value?.name || "Browse"
+		case "tmb-upload": return "Import Backup"
+		case "tmb-select": return "Select Manga"
 		case "review": return `Review (${wizard.cartCount.value})`
 		case "processing": return "Importing..."
 		default: return "Import"
@@ -30,6 +32,8 @@ const stepDescription = computed(() => {
 		case "url-paste": return "Paste series URLs to import"
 		case "source-select": return "Select a source to browse"
 		case "browse": return "Search and select series to import"
+		case "tmb-upload": return "Upload your Tachimanga backup file"
+		case "tmb-select": return "Select manga to import from your backup"
 		case "review": return "Review your selections before importing"
 		case "processing": return "Importing your selections..."
 		default: return ""
@@ -53,10 +57,14 @@ function handleBack() {
 			break
 		case "url-paste":
 		case "source-select":
+		case "tmb-upload":
 			wizard.goToEntry()
 			break
 		case "browse":
 			wizard.goBackToSources()
+			break
+		case "tmb-select":
+			wizard.goToStep("tmb-upload")
 			break
 		case "review":
 			wizard.goBackFromReview()
@@ -144,6 +152,8 @@ onUnmounted(() => {
 				<ImporterStepsUrlPasteStep v-else-if="wizard.step.value === 'url-paste'" />
 				<ImporterStepsSourceSelectStep v-else-if="wizard.step.value === 'source-select'" />
 				<ImporterStepsBrowseStep v-else-if="wizard.step.value === 'browse'" />
+				<ImporterStepsTmbUploadStep v-else-if="wizard.step.value === 'tmb-upload'" />
+				<ImporterStepsTmbSelectStep v-else-if="wizard.step.value === 'tmb-select'" />
 				<ImporterStepsReviewStep v-else-if="wizard.step.value === 'review'" />
 				<ImporterStepsProcessingStep
 					v-else-if="wizard.step.value === 'processing'"

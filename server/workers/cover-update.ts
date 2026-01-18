@@ -124,6 +124,7 @@ async function processCustomCover(
 export default defineWorker<typeof QUEUE_NAME, CoverUpdateJobData, undefined>({
 	name: QUEUE_NAME,
 	options: {
+		concurrency: 2,
 		metrics: { maxDataPoints: MetricsTime.ONE_WEEK * 2 },
 	},
 	async processor(job) {

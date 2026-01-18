@@ -71,8 +71,57 @@ export function useImportWizardInjected(): ImportWizardReturn {
 
 // ==================== Types ====================
 
-export type WizardStep = "entry" | "url-paste" | "source-select" | "browse" | "review" | "processing"
-export type EntryMode = "browse" | "url" | "csv" | null
+export type WizardStep = "entry" | "url-paste" | "source-select" | "browse" | "tmb-upload" | "tmb-select" | "review" | "processing"
+export type EntryMode = "browse" | "url" | "csv" | "tmb" | null
+
+// ==================== Backup Import Types ====================
+
+export interface BackupParsedManga {
+	id: number | string
+	title: string
+	backupSourceId: string
+	backupSourceName: string
+	relativeUrl: string
+	categories: string[]
+	mapped: boolean
+	sourceId?: string
+	sourceName?: string
+	serieId?: string
+	alreadyImported: boolean
+	existingSerieId?: string
+	selected: boolean // For UI selection
+}
+
+export interface BackupCategory {
+	id: number | string
+	name: string
+	count: number
+}
+
+export interface BackupProgress {
+	stage: "downloading" | "extracting" | "parsing" | "mapping" | "checking" | "complete"
+	percent: number
+	current?: number
+	total?: number
+}
+
+export interface BackupParseResult {
+	backupType: string
+	manga: BackupParsedManga[]
+	categories: BackupCategory[]
+	stats: {
+		total: number
+		mapped: number
+		unmapped: number
+		alreadyImported: number
+	}
+}
+
+// Legacy aliases for backwards compatibility in components
+export type TmbParsedManga = BackupParsedManga
+export type TmbCategory = BackupCategory
+export type TmbProgress = BackupProgress
+export type TmbParseResult = BackupParseResult
 
 export interface SimilarMatch {
 	serieId: string
@@ -238,6 +287,16 @@ export function useImportWizard() {
 	// ==================== Processing State ====================
 	const processingStarted = ref(false)
 
+	// ==================== TMB Import State ====================
+	const tmbJobId = ref<string | null>(null)
+	const tmbProgress = ref<TmbProgress>({ stage: "extracting", percent: 0 })
+	const tmbResults = ref<TmbParseResult | null>(null)
+	const tmbError = ref<string | null>(null)
+	const tmbSelectedCategory = ref<number | string | null>(null)
+	const tmbUploading = ref(false)
+	const tmbPolling = ref(false)
+	const tmbAddingToCart = ref(false)
+
 	// ==================== Library Search State ====================
 	const librarySearchQuery = ref("")
 	const librarySearchResults = ref<RecentSerie[]>([])
@@ -301,6 +360,25 @@ export function useImportWizard() {
 		}
 	})
 
+	// ==================== TMB Computed ====================
+	const tmbFilteredManga = computed(() => {
+		if (!tmbResults.value) return []
+		const manga = tmbResults.value.manga
+		if (tmbSelectedCategory.value === null) return manga
+		const category = tmbResults.value.categories.find(c => c.id === tmbSelectedCategory.value)
+		if (!category) return manga
+		return manga.filter(m => m.categories.includes(category.name))
+	})
+
+	const tmbImportableManga = computed(() => {
+		return tmbFilteredManga.value.filter(m => m.mapped && !m.alreadyImported && m.selected)
+	})
+
+	const tmbSelectedCount = computed(() => {
+		if (!tmbResults.value) return 0
+		return tmbResults.value.manga.filter(m => m.selected).length
+	})
+
 	// ==================== Cart Methods ====================
 	function getCartKey(sourceId: string, externalId: string): string {
 		return `${sourceId}:${externalId}`
@@ -355,6 +433,17 @@ export function useImportWizard() {
 		step.value = "url-paste"
 	}
 
+	function startTmbImport() {
+		entryMode.value = "tmb"
+		step.value = "tmb-upload"
+		// Reset TMB state
+		tmbJobId.value = null
+		tmbProgress.value = { stage: "extracting", percent: 0 }
+		tmbResults.value = null
+		tmbError.value = null
+		tmbSelectedCategory.value = null
+	}
+
 	function selectSource(source: Source) {
 		selectedSource.value = source
 		searchQuery.value = ""
@@ -385,6 +474,9 @@ export function useImportWizard() {
 		}
 		else if (entryMode.value === "url") {
 			step.value = "url-paste"
+		}
+		else if (entryMode.value === "tmb") {
+			step.value = "tmb-select"
 		}
 		else {
 			step.value = "entry"
@@ -602,6 +694,185 @@ export function useImportWizard() {
 		// Clear parsed URLs after adding
 		urlInput.value = ""
 		parsedUrls.value = []
+	}
+
+	// ==================== TMB Import Methods ====================
+	async function uploadTmbFile(file: File) {
+		tmbUploading.value = true
+		tmbError.value = null
+
+		try {
+			const formData = new FormData()
+			formData.append("file", file)
+
+			const response = await $fetch<{ jobId: string }>("/api/v1/import-tmb/upload", {
+				method: "POST",
+				body: formData,
+			})
+
+			tmbJobId.value = response.jobId
+			// Start polling for status
+			await pollTmbStatus()
+		}
+		catch (e: unknown) {
+			const fetchError = e as { data?: { message?: string }, message?: string }
+			tmbError.value = fetchError.data?.message || fetchError.message || "Failed to upload file"
+		}
+		finally {
+			tmbUploading.value = false
+		}
+	}
+
+	async function pollTmbStatus() {
+		if (!tmbJobId.value) return
+
+		tmbPolling.value = true
+
+		try {
+			while (true) {
+				const status = await $fetch<{
+					id: string
+					state: string
+					progress: TmbProgress | null
+					result: TmbParseResult | null
+					failedReason: string | null
+				}>(`/api/v1/import-tmb/${tmbJobId.value}/status`)
+
+				if (status.progress) {
+					tmbProgress.value = status.progress
+				}
+
+				if (status.state === "completed" && status.result) {
+					// Add selected flag to manga and auto-select importable ones
+					tmbResults.value = {
+						...status.result,
+						manga: status.result.manga.map(m => ({
+							...m,
+							selected: m.mapped && !m.alreadyImported,
+						})),
+					}
+					step.value = "tmb-select"
+					break
+				}
+				else if (status.state === "failed") {
+					tmbError.value = status.failedReason || "Parsing failed"
+					break
+				}
+
+				// Wait before next poll
+				await new Promise(resolve => setTimeout(resolve, 1000))
+			}
+		}
+		catch (e: unknown) {
+			const fetchError = e as { data?: { message?: string }, message?: string }
+			tmbError.value = fetchError.data?.message || fetchError.message || "Failed to get status"
+		}
+		finally {
+			tmbPolling.value = false
+		}
+	}
+
+	function toggleTmbMangaSelection(mangaId: number | string) {
+		if (!tmbResults.value) return
+		const manga = tmbResults.value.manga.find(m => m.id === mangaId)
+		if (manga && manga.mapped && !manga.alreadyImported) {
+			manga.selected = !manga.selected
+		}
+	}
+
+	function selectAllTmbManga() {
+		const filteredIds = new Set(tmbFilteredManga.value.map(m => m.id))
+		if (!tmbResults.value) return
+		for (const manga of tmbResults.value.manga) {
+			if (filteredIds.has(manga.id) && manga.mapped && !manga.alreadyImported) {
+				manga.selected = true
+			}
+		}
+	}
+
+	function deselectAllTmbManga() {
+		const filteredIds = new Set(tmbFilteredManga.value.map(m => m.id))
+		if (!tmbResults.value) return
+		for (const manga of tmbResults.value.manga) {
+			if (filteredIds.has(manga.id)) {
+				manga.selected = false
+			}
+		}
+	}
+
+	async function addTmbToCart() {
+		const selectedManga = tmbImportableManga.value
+
+		if (selectedManga.length === 0) return
+
+		tmbAddingToCart.value = true
+
+		const missingSourceIds = new Set<string>()
+		let addedCount = 0
+
+		try {
+			// Ensure sources are loaded (required for mapping external_id to database UUID)
+			if (sources.value.length === 0) {
+				await fetchSources()
+			}
+
+			for (const manga of selectedManga) {
+				if (!manga.sourceId || !manga.serieId || !manga.sourceName) continue
+
+				// Find the database source by external_id
+				// manga.sourceId is the external_id (e.g., "mangadex"), we need the database UUID
+				const dbSource = sources.value.find(s => s.external_id === manga.sourceId)
+
+				if (!dbSource) {
+					missingSourceIds.add(manga.sourceId)
+					continue
+				}
+
+				// Fetch detail to get full info using database source ID
+				try {
+					const detail = await $fetch(`/api/v1/sources/${dbSource.id}/detail`, {
+						query: { serieId: manga.serieId },
+					}) as SerieDetail
+
+					addToCart({
+						sourceId: dbSource.id,
+						sourceName: manga.sourceName,
+						externalId: manga.serieId,
+						title: detail.title,
+						cover: detail.cover,
+						type: detail.type,
+						status: detail.status,
+					})
+					addedCount++
+				}
+				catch {
+					// If can't fetch detail, use basic info from TMB
+					addToCart({
+						sourceId: dbSource.id,
+						sourceName: manga.sourceName,
+						externalId: manga.serieId,
+						title: manga.title,
+						cover: null,
+						type: "Unknown",
+						status: [],
+					})
+					addedCount++
+				}
+			}
+
+			if (addedCount === 0 && selectedManga.length > 0) {
+				if (missingSourceIds.size > 0) {
+					console.warn(`[TMB Import] Missing sources: ${[...missingSourceIds].join(", ")}`)
+					alert(`Could not add any items. Missing sources: ${[...missingSourceIds].join(", ")}\n\nMake sure these sources are enabled in the database.`)
+				}
+				return
+			}
+
+			goToReview()
+		}
+		finally {
+			tmbAddingToCart.value = false
+		}
 	}
 
 	// ==================== Similarity ====================
@@ -1104,6 +1375,15 @@ export function useImportWizard() {
 		loadingRecentSeries.value = false
 		showLibrarySearchSheet.value = false
 		librarySearchForSerieKey.value = null
+		// TMB state
+		tmbJobId.value = null
+		tmbProgress.value = { stage: "extracting", percent: 0 }
+		tmbResults.value = null
+		tmbError.value = null
+		tmbSelectedCategory.value = null
+		tmbUploading.value = false
+		tmbPolling.value = false
+		tmbAddingToCart.value = false
 	}
 
 	return {
@@ -1195,9 +1475,28 @@ export function useImportWizard() {
 		goToEntry,
 		startBrowse,
 		startUrlPaste,
+		startTmbImport,
 		goBackToSources,
 		goToReview,
 		goBackFromReview,
+
+		// TMB Import
+		tmbJobId,
+		tmbProgress,
+		tmbResults,
+		tmbError,
+		tmbSelectedCategory,
+		tmbUploading,
+		tmbPolling,
+		tmbAddingToCart,
+		tmbFilteredManga,
+		tmbImportableManga,
+		tmbSelectedCount,
+		uploadTmbFile,
+		toggleTmbMangaSelection,
+		selectAllTmbManga,
+		deselectAllTmbManga,
+		addTmbToCart,
 
 		// Reset
 		reset,
