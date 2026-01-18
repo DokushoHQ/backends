@@ -30,13 +30,14 @@ export class SuwayomiClient {
 		this.baseUrl = baseUrl.replace(/\/$/, "")
 	}
 
-	private async graphql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+	private async graphql<T>(query: string, variables?: Record<string, unknown>, timeoutMs = 120_000): Promise<T> {
 		const response = await fetch(`${this.baseUrl}/api/graphql`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({ query, variables }),
+			signal: AbortSignal.timeout(timeoutMs),
 		})
 
 		if (!response.ok) {

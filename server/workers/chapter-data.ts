@@ -1,13 +1,13 @@
-import { join } from "node:path"
 import { defineWorker } from "#processor"
 import { MetricsTime, type Job } from "bullmq"
+import { join } from "node:path"
 import pLimit from "p-limit"
 import type { ChapterDataJobData } from "../queues/chapter-data"
-import { QUEUE_NAME, chapterDataJobDataSchema } from "../queues/chapter-data"
-import { db } from "../utils/db"
+import { chapterDataJobDataSchema, QUEUE_NAME } from "../queues/chapter-data"
 import type { Chapter, PageFetchStatus, Prisma } from "../utils/db"
+import { db } from "../utils/db"
 import { deleteByPrefix, GifTooLargeError, uploadImageFile } from "../utils/s3"
-import { createSources, getSourceById } from "../utils/sources"
+import { getSourceById } from "../utils/sources"
 
 type PageUploadResult = {
 	success: boolean
@@ -22,7 +22,6 @@ async function processChapterUpdate(
 		serie: { sources: { external_id: string, source_id: string }[] }
 	},
 ): Promise<PageFetchStatus> {
-	const config = useRuntimeConfig()
 	job.log(`Fetching chapter data for chapter ${chapter.id}`)
 
 	// Set status to InProgress
@@ -32,15 +31,7 @@ async function processChapterUpdate(
 	})
 
 	// Create sources and get the right one
-	const enabledLanguages = config.enabledLanguages
-		?.split(",")
-		.map((lang: string) => lang.trim())
-		.filter(Boolean) as ("En" | "Fr")[]
-	const sources = await createSources({
-		ENABLED_LANGUAGE: enabledLanguages?.length ? enabledLanguages : ["En"],
-		BYPARR_URL: config.byparrUrl,
-		SUWAYOMI_URL: config.suwayomiUrl,
-	})
+	const sources = await getSources()
 	const source = getSourceById(sources, chapter.source.external_id)
 
 	// Find the SerieSource that matches this chapter's source
