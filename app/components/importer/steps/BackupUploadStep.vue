@@ -15,7 +15,7 @@ async function handleFileUpload(event: Event) {
 	const file = input.files?.[0]
 	if (!file) return
 
-	await wizard.uploadTmbFile(file)
+	await wizard.uploadBackupFile(file)
 
 	// Reset the input so the same file can be uploaded again
 	input.value = ""
@@ -43,14 +43,14 @@ async function handleDrop(event: DragEvent) {
 
 	const file = event.dataTransfer?.files?.[0]
 	if (file && isSupportedFile(file.name)) {
-		await wizard.uploadTmbFile(file)
+		await wizard.uploadBackupFile(file)
 	}
 }
 
-const isProcessing = computed(() => wizard.tmbUploading.value || wizard.tmbPolling.value)
+const isProcessing = computed(() => wizard.backupUploading.value || wizard.backupPolling.value)
 
 const stageLabel = computed(() => {
-	switch (wizard.tmbProgress.value.stage) {
+	switch (wizard.backupProgress.value.stage) {
 		case "extracting": return "Extracting backup file..."
 		case "parsing": return "Parsing manga database..."
 		case "mapping": return "Mapping sources..."
@@ -67,7 +67,7 @@ const stageLabel = computed(() => {
 		<div class="flex-1 flex flex-col items-center justify-center px-4">
 			<!-- Error State -->
 			<div
-				v-if="wizard.tmbError.value"
+				v-if="wizard.backupError.value"
 				class="text-center max-w-md"
 			>
 				<div class="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
@@ -80,11 +80,11 @@ const stageLabel = computed(() => {
 					Failed to parse backup
 				</h3>
 				<p class="text-sm text-muted-foreground mb-4">
-					{{ wizard.tmbError.value }}
+					{{ wizard.backupError.value }}
 				</p>
 				<UButton
 					variant="outline"
-					@click="wizard.startTmbImport()"
+					@click="wizard.startBackupImport()"
 				>
 					Try Again
 				</UButton>
@@ -109,17 +109,17 @@ const stageLabel = computed(() => {
 				<div class="w-full bg-muted rounded-full h-2 overflow-hidden mb-3">
 					<div
 						class="h-full bg-primary transition-all duration-300"
-						:style="{ width: `${wizard.tmbProgress.value.percent}%` }"
+						:style="{ width: `${wizard.backupProgress.value.percent}%` }"
 					/>
 				</div>
 
 				<!-- Progress Details -->
 				<p class="text-sm text-muted-foreground">
-					<template v-if="wizard.tmbProgress.value.current !== undefined && wizard.tmbProgress.value.total">
-						{{ wizard.tmbProgress.value.current }} / {{ wizard.tmbProgress.value.total }}
+					<template v-if="wizard.backupProgress.value.current !== undefined && wizard.backupProgress.value.total">
+						{{ wizard.backupProgress.value.current }} / {{ wizard.backupProgress.value.total }}
 					</template>
 					<template v-else>
-						{{ wizard.tmbProgress.value.percent }}%
+						{{ wizard.backupProgress.value.percent }}%
 					</template>
 				</p>
 			</div>

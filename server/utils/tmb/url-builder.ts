@@ -7,11 +7,11 @@ import { NATIVE_SOURCE_MAP } from "./source-map"
  */
 const URL_TRANSFORMERS: Record<string, (relativeUrl: string) => string> = {
 	// MangaDex: /manga/{uuid} -> /title/{uuid}
-	mangadex: (url) => url.replace(/^\/manga\//, "/title/"),
+	mangadex: url => url.replace(/^\/manga\//, "/title/"),
 	// WeebCentral: /series/{id}/{slug} -> /series/{id}/{slug} (no change needed)
-	weebcentral: (url) => url,
+	weebcentral: url => url,
 	// Japscan: /{type}/{slug} -> /{type}/{slug} (no change needed)
-	japscan: (url) => url,
+	japscan: url => url,
 }
 
 /**

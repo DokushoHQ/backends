@@ -4,8 +4,8 @@ import type { SourceProvider } from "../sources/core"
 import type {
 	BackupParser,
 	BackupParseResult,
-	ParsedMangaEntry,
 	ParsedCategory,
+	ParsedMangaEntry,
 	SourceMappingResult,
 } from "./types"
 
@@ -85,12 +85,6 @@ interface Long {
 	unsigned: boolean
 	toNumber(): number
 	toString(): string
-}
-
-function toLong(value: number | Long | undefined): number {
-	if (value === undefined) return 0
-	if (typeof value === "number") return value
-	return value.toNumber()
 }
 
 function toSourceId(value: number | Long | undefined): string {

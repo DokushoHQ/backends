@@ -54,7 +54,7 @@ const wizard = useImportWizardInjected()
 
 			<button
 				class="p-6 rounded-lg border border-border hover:border-primary hover:bg-muted/50 transition-colors text-left h-full"
-				@click="wizard.startTmbImport()"
+				@click="wizard.startBackupImport()"
 			>
 				<div class="flex flex-col items-center text-center gap-4">
 					<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
