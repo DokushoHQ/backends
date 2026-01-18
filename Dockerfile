@@ -1,6 +1,7 @@
 FROM node:25-slim AS base
 WORKDIR /app
 ENV NODE_ENV=production
+RUN apt-get update -y && apt-get install -y openssl
 
 FROM base AS build
 RUN npm install -g --force corepack && corepack enable
