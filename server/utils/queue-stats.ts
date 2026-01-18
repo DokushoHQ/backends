@@ -31,6 +31,10 @@ import updateSchedulerQueue, {
 	QUEUE_NAME as UPDATE_SCHEDULER_NAME,
 	DISPLAY_NAME as UPDATE_SCHEDULER_DISPLAY,
 } from "../queues/update-scheduler"
+import backupParserQueue, {
+	QUEUE_NAME as BACKUP_PARSER_NAME,
+	DISPLAY_NAME as BACKUP_PARSER_DISPLAY,
+} from "../queues/backup-parser"
 
 const queues = {
 	serieInserter: serieInserterQueue,
@@ -41,6 +45,7 @@ const queues = {
 	deleteSerie: deleteSerieQueue,
 	email: emailQueue,
 	pageRetry: pageRetryQueue,
+	backupParser: backupParserQueue,
 }
 
 export type QueueName = keyof typeof queues
@@ -65,6 +70,7 @@ export const queueConfig: Record<
 	deleteSerie: { name: DELETE_SERIE_NAME, displayName: DELETE_SERIE_DISPLAY },
 	email: { name: EMAIL_NAME, displayName: EMAIL_DISPLAY },
 	pageRetry: { name: PAGE_RETRY_NAME, displayName: PAGE_RETRY_DISPLAY },
+	backupParser: { name: BACKUP_PARSER_NAME, displayName: BACKUP_PARSER_DISPLAY },
 }
 
 export const allQueueNames = Object.keys(queueConfig) as QueueName[]

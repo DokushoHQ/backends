@@ -71,8 +71,51 @@ export function useImportWizardInjected(): ImportWizardReturn {
 
 // ==================== Types ====================
 
-export type WizardStep = "entry" | "url-paste" | "source-select" | "browse" | "review" | "processing"
-export type EntryMode = "browse" | "url" | "csv" | null
+export type WizardStep = "entry" | "url-paste" | "source-select" | "browse" | "backup-upload" | "backup-select" | "review" | "processing"
+export type EntryMode = "browse" | "url" | "csv" | "backup" | null
+
+// ==================== Backup Import Types ====================
+
+export interface BackupParsedManga {
+	id: number | string
+	title: string
+	backupSourceId: string
+	backupSourceName: string
+	relativeUrl: string
+	categories: string[]
+	mapped: boolean
+	sourceId?: string
+	sourceName?: string
+	serieId?: string
+	alreadyImported: boolean
+	existingSerieId?: string
+	selected: boolean // For UI selection
+}
+
+export interface BackupCategory {
+	id: number | string
+	name: string
+	count: number
+}
+
+export interface BackupProgress {
+	stage: "downloading" | "extracting" | "parsing" | "mapping" | "checking" | "complete"
+	percent: number
+	current?: number
+	total?: number
+}
+
+export interface BackupParseResult {
+	backupType: string
+	manga: BackupParsedManga[]
+	categories: BackupCategory[]
+	stats: {
+		total: number
+		mapped: number
+		unmapped: number
+		alreadyImported: number
+	}
+}
 
 export interface SimilarMatch {
 	serieId: string
@@ -238,6 +281,16 @@ export function useImportWizard() {
 	// ==================== Processing State ====================
 	const processingStarted = ref(false)
 
+	// ==================== TMB Import State ====================
+	const backupJobId = ref<string | null>(null)
+	const backupProgress = ref<BackupProgress>({ stage: "extracting", percent: 0 })
+	const backupResults = ref<BackupParseResult | null>(null)
+	const backupError = ref<string | null>(null)
+	const backupSelectedCategory = ref<number | string | null>(null)
+	const backupUploading = ref(false)
+	const backupPolling = ref(false)
+	const backupAddingToCart = ref(false)
+
 	// ==================== Library Search State ====================
 	const librarySearchQuery = ref("")
 	const librarySearchResults = ref<RecentSerie[]>([])
@@ -301,6 +354,25 @@ export function useImportWizard() {
 		}
 	})
 
+	// ==================== TMB Computed ====================
+	const backupFilteredManga = computed(() => {
+		if (!backupResults.value) return []
+		const manga = backupResults.value.manga
+		if (backupSelectedCategory.value === null) return manga
+		const category = backupResults.value.categories.find(c => c.id === backupSelectedCategory.value)
+		if (!category) return manga
+		return manga.filter(m => m.categories.includes(category.name))
+	})
+
+	const backupImportableManga = computed(() => {
+		return backupFilteredManga.value.filter(m => m.mapped && !m.alreadyImported && m.selected)
+	})
+
+	const backupSelectedCount = computed(() => {
+		if (!backupResults.value) return 0
+		return backupResults.value.manga.filter(m => m.selected).length
+	})
+
 	// ==================== Cart Methods ====================
 	function getCartKey(sourceId: string, externalId: string): string {
 		return `${sourceId}:${externalId}`
@@ -355,6 +427,17 @@ export function useImportWizard() {
 		step.value = "url-paste"
 	}
 
+	function startBackupImport() {
+		entryMode.value = "backup"
+		step.value = "backup-upload"
+		// Reset TMB state
+		backupJobId.value = null
+		backupProgress.value = { stage: "extracting", percent: 0 }
+		backupResults.value = null
+		backupError.value = null
+		backupSelectedCategory.value = null
+	}
+
 	function selectSource(source: Source) {
 		selectedSource.value = source
 		searchQuery.value = ""
@@ -385,6 +468,9 @@ export function useImportWizard() {
 		}
 		else if (entryMode.value === "url") {
 			step.value = "url-paste"
+		}
+		else if (entryMode.value === "backup") {
+			step.value = "backup-select"
 		}
 		else {
 			step.value = "entry"
@@ -602,6 +688,185 @@ export function useImportWizard() {
 		// Clear parsed URLs after adding
 		urlInput.value = ""
 		parsedUrls.value = []
+	}
+
+	// ==================== TMB Import Methods ====================
+	async function uploadBackupFile(file: File) {
+		backupUploading.value = true
+		backupError.value = null
+
+		try {
+			const formData = new FormData()
+			formData.append("file", file)
+
+			const response = await $fetch<{ jobId: string }>("/api/v1/import-backup/upload", {
+				method: "POST",
+				body: formData,
+			})
+
+			backupJobId.value = response.jobId
+			// Start polling for status
+			await pollBackupStatus()
+		}
+		catch (e: unknown) {
+			const fetchError = e as { data?: { message?: string }, message?: string }
+			backupError.value = fetchError.data?.message || fetchError.message || "Failed to upload file"
+		}
+		finally {
+			backupUploading.value = false
+		}
+	}
+
+	async function pollBackupStatus() {
+		if (!backupJobId.value) return
+
+		backupPolling.value = true
+
+		try {
+			while (true) {
+				const status = await $fetch<{
+					id: string
+					state: string
+					progress: BackupProgress | null
+					result: BackupParseResult | null
+					failedReason: string | null
+				}>(`/api/v1/import-backup/${backupJobId.value}/status`)
+
+				if (status.progress) {
+					backupProgress.value = status.progress
+				}
+
+				if (status.state === "completed" && status.result) {
+					// Add selected flag to manga and auto-select importable ones
+					backupResults.value = {
+						...status.result,
+						manga: status.result.manga.map(m => ({
+							...m,
+							selected: m.mapped && !m.alreadyImported,
+						})),
+					}
+					step.value = "backup-select"
+					break
+				}
+				else if (status.state === "failed") {
+					backupError.value = status.failedReason || "Parsing failed"
+					break
+				}
+
+				// Wait before next poll
+				await new Promise(resolve => setTimeout(resolve, 1000))
+			}
+		}
+		catch (e: unknown) {
+			const fetchError = e as { data?: { message?: string }, message?: string }
+			backupError.value = fetchError.data?.message || fetchError.message || "Failed to get status"
+		}
+		finally {
+			backupPolling.value = false
+		}
+	}
+
+	function toggleBackupMangaSelection(mangaId: number | string) {
+		if (!backupResults.value) return
+		const manga = backupResults.value.manga.find(m => m.id === mangaId)
+		if (manga && manga.mapped && !manga.alreadyImported) {
+			manga.selected = !manga.selected
+		}
+	}
+
+	function selectAllBackupManga() {
+		const filteredIds = new Set(backupFilteredManga.value.map(m => m.id))
+		if (!backupResults.value) return
+		for (const manga of backupResults.value.manga) {
+			if (filteredIds.has(manga.id) && manga.mapped && !manga.alreadyImported) {
+				manga.selected = true
+			}
+		}
+	}
+
+	function deselectAllBackupManga() {
+		const filteredIds = new Set(backupFilteredManga.value.map(m => m.id))
+		if (!backupResults.value) return
+		for (const manga of backupResults.value.manga) {
+			if (filteredIds.has(manga.id)) {
+				manga.selected = false
+			}
+		}
+	}
+
+	async function addBackupToCart() {
+		const selectedManga = backupImportableManga.value
+
+		if (selectedManga.length === 0) return
+
+		backupAddingToCart.value = true
+
+		const missingSourceIds = new Set<string>()
+		let addedCount = 0
+
+		try {
+			// Ensure sources are loaded (required for mapping external_id to database UUID)
+			if (sources.value.length === 0) {
+				await fetchSources()
+			}
+
+			for (const manga of selectedManga) {
+				if (!manga.sourceId || !manga.serieId || !manga.sourceName) continue
+
+				// Find the database source by external_id
+				// manga.sourceId is the external_id (e.g., "mangadex"), we need the database UUID
+				const dbSource = sources.value.find(s => s.external_id === manga.sourceId)
+
+				if (!dbSource) {
+					missingSourceIds.add(manga.sourceId)
+					continue
+				}
+
+				// Fetch detail to get full info using database source ID
+				try {
+					const detail = await $fetch(`/api/v1/sources/${dbSource.id}/detail`, {
+						query: { serieId: manga.serieId },
+					}) as SerieDetail
+
+					addToCart({
+						sourceId: dbSource.id,
+						sourceName: manga.sourceName,
+						externalId: manga.serieId,
+						title: detail.title,
+						cover: detail.cover,
+						type: detail.type,
+						status: detail.status,
+					})
+					addedCount++
+				}
+				catch {
+					// If can't fetch detail, use basic info from TMB
+					addToCart({
+						sourceId: dbSource.id,
+						sourceName: manga.sourceName,
+						externalId: manga.serieId,
+						title: manga.title,
+						cover: null,
+						type: "Unknown",
+						status: [],
+					})
+					addedCount++
+				}
+			}
+
+			if (addedCount === 0 && selectedManga.length > 0) {
+				if (missingSourceIds.size > 0) {
+					console.warn(`[TMB Import] Missing sources: ${[...missingSourceIds].join(", ")}`)
+					alert(`Could not add any items. Missing sources: ${[...missingSourceIds].join(", ")}\n\nMake sure these sources are enabled in the database.`)
+				}
+				return
+			}
+
+			goToReview()
+		}
+		finally {
+			backupAddingToCart.value = false
+		}
 	}
 
 	// ==================== Similarity ====================
@@ -1104,6 +1369,15 @@ export function useImportWizard() {
 		loadingRecentSeries.value = false
 		showLibrarySearchSheet.value = false
 		librarySearchForSerieKey.value = null
+		// TMB state
+		backupJobId.value = null
+		backupProgress.value = { stage: "extracting", percent: 0 }
+		backupResults.value = null
+		backupError.value = null
+		backupSelectedCategory.value = null
+		backupUploading.value = false
+		backupPolling.value = false
+		backupAddingToCart.value = false
 	}
 
 	return {
@@ -1195,9 +1469,28 @@ export function useImportWizard() {
 		goToEntry,
 		startBrowse,
 		startUrlPaste,
+		startBackupImport,
 		goBackToSources,
 		goToReview,
 		goBackFromReview,
+
+		// TMB Import
+		backupJobId,
+		backupProgress,
+		backupResults,
+		backupError,
+		backupSelectedCategory,
+		backupUploading,
+		backupPolling,
+		backupAddingToCart,
+		backupFilteredManga,
+		backupImportableManga,
+		backupSelectedCount,
+		uploadBackupFile,
+		toggleBackupMangaSelection,
+		selectAllBackupManga,
+		deselectAllBackupManga,
+		addBackupToCart,
 
 		// Reset
 		reset,

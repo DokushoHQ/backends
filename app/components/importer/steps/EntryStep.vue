@@ -7,7 +7,7 @@ const wizard = useImportWizardInjected()
 <template>
 	<div class="space-y-6">
 		<!-- Import Method Cards - Grid on desktop -->
-		<div class="grid gap-4 md:grid-cols-2 max-w-2xl mx-auto">
+		<div class="grid gap-4 md:grid-cols-3 max-w-4xl mx-auto">
 			<button
 				class="p-6 rounded-lg border border-border hover:border-primary hover:bg-muted/50 transition-colors text-left h-full"
 				@click="wizard.startBrowse()"
@@ -47,6 +47,28 @@ const wizard = useImportWizardInjected()
 						</div>
 						<div class="text-sm text-muted-foreground mt-1">
 							Import from direct links or CSV/TXT file
+						</div>
+					</div>
+				</div>
+			</button>
+
+			<button
+				class="p-6 rounded-lg border border-border hover:border-primary hover:bg-muted/50 transition-colors text-left h-full"
+				@click="wizard.startBackupImport()"
+			>
+				<div class="flex flex-col items-center text-center gap-4">
+					<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+						<UIcon
+							name="i-lucide-archive"
+							class="w-6 h-6 text-primary"
+						/>
+					</div>
+					<div>
+						<div class="font-semibold text-lg">
+							Import Backup
+						</div>
+						<div class="text-sm text-muted-foreground mt-1">
+							Tachiyomi, Mihon, Tachimanga, Dokusho
 						</div>
 					</div>
 				</div>
