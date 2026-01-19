@@ -15,7 +15,10 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 	const serie = await db.serie.findUnique({
 		where: { id: serieId },
 		include: {
-			sources: { orderBy: { is_primary: "desc" } },
+			sources: {
+				orderBy: { is_primary: "desc" },
+				include: { source: { select: { name: true, id: true } } },
+			},
 			genres: { select: { title: true } },
 			authors: { select: { name: true } },
 			artists: { select: { name: true } },
@@ -130,12 +133,16 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 				artists: serie.artists.map(a => a.name),
 				authors: serie.authors.map(a => a.name),
 				genres: serie.genres.map(g => g.title),
+				sources: serie.sources.map(s => s.source.name),
 				status: updated.status,
 				type: updated.type,
 				poster: updated.cover ?? "",
-				// Source info - use first source for backwards compatibility
+				// Source info
 				external_id: primarySource.external_id,
-				source_id: primarySource.source_id,
+				source_ids: serie.sources.map(s => s.source.id),
+				// Sorting and filtering
+				updated_at: updated.updated_at.getTime(),
+				soft_deleted: serie.soft_deleted_at !== null,
 			},
 		],
 		{ primaryKey: "id" },

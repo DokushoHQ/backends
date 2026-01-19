@@ -55,6 +55,7 @@ model Serie {
     authors  Author[]
     artists  Artist[]
 
+    @@index([soft_deleted_at, updated_at(sort: Desc)])
     @@map("serie")
 }
 

@@ -10,9 +10,9 @@ const serieSelect = {
 	type: true,
 	status: true,
 	updated_at: true,
-	genres: { select: { id: true, title: true } },
-	authors: { select: { id: true, name: true } },
-	artists: { select: { id: true, name: true } },
+	// genres: { select: { id: true, title: true } },
+	// authors: { select: { id: true, name: true } },
+	// artists: { select: { id: true, name: true } },
 	sources: {
 		select: {
 			id: true,
@@ -78,23 +78,34 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
-	// Source filter
+	// Source filter using Meilisearch
 	if (sourceFilter) {
-		const whereClause = {
-			sources: { some: { source_id: sourceFilter } },
-			soft_deleted_at: null,
+		const searchResult = await serieIndex.search("", {
+			limit: PAGE_SIZE,
+			offset: (page - 1) * PAGE_SIZE,
+			filter: `soft_deleted = false AND source_ids = "${sourceFilter}"`,
+			sort: ["updated_at:desc"],
+		})
+
+		const ids = searchResult.hits.map(hit => hit.id)
+		if (ids.length === 0) {
+			return {
+				data: [],
+				pagination: { page, pageSize: PAGE_SIZE, total: 0, totalPages: 0 },
+			}
 		}
 
-		const [series, total] = await Promise.all([
-			db.serie.findMany({
-				where: whereClause,
-				skip: (page - 1) * PAGE_SIZE,
-				take: PAGE_SIZE,
-				orderBy: { updated_at: "desc" },
-				select: serieSelect,
-			}),
-			db.serie.count({ where: whereClause }),
-		])
+		const seriesMap = new Map(
+			(
+				await db.serie.findMany({
+					where: { id: { in: ids } },
+					select: serieSelect,
+				})
+			).map(s => [s.id, s]),
+		)
+
+		const series = ids.map(id => seriesMap.get(id)).filter(Boolean)
+		const total = searchResult.estimatedTotalHits ?? series.length
 
 		return {
 			data: series,
@@ -122,6 +133,9 @@ export default defineEventHandler(async (event) => {
 			}
 		}
 
+		// Create a map of hit data for merging sources
+		const hitsMap = new Map(searchResult.hits.map(hit => [hit.id, hit]))
+
 		// Get series by IDs, maintaining search order
 		const seriesMap = new Map(
 			(
@@ -132,7 +146,13 @@ export default defineEventHandler(async (event) => {
 			).map(s => [s.id, s]),
 		)
 
-		const series = ids.map(id => seriesMap.get(id)).filter(Boolean)
+		// Merge DB data with sources from Meilisearch hits
+		const series = ids.map((id) => {
+			const dbData = seriesMap.get(id)
+			if (!dbData) return null
+			const hit = hitsMap.get(id)
+			return { ...dbData, sources: hit?.sources ?? [] }
+		}).filter(Boolean)
 		const total = searchResult.estimatedTotalHits ?? series.length
 
 		return {
@@ -146,17 +166,34 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
-	// Default: paginated series
-	const [series, total] = await Promise.all([
-		db.serie.findMany({
-			where: { soft_deleted_at: null },
-			skip: (page - 1) * PAGE_SIZE,
-			take: PAGE_SIZE,
-			orderBy: { updated_at: "desc" },
-			select: serieSelect,
-		}),
-		db.serie.count({ where: { soft_deleted_at: null } }),
-	])
+	// Default: paginated series using Meilisearch for fast sorting/filtering
+	const searchResult = await serieIndex.search("", {
+		limit: PAGE_SIZE,
+		offset: (page - 1) * PAGE_SIZE,
+		filter: "soft_deleted = false",
+		sort: ["updated_at:desc"],
+	})
+
+	const ids = searchResult.hits.map(hit => hit.id)
+	if (ids.length === 0) {
+		return {
+			data: [],
+			pagination: { page, pageSize: PAGE_SIZE, total: 0, totalPages: 0 },
+		}
+	}
+
+	// Fetch full data from PostgreSQL, maintaining Meilisearch order
+	const seriesMap = new Map(
+		(
+			await db.serie.findMany({
+				where: { id: { in: ids } },
+				select: serieSelect,
+			})
+		).map(s => [s.id, s]),
+	)
+
+	const series = ids.map(id => seriesMap.get(id)).filter(Boolean)
+	const total = searchResult.estimatedTotalHits ?? series.length
 
 	return {
 		data: series,

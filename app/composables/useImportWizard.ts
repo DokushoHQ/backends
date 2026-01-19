@@ -1058,14 +1058,14 @@ export function useImportWizard() {
 
 		loadingLibrarySearch.value = true
 		try {
-			const result = await $fetch<{ data: Array<{ id: string, title: string, cover: string | null, _count: { chapters: number }, sources: Array<{ source: { name: string } }> }> }>("/api/v1/serie", {
+			const result = await $fetch<{ data: Array<{ id: string, title: string, cover: string | null, _count: { chapters: number }, sources: string[] }> }>("/api/v1/serie", {
 				query: { q: query.trim() },
 			})
 			librarySearchResults.value = result.data.map(s => ({
 				id: s.id,
 				title: s.title,
 				cover: s.cover,
-				sources: [...new Set(s.sources.map(src => src.source.name))],
+				sources: s.sources ?? [],
 				chapterCount: s._count.chapters,
 				importedAt: "",
 			}))
