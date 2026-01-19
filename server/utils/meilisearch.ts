@@ -7,7 +7,7 @@ export type FlattenData = Partial<Record<FlattenRow, string[]>>
 
 export type SerieIndex = {
 	id: string
-	external_id: string
+	external_ids: string[] // All external IDs from all sources
 	source_ids: string[] // All linked source IDs
 	status: SerieStatus[]
 	type: SerieType
@@ -18,6 +18,9 @@ export type SerieIndex = {
 	poster: string
 	updated_at: number // Unix timestamp for sorting
 	soft_deleted: boolean
+	// Resolved display values (includes custom locked values)
+	title: string
+	synopsis?: string
 } & FlattenData
 
 let _meilisearch: Meilisearch | null = null
@@ -61,6 +64,6 @@ export async function configureSerieIndex() {
 	const index = getSerieIndex()
 	await index.updateSettings({
 		sortableAttributes: ["updated_at"],
-		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type"],
+		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists"],
 	})
 }
