@@ -4,6 +4,14 @@ import { z } from "zod"
 export const QUEUE_NAME = "serie-inserter" as const
 export const DISPLAY_NAME = "Serie Inserter"
 
+// Job priorities (lower = higher priority)
+// BullMQ 4.0+: Jobs WITHOUT priority get processed FIRST, so all jobs must have a priority set
+export const JOB_PRIORITY = {
+	HIGH: 1, // FETCH_LATEST scheduled updates
+	NORMAL: 5, // Manual imports, refresh, link-source
+	LOW: 10, // Backup imports
+} as const
+
 export const serieInserterJobDataSchema = z.object({
 	source_serie_id: z.string(),
 	source_id: z.string(),

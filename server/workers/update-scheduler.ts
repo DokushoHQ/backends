@@ -2,7 +2,7 @@ import { defineWorker } from "#processor"
 import { MetricsTime, type Job } from "bullmq"
 import indexerQueue from "../queues/indexer"
 import pageRetryQueue from "../queues/page-retry"
-import serieInserterQueue from "../queues/serie-inserter"
+import serieInserterQueue, { JOB_PRIORITY } from "../queues/serie-inserter"
 import type { UpdateSchedulerJobData } from "../queues/update-scheduler"
 import { QUEUE_NAME, updateSchedulerJobDataSchema } from "../queues/update-scheduler"
 import { db } from "../utils/db"
@@ -180,6 +180,7 @@ async function handleFetchLatest(
 			await serieInserterQueue.add(
 				"serie-inserter",
 				{ source_id: dbSource.id, source_serie_id: externalId },
+				{ priority: JOB_PRIORITY.HIGH },
 			)
 
 			sourceQueued++
@@ -261,7 +262,7 @@ async function handleRefreshAll(job: Job<UpdateSchedulerJobData>) {
 			await serieInserterQueue.add(
 				"serie-inserter",
 				{ source_id: dbSource.id, source_serie_id: serieSource.external_id },
-				{ delay },
+				{ delay, priority: JOB_PRIORITY.NORMAL },
 			)
 
 			totalQueued++

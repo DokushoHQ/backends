@@ -3,7 +3,10 @@ interface Job {
 	id: string
 	name: string
 	data: unknown
-	opts: unknown
+	opts: {
+		priority?: number
+		[key: string]: unknown
+	}
 	progress: number | string | object
 	timestamp?: number
 	processedOn?: number
@@ -449,6 +452,14 @@ function getJobDefaultTabIndex(job: Job): number {
 										{{ job.attemptsMade }}
 									</p>
 								</div>
+								<div v-if="job.opts?.priority !== undefined">
+									<p class="text-muted-foreground">
+										Priority
+									</p>
+									<p :class="['font-medium', job.opts.priority === 1 ? 'text-green-600' : job.opts.priority >= 10 ? 'text-orange-600' : '']">
+										{{ job.opts.priority }}
+									</p>
+								</div>
 							</div>
 
 							<!-- Main content -->
@@ -603,6 +614,9 @@ function getJobDefaultTabIndex(job: Job): number {
 											</span>
 											<span v-if="job.attemptsMade > 0">
 												&bull; {{ job.attemptsMade }} attempt{{ job.attemptsMade > 1 ? "s" : "" }}
+											</span>
+											<span v-if="job.opts?.priority !== undefined">
+												&bull; Priority: <span :class="job.opts.priority === 1 ? 'text-green-600' : job.opts.priority >= 10 ? 'text-orange-600' : ''">{{ job.opts.priority }}</span>
 											</span>
 										</div>
 									</div>

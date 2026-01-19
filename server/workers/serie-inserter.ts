@@ -4,7 +4,7 @@ import type { ChapterDataJobData } from "../queues/chapter-data"
 import type { CoverUpdateJobData } from "../queues/cover-update"
 import type { IndexerJobData } from "../queues/indexer"
 import type { SerieInserterJobData, SerieInserterJobResult } from "../queues/serie-inserter"
-import { QUEUE_NAME, serieInserterJobDataSchema } from "../queues/serie-inserter"
+import { JOB_PRIORITY, QUEUE_NAME, serieInserterJobDataSchema } from "../queues/serie-inserter"
 import type { Language, Prisma } from "../utils/db"
 import { db } from "../utils/db"
 import { getFlowProducer } from "../utils/flow-producer"
@@ -316,12 +316,15 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 
 			// Create two independent flows for faster indexing and fault tolerance
 			const flowProducer = getFlowProducer()
+			// Inherit priority from parent job, default to NORMAL
+			const priority = job.opts.priority ?? JOB_PRIORITY.NORMAL
 
 			// Flow 1: Cover Update -> Indexer (fast path, serie searchable after cover completes)
 			await flowProducer.add({
 				name: `indexer-cover-${serie_id}`,
 				queueName: "indexer",
 				data: { serie_id, type: "UPDATE" } as IndexerJobData,
+				opts: { priority },
 				children: [
 					{
 						name: `cover-source-${serie_source_id}`,
@@ -330,6 +333,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 							type: "SOURCE",
 							serie_source_id,
 						} as CoverUpdateJobData,
+						opts: { priority },
 					},
 				],
 			})
@@ -340,6 +344,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					name: `indexer-chapters-${serie_id}`,
 					queueName: "indexer",
 					data: { serie_id, type: "UPDATE" } as IndexerJobData,
+					opts: { priority },
 					children: chapter_ids.map(chapter_id => ({
 						name: `chapter-${serie_id}-${chapter_id}`,
 						queueName: "chapter-data",
@@ -349,6 +354,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 							chapter_id,
 							type: "UPDATE",
 						} as ChapterDataJobData,
+						opts: { priority },
 					})),
 				})
 			}

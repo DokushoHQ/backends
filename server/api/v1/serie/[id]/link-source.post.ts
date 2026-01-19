@@ -1,5 +1,5 @@
 import { z } from "zod"
-import serieInserterQueue from "../../../../queues/serie-inserter"
+import serieInserterQueue, { JOB_PRIORITY } from "../../../../queues/serie-inserter"
 
 const linkSchema = z.object({
 	sourceId: z.string(),
@@ -63,6 +63,7 @@ export default defineEventHandler(async (event) => {
 			target_serie_id: id,
 			is_primary: false,
 		},
+		{ priority: JOB_PRIORITY.NORMAL },
 	)
 
 	return { success: true, status: "queued", jobId: job.id ?? "" }

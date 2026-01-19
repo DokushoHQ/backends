@@ -1,4 +1,4 @@
-import serieInserterQueue from "../../../../queues/serie-inserter"
+import serieInserterQueue, { JOB_PRIORITY } from "../../../../queues/serie-inserter"
 
 export default defineEventHandler(async (event) => {
 	await requireAdmin(event)
@@ -24,6 +24,7 @@ export default defineEventHandler(async (event) => {
 		const job = await serieInserterQueue.add(
 			"serie-inserter",
 			{ source_id: source.source_id, source_serie_id: source.external_id },
+			{ priority: JOB_PRIORITY.NORMAL },
 		)
 		if (job.id) jobIds.push(job.id)
 	}
