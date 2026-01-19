@@ -1,5 +1,5 @@
 import { defineWorker } from "#processor"
-import { MetricsTime, type FlowChildJob } from "bullmq"
+import { MetricsTime } from "bullmq"
 import type { ChapterDataJobData } from "../queues/chapter-data"
 import type { CoverUpdateJobData } from "../queues/cover-update"
 import type { IndexerJobData } from "../queues/indexer"
@@ -314,38 +314,44 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 			const mode = existingSerieSource ? "Updated" : targetSerieId ? "Linked to" : "Created"
 			log(`${mode} serie ${serie_id} with ${chapter_ids.length} chapters to process`)
 
-			// Build child jobs: Chapter Data + Cover Update
-			const children: FlowChildJob[] = [
-				// Cover Update job for the SerieSource
-				{
-					name: `cover-source-${serie_source_id}`,
-					queueName: "cover-update",
-					data: {
-						type: "SOURCE",
-						serie_source_id,
-					} as CoverUpdateJobData,
-				},
-				// Chapter Data jobs
-				...chapter_ids.map(chapter_id => ({
-					name: `chapter-${serie_id}-${chapter_id}`,
-					queueName: "chapter-data",
-					data: {
-						serie_id,
-						source_id: sourceId,
-						chapter_id,
-						type: "UPDATE",
-					} as ChapterDataJobData,
-				})),
-			]
-
-			// Indexer is parent - runs after ALL children complete
+			// Create two independent flows for faster indexing and fault tolerance
 			const flowProducer = getFlowProducer()
+
+			// Flow 1: Cover Update -> Indexer (fast path, serie searchable after cover completes)
 			await flowProducer.add({
-				name: `indexer-${serie_id}`,
+				name: `indexer-cover-${serie_id}`,
 				queueName: "indexer",
 				data: { serie_id, type: "UPDATE" } as IndexerJobData,
-				children,
+				children: [
+					{
+						name: `cover-source-${serie_source_id}`,
+						queueName: "cover-update",
+						data: {
+							type: "SOURCE",
+							serie_source_id,
+						} as CoverUpdateJobData,
+					},
+				],
 			})
+
+			// Flow 2: Chapter Data -> Indexer (if chapters need refresh)
+			if (chapter_ids.length > 0) {
+				await flowProducer.add({
+					name: `indexer-chapters-${serie_id}`,
+					queueName: "indexer",
+					data: { serie_id, type: "UPDATE" } as IndexerJobData,
+					children: chapter_ids.map(chapter_id => ({
+						name: `chapter-${serie_id}-${chapter_id}`,
+						queueName: "chapter-data",
+						data: {
+							serie_id,
+							source_id: sourceId,
+							chapter_id,
+							type: "UPDATE",
+						} as ChapterDataJobData,
+					})),
+				})
+			}
 
 			// Update last_checked_at and reset consecutive_failures
 			await db.serieSource.update({
