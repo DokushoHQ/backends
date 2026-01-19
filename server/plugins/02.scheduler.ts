@@ -47,6 +47,20 @@ export default defineNitroPlugin(async () => {
 			)
 			console.log(`Scheduled RETRY_FAILED_PAGES with cron: ${retryFailedPagesCron}`)
 		}
+
+		// Set up REINDEX_ALL repeatable job (force Meilisearch re-indexing)
+		const reindexAllCron = config.schedulerReindexAllCron
+		if (reindexAllCron) {
+			await updateSchedulerQueue.upsertJobScheduler(
+				"reindex-all-scheduler",
+				{ pattern: reindexAllCron },
+				{
+					name: "update-scheduler",
+					data: { type: "REINDEX_ALL" },
+				},
+			)
+			console.log(`Scheduled REINDEX_ALL with cron: ${reindexAllCron}`)
+		}
 	}
 	catch (error) {
 		console.error("Failed to set up scheduled jobs:", error)

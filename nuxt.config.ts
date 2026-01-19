@@ -27,6 +27,7 @@ export default defineNuxtConfig({
 		schedulerFetchLatestCron: "*/30 * * * *",
 		schedulerRefreshAllCron: "0 3 * * 0",
 		schedulerRetryFailedPagesCron: "0 */6 * * *",
+		schedulerReindexAllCron: "", // Disabled by default, e.g. "0 4 * * 0" for Sunday 4 AM
 		schedulerMaxPages: 5,
 		schedulerFingerprintSize: 50,
 		schedulerRecentlyCheckedMs: 900000, // 15 * 60 * 1000

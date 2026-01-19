@@ -84,19 +84,47 @@ onUnmounted(() => {
 			>
 				<template #right>
 					<div class="flex items-center gap-2">
-						<ChaptersRetryFailedButton scope="global" />
+						<UButton
+							variant="outline"
+							size="sm"
+							to="/jobs/settings"
+							icon="i-lucide-settings"
+							class="sm:hidden"
+						/>
+						<UButton
+							variant="outline"
+							size="sm"
+							to="/jobs/settings"
+							class="hidden sm:inline-flex"
+						>
+							<UIcon
+								name="i-lucide-settings"
+								class="size-4 mr-2"
+							/>
+							Settings
+						</UButton>
 						<UButton
 							:variant="anyQueuePaused ? 'solid' : 'outline'"
 							:color="anyQueuePaused ? 'primary' : 'neutral'"
 							size="sm"
 							:loading="pauseAllPending"
+							:icon="anyQueuePaused ? 'i-lucide-play' : 'i-lucide-pause'"
+							class="sm:hidden"
+							@click="togglePauseAllQueues"
+						/>
+						<UButton
+							:variant="anyQueuePaused ? 'solid' : 'outline'"
+							:color="anyQueuePaused ? 'primary' : 'neutral'"
+							size="sm"
+							:loading="pauseAllPending"
+							class="hidden sm:inline-flex"
 							@click="togglePauseAllQueues"
 						>
 							<UIcon
 								:name="anyQueuePaused ? 'i-lucide-play' : 'i-lucide-pause'"
 								class="size-4 mr-2"
 							/>
-							{{ anyQueuePaused ? 'Resume All Queues' : 'Pause All Queues' }}
+							{{ anyQueuePaused ? 'Resume All' : 'Pause All' }}
 						</UButton>
 					</div>
 				</template>
