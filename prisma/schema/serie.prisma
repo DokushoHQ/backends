@@ -55,6 +55,8 @@ model Serie {
     authors  Author[]
     artists  Artist[]
 
+    @@index([soft_deleted_at, updated_at(sort: Desc)])
+    @@index([cover])
     @@map("serie")
 }
 
@@ -94,6 +96,7 @@ model SerieSource {
     source Source @relation(fields: [source_id], references: [id])
 
     @@unique([source_id, external_id])
+    @@index([serie_id, consecutive_failures])
     @@map("serie_source")
 }
 
@@ -136,6 +139,7 @@ model Chapter {
     groups ScanlationGroup[]
 
     @@unique([source_id, external_id])
+    @@index([serie_id, page_fetch_status])
     @@map("chapter")
 }
 

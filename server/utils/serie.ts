@@ -49,6 +49,14 @@ export function resolveMultiLanguageArray(ml: MultiLanguage | null | undefined):
 	return allValues.length > 0 ? allValues : null
 }
 
+/**
+ * Get values for a specific language from a MultiLanguage object
+ */
+export function getMultiLanguageValues(ml: MultiLanguage | null | undefined, language: string): string[] {
+	if (!ml || typeof ml !== "object") return []
+	return (ml as Record<string, string[]>)[language] ?? []
+}
+
 // === API Types ===
 
 /**

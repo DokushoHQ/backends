@@ -4,6 +4,12 @@ import { syncSources } from "../utils/sync-sources"
 export default defineNitroPlugin(async () => {
 	const config = useRuntimeConfig()
 
+	// Skip if disabled (useful for worker processes)
+	if (config.skipSourcesSync) {
+		console.log("Skipping sources sync (disabled via env)")
+		return
+	}
+
 	console.log("Initializing sources...")
 
 	try {

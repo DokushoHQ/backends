@@ -16,11 +16,22 @@ const activityRangeOptions = [
 	{ label: "Last Month", value: "month" },
 ]
 
-const { data, error, refresh } = await useFetch("/api/dashboard/stats", {
+const { data, error } = await useFetch("/api/dashboard/stats")
+
+// Lazy fetch recent activity separately
+const { data: activityData, status: activityStatus } = await useLazyFetch("/api/dashboard/activity", {
 	query: { activityRange },
+	watch: [activityRange],
 })
 
-watch(activityRange, () => refresh())
+// Lazy fetch admin sections
+const { data: attentionData, status: attentionStatus } = await useLazyFetch("/api/dashboard/attention", {
+	immediate: isAdmin.value,
+})
+
+const { data: jobsData, status: jobsStatus } = await useLazyFetch("/api/jobs", {
+	immediate: isAdmin.value,
+})
 
 if (error.value) {
 	console.error("Dashboard stats error:", error.value)
@@ -157,13 +168,18 @@ function getIssueBadge(issue: string) {
 									Job Queues
 								</h3>
 								<p class="text-sm text-muted-foreground">
-									{{ data?.jobSummary?.total.toLocaleString() ?? 0 }} total jobs
-									<span
-										v-if="data?.jobSummary?.failed"
-										class="text-red-500"
-									>
-										({{ data.jobSummary.failed }} failed)
-									</span>
+									<template v-if="jobsStatus === 'pending'">
+										Loading...
+									</template>
+									<template v-else>
+										{{ jobsData?.totalJobs?.toLocaleString() ?? 0 }} total jobs
+										<span
+											v-if="jobsData?.totalFailed"
+											class="text-red-500"
+										>
+											({{ jobsData.totalFailed }} failed)
+										</span>
+									</template>
 								</p>
 							</div>
 							<NuxtLink
@@ -179,10 +195,24 @@ function getIssueBadge(issue: string) {
 						<!-- Mini Line Chart -->
 						<JobsActivityChart :height="120" />
 
+						<!-- Loading state -->
+						<div
+							v-if="jobsStatus === 'pending'"
+							class="flex items-center justify-center py-4"
+						>
+							<UIcon
+								name="i-lucide-loader-2"
+								class="size-5 animate-spin text-muted-foreground"
+							/>
+						</div>
+
 						<!-- Per-queue breakdown -->
-						<div class="flex flex-wrap gap-2">
+						<div
+							v-else
+							class="flex flex-wrap gap-2 pt-4"
+						>
 							<NuxtLink
-								v-for="queue in data?.jobSummary?.queues"
+								v-for="queue in jobsData?.stats"
 								:key="queue.name"
 								:to="`/jobs/${queue.name}`"
 								class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors text-sm"
@@ -205,22 +235,39 @@ function getIssueBadge(issue: string) {
 							<div>
 								<h3 class="text-lg font-semibold flex items-center gap-2">
 									<UIcon
-										:name="data?.seriesNeedingAttention?.length ? 'i-lucide-alert-triangle' : 'i-lucide-check-circle'"
+										v-if="attentionStatus !== 'pending'"
+										:name="attentionData?.length ? 'i-lucide-alert-triangle' : 'i-lucide-check-circle'"
 										class="size-5"
-										:class="data?.seriesNeedingAttention?.length ? 'text-orange-500' : 'text-green-500'"
+										:class="attentionData?.length ? 'text-orange-500' : 'text-green-500'"
 									/>
 									Series Needing Attention
 								</h3>
 								<p class="text-sm text-muted-foreground">
-									{{ data?.seriesNeedingAttention?.length || 0 }} series with issues
+									<template v-if="attentionStatus === 'pending'">
+										Loading...
+									</template>
+									<template v-else>
+										{{ attentionData?.length || 0 }} series with issues
+									</template>
 								</p>
 							</div>
 						</div>
 					</template>
 
+					<!-- Loading state -->
+					<div
+						v-if="attentionStatus === 'pending'"
+						class="flex items-center justify-center py-8"
+					>
+						<UIcon
+							name="i-lucide-loader-2"
+							class="size-6 animate-spin text-muted-foreground"
+						/>
+					</div>
+
 					<!-- Empty state -->
 					<div
-						v-if="!data?.seriesNeedingAttention?.length"
+						v-else-if="!attentionData?.length"
 						class="flex items-center justify-center py-8 text-center"
 					>
 						<div>
@@ -245,7 +292,7 @@ function getIssueBadge(issue: string) {
 						class="-mx-4 divide-y"
 					>
 						<NuxtLink
-							v-for="serie in data.seriesNeedingAttention"
+							v-for="serie in attentionData"
 							:key="serie.id"
 							:to="`/series/${serie.id}`"
 							class="flex items-center gap-4 py-3 px-4 hover:bg-muted/50 transition-colors"
@@ -378,65 +425,78 @@ function getIssueBadge(issue: string) {
 						</template>
 
 						<div class="space-y-4">
-							<NuxtLink
-								v-for="activity in data?.recentActivity"
-								:key="activity.serie.id"
-								:to="`/series/${activity.serie.id}`"
-								class="flex items-center gap-3 rounded-lg p-2 -mx-2 hover:bg-muted/50 transition-colors"
-							>
-								<div class="relative h-12 w-9 shrink-0 rounded overflow-hidden bg-muted">
-									<div class="absolute inset-0 flex items-center justify-center">
-										<UIcon
-											name="i-lucide-book-open"
-											class="size-4 text-muted-foreground"
-										/>
-									</div>
-									<NuxtImg
-										v-if="activity.serie.cover"
-										:src="activity.serie.cover"
-										:alt="activity.serie.title"
-										class="absolute inset-0 h-full w-full object-cover"
-									/>
-								</div>
-								<div class="flex-1 min-w-0">
-									<p class="text-sm font-medium truncate">{{ activity.serie.title }}</p>
-									<p class="text-xs text-muted-foreground flex items-center gap-2">
-										<span class="flex items-center gap-1">
-											<UIcon
-												name="i-lucide-plus"
-												class="size-3"
-											/>
-											{{ activity.chapterCount }} {{ activity.chapterCount === 1 ? 'chapter' : 'chapters' }}
-										</span>
-										<span class="flex items-center gap-1">
-											<UIcon
-												name="i-lucide-clock"
-												class="size-3"
-											/>
-											{{ formatRelativeTime(activity.latestUpdate) }}
-										</span>
-									</p>
-								</div>
-							</NuxtLink>
+							<!-- Loading state -->
 							<div
-								v-if="!data?.recentActivity?.length"
-								class="flex items-center justify-center py-8 text-center"
+								v-if="activityStatus === 'pending'"
+								class="flex items-center justify-center py-8"
 							>
-								<div>
-									<div class="size-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-										<UIcon
-											name="i-lucide-calendar-off"
-											class="size-6 text-muted-foreground"
+								<UIcon
+									name="i-lucide-loader-2"
+									class="size-6 animate-spin text-muted-foreground"
+								/>
+							</div>
+							<!-- Activity list -->
+							<template v-else>
+								<NuxtLink
+									v-for="activity in activityData"
+									:key="activity.serie.id"
+									:to="`/series/${activity.serie.id}`"
+									class="flex items-center gap-3 rounded-lg p-2 -mx-2 hover:bg-muted/50 transition-colors"
+								>
+									<div class="relative h-12 w-9 shrink-0 rounded overflow-hidden bg-muted">
+										<div class="absolute inset-0 flex items-center justify-center">
+											<UIcon
+												name="i-lucide-book-open"
+												class="size-4 text-muted-foreground"
+											/>
+										</div>
+										<NuxtImg
+											v-if="activity.serie.cover"
+											:src="activity.serie.cover"
+											:alt="activity.serie.title"
+											class="absolute inset-0 h-full w-full object-cover"
 										/>
 									</div>
-									<p class="font-medium">
-										No activity
-									</p>
-									<p class="text-sm text-muted-foreground">
-										No chapters added in this period
-									</p>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm font-medium truncate">{{ activity.serie.title }}</p>
+										<p class="text-xs text-muted-foreground flex items-center gap-2">
+											<span class="flex items-center gap-1">
+												<UIcon
+													name="i-lucide-plus"
+													class="size-3"
+												/>
+												{{ activity.chapterCount }} {{ activity.chapterCount === 1 ? 'chapter' : 'chapters' }}
+											</span>
+											<span class="flex items-center gap-1">
+												<UIcon
+													name="i-lucide-clock"
+													class="size-3"
+												/>
+												{{ formatRelativeTime(activity.latestUpdate) }}
+											</span>
+										</p>
+									</div>
+								</NuxtLink>
+								<div
+									v-if="!activityData?.length"
+									class="flex items-center justify-center py-8 text-center"
+								>
+									<div>
+										<div class="size-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+											<UIcon
+												name="i-lucide-calendar-off"
+												class="size-6 text-muted-foreground"
+											/>
+										</div>
+										<p class="font-medium">
+											No activity
+										</p>
+										<p class="text-sm text-muted-foreground">
+											No chapters added in this period
+										</p>
+									</div>
 								</div>
-							</div>
+							</template>
 						</div>
 					</UCard>
 				</div>

@@ -5,8 +5,8 @@ import { QUEUE_NAME, indexerJobDataSchema } from "../queues/indexer"
 import { db } from "../utils/db"
 import { serieIndex } from "../utils/meilisearch"
 import type { SerieField } from "../utils/serie"
-import { resolveMultiLanguage, resolveMultiLanguageArray } from "../utils/serie"
-import type { MultiLanguage } from "../utils/sources/core"
+import { getMultiLanguageValues, resolveMultiLanguage } from "../utils/serie"
+import { SourceLanguage, type MultiLanguage } from "../utils/sources/core"
 
 async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 	job.log(`Indexing serie ${serieId}`)
@@ -15,7 +15,10 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 	const serie = await db.serie.findUnique({
 		where: { id: serieId },
 		include: {
-			sources: { orderBy: { is_primary: "desc" } },
+			sources: {
+				orderBy: { is_primary: "desc" },
+				include: { source: { select: { name: true, id: true } } },
+			},
 			genres: { select: { title: true } },
 			authors: { select: { name: true } },
 			artists: { select: { name: true } },
@@ -93,49 +96,60 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 
 	await job.updateProgress(70)
 
-	// 4. Build search data from all sources (for comprehensive search)
-	const allTitles: string[] = []
-	const allAlternateTitles: string[] = []
-	const allSynopses: string[] = []
+	// 4. Build language-specific search data from all sources
+	const languages = Object.keys(SourceLanguage) as (keyof typeof SourceLanguage)[]
+	const titlesByLang: Record<string, string[]> = {}
+	const synopsesByLang: Record<string, string[]> = {}
+	const alternatesByLang: Record<string, string[]> = {}
 
 	for (const source of serie.sources) {
-		// Collect all language variants for search
-		const titles = resolveMultiLanguageArray(source.title as MultiLanguage)
-		if (titles) allTitles.push(...titles)
+		for (const lang of languages) {
+			const titles = getMultiLanguageValues(source.title as MultiLanguage, lang)
+			const synopses = getMultiLanguageValues(source.synopsis as MultiLanguage | null, lang)
+			const alternates = getMultiLanguageValues(source.alternates_titles as MultiLanguage | null, lang)
 
-		const alternates = resolveMultiLanguageArray(source.alternates_titles as MultiLanguage | null)
-		if (alternates) allAlternateTitles.push(...alternates)
-
-		const synopses = resolveMultiLanguageArray(source.synopsis as MultiLanguage | null)
-		if (synopses) allSynopses.push(...synopses)
+			titlesByLang[lang] = [...(titlesByLang[lang] ?? []), ...titles]
+			synopsesByLang[lang] = [...(synopsesByLang[lang] ?? []), ...synopses]
+			alternatesByLang[lang] = [...(alternatesByLang[lang] ?? []), ...alternates]
+		}
 	}
 
-	// Deduplicate
-	const uniqueTitles = [...new Set(allTitles)]
-	const uniqueAlternateTitles = [...new Set(allAlternateTitles)]
-	const uniqueSynopses = [...new Set(allSynopses)]
+	// Deduplicate and build flat fields for Meilisearch
+	const flatFields: Record<string, string[]> = {}
+	for (const lang of languages) {
+		const titles = [...new Set(titlesByLang[lang] ?? [])]
+		const synopses = [...new Set(synopsesByLang[lang] ?? [])]
+		const alternates = [...new Set(alternatesByLang[lang] ?? [])]
+
+		if (titles.length) flatFields[`title_${lang}`] = titles
+		if (synopses.length) flatFields[`synopsis_${lang}`] = synopses
+		if (alternates.length) flatFields[`alternates_titles_${lang}`] = alternates
+	}
 
 	// 5. Update Meilisearch
 	await serieIndex.updateDocuments(
 		[
 			{
 				id: updated.id,
-				// Primary display values
-				title_En: [updated.title],
-				synopsis_En: uniqueSynopses,
-				// All searchable content from all sources
-				title_Jp: uniqueTitles.filter(t => t !== updated.title),
-				alternates_titles_En: uniqueAlternateTitles,
+				// Resolved display values (includes custom locked values)
+				title: updated.title,
+				synopsis: updated.synopsis ?? undefined,
+				// Language-specific search fields
+				...flatFields,
 				// Metadata
 				artists: serie.artists.map(a => a.name),
 				authors: serie.authors.map(a => a.name),
 				genres: serie.genres.map(g => g.title),
+				sources: serie.sources.map(s => s.source.name),
 				status: updated.status,
 				type: updated.type,
 				poster: updated.cover ?? "",
-				// Source info - use first source for backwards compatibility
-				external_id: primarySource.external_id,
-				source_id: primarySource.source_id,
+				// Source info
+				external_ids: serie.sources.map(s => s.external_id),
+				source_ids: serie.sources.map(s => s.source.id),
+				// Sorting and filtering
+				updated_at: updated.updated_at.getTime(),
+				soft_deleted: serie.soft_deleted_at !== null,
 			},
 		],
 		{ primaryKey: "id" },

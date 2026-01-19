@@ -1,8 +1,9 @@
 import { z } from "zod"
-import serieInserterQueue from "../../../../queues/serie-inserter"
+import serieInserterQueue, { JOB_PRIORITY } from "../../../../queues/serie-inserter"
 
 const importSchema = z.object({
 	serieId: z.string(),
+	priority: z.number().optional(), // Allow caller to set priority (e.g., LOW for backup imports)
 })
 
 export default defineEventHandler(async (event) => {
@@ -19,7 +20,7 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, message: "Serie ID required" })
 	}
 
-	const { serieId } = parsed.data
+	const { serieId, priority } = parsed.data
 
 	const dbSource = await db.source.findUnique({
 		where: { id: sourceId, enabled: true },
@@ -46,6 +47,7 @@ export default defineEventHandler(async (event) => {
 	const job = await serieInserterQueue.add(
 		"serie-inserter",
 		{ source_id: dbSource.id, source_serie_id: serieId },
+		{ priority: priority ?? JOB_PRIORITY.NORMAL },
 	)
 
 	return { status: "queued", jobId: job.id ?? "" }

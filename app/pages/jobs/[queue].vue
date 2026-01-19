@@ -3,7 +3,10 @@ interface Job {
 	id: string
 	name: string
 	data: unknown
-	opts: unknown
+	opts: {
+		priority?: number
+		[key: string]: unknown
+	}
 	progress: number | string | object
 	timestamp?: number
 	processedOn?: number
@@ -89,6 +92,40 @@ function setStatus(status: string) {
 function setPage(page: number) {
 	router.push({ query: { ...route.query, page: page > 1 ? page : undefined } })
 }
+
+// Pagination range with sliding window
+const paginationRange = computed(() => {
+	const total = data.value?.pagination.totalPages ?? 1
+	const current = currentPage.value
+	const delta = 2 // Pages to show on each side of current
+
+	if (total <= 1) return [1]
+
+	const range: (number | "ellipsis")[] = []
+
+	// Always show first page
+	range.push(1)
+
+	// Calculate window start/end
+	const windowStart = Math.max(2, current - delta)
+	const windowEnd = Math.min(total - 1, current + delta)
+
+	// Add ellipsis before window if needed
+	if (windowStart > 2) range.push("ellipsis")
+
+	// Add window pages
+	for (let i = windowStart; i <= windowEnd; i++) {
+		range.push(i)
+	}
+
+	// Add ellipsis after window if needed
+	if (windowEnd < total - 1) range.push("ellipsis")
+
+	// Always show last page (if more than 1 page)
+	if (total > 1) range.push(total)
+
+	return range
+})
 
 // Auto-refresh every 5 seconds
 let refreshInterval: ReturnType<typeof setInterval> | null = null
@@ -449,6 +486,14 @@ function getJobDefaultTabIndex(job: Job): number {
 										{{ job.attemptsMade }}
 									</p>
 								</div>
+								<div v-if="job.opts?.priority !== undefined">
+									<p class="text-muted-foreground">
+										Priority
+									</p>
+									<p :class="['font-medium', job.opts.priority === 1 ? 'text-green-600' : job.opts.priority >= 10 ? 'text-orange-600' : '']">
+										{{ job.opts.priority }}
+									</p>
+								</div>
 							</div>
 
 							<!-- Main content -->
@@ -604,6 +649,9 @@ function getJobDefaultTabIndex(job: Job): number {
 											<span v-if="job.attemptsMade > 0">
 												&bull; {{ job.attemptsMade }} attempt{{ job.attemptsMade > 1 ? "s" : "" }}
 											</span>
+											<span v-if="job.opts?.priority !== undefined">
+												&bull; Priority: <span :class="job.opts.priority === 1 ? 'text-green-600' : job.opts.priority >= 10 ? 'text-orange-600' : ''">{{ job.opts.priority }}</span>
+											</span>
 										</div>
 									</div>
 
@@ -637,16 +685,24 @@ function getJobDefaultTabIndex(job: Job): number {
 					</UButton>
 
 					<div class="flex items-center gap-1">
-						<UButton
-							v-for="pageNum in Math.min(5, data.pagination.totalPages)"
-							:key="pageNum"
-							:variant="pageNum === currentPage ? 'solid' : 'outline'"
-							size="sm"
-							class="w-9"
-							@click="setPage(pageNum)"
+						<template
+							v-for="(item, idx) in paginationRange"
+							:key="idx"
 						>
-							{{ pageNum }}
-						</UButton>
+							<span
+								v-if="item === 'ellipsis'"
+								class="px-2 text-gray-400"
+							>...</span>
+							<UButton
+								v-else
+								:variant="item === currentPage ? 'solid' : 'outline'"
+								size="sm"
+								class="min-w-9"
+								@click="setPage(item)"
+							>
+								{{ item }}
+							</UButton>
+						</template>
 					</div>
 
 					<UButton

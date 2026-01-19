@@ -33,6 +33,9 @@ export default defineNuxtConfig({
 		schedulerRecentlyCheckedMs: 900000, // 15 * 60 * 1000
 		schedulerRefreshSpreadMs: 86400000, // 24 * 60 * 60 * 1000
 		softDeleteDelayDays: 7,
+		skipMeilisearchConfig: false,
+		skipSourcesSync: false,
+		skipSchedulerSetup: false,
 		suwayomiUrl: "",
 		forceDisableSource: "",
 		importSimilarityThreshold: "0.8",

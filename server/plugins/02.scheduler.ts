@@ -3,6 +3,12 @@ import updateSchedulerQueue from "../queues/update-scheduler"
 export default defineNitroPlugin(async () => {
 	const config = useRuntimeConfig()
 
+	// Skip if disabled (useful for worker processes)
+	if (config.skipSchedulerSetup) {
+		console.log("Skipping scheduler setup (disabled via env)")
+		return
+	}
+
 	console.log("Setting up scheduled jobs...")
 
 	try {

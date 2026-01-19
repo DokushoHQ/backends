@@ -60,6 +60,40 @@ const pageDescription = computed(() => {
 	return `${total} series in your library`
 })
 
+// Pagination range with sliding window
+const paginationRange = computed(() => {
+	const total = pagination.value.totalPages
+	const current = page.value
+	const delta = 2 // Pages to show on each side of current
+
+	if (total <= 1) return [1]
+
+	const range: (number | "ellipsis")[] = []
+
+	// Always show first page
+	range.push(1)
+
+	// Calculate window start/end
+	const windowStart = Math.max(2, current - delta)
+	const windowEnd = Math.min(total - 1, current + delta)
+
+	// Add ellipsis before window if needed
+	if (windowStart > 2) range.push("ellipsis")
+
+	// Add window pages
+	for (let i = windowStart; i <= windowEnd; i++) {
+		range.push(i)
+	}
+
+	// Add ellipsis after window if needed
+	if (windowEnd < total - 1) range.push("ellipsis")
+
+	// Always show last page (if more than 1 page)
+	if (total > 1) range.push(total)
+
+	return range
+})
+
 // Helper to update URL params
 function updateFilters(updates: Record<string, string | undefined>) {
 	// Convert route.query values to string | undefined (ignoring arrays and nulls)
@@ -352,16 +386,21 @@ const filterItems = computed(() => {
 
 						<div class="flex items-center gap-1">
 							<template
-								v-for="pageNum in Math.min(5, pagination.totalPages)"
-								:key="pageNum"
+								v-for="(item, idx) in paginationRange"
+								:key="idx"
 							>
+								<span
+									v-if="item === 'ellipsis'"
+									class="px-2 text-gray-400"
+								>...</span>
 								<UButton
-									:variant="pageNum === page ? 'solid' : 'outline'"
+									v-else
+									:variant="item === page ? 'solid' : 'outline'"
 									size="sm"
-									class="w-9"
-									@click="setPage(pageNum)"
+									class="min-w-9"
+									@click="setPage(item)"
 								>
-									{{ pageNum }}
+									{{ item }}
 								</UButton>
 							</template>
 						</div>
