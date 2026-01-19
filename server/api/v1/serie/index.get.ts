@@ -10,19 +10,6 @@ const serieSelect = {
 	type: true,
 	status: true,
 	updated_at: true,
-	// genres: { select: { id: true, title: true } },
-	// authors: { select: { id: true, name: true } },
-	// artists: { select: { id: true, name: true } },
-	sources: {
-		select: {
-			id: true,
-			external_id: true,
-			is_primary: true,
-			consecutive_failures: true,
-			source: { select: { id: true, external_id: true, name: true } },
-		},
-		orderBy: { is_primary: "desc" as const },
-	},
 	_count: { select: { chapters: { where: { enabled: true } } } },
 } as const
 
