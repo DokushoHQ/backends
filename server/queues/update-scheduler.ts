@@ -5,13 +5,13 @@ export const QUEUE_NAME = "update-scheduler" as const
 export const DISPLAY_NAME = "Update Scheduler"
 
 export const updateSchedulerJobDataSchema = z.object({
-	type: z.enum(["FETCH_LATEST", "REFRESH_ALL", "RETRY_FAILED_PAGES"]),
+	type: z.enum(["FETCH_LATEST", "REFRESH_ALL", "RETRY_FAILED_PAGES", "REINDEX_ALL"]),
 	sourceId: z.string().optional(),
 })
 
 export type UpdateSchedulerJobData = z.infer<typeof updateSchedulerJobDataSchema>
 
-export default defineQueue<UpdateSchedulerJobData, undefined, "fetch-latest-scheduler" | "refresh-all-scheduler" | "retry-failed-pages-scheduler" | typeof QUEUE_NAME>({
+export default defineQueue<UpdateSchedulerJobData, undefined, "fetch-latest-scheduler" | "refresh-all-scheduler" | "retry-failed-pages-scheduler" | "reindex-all-scheduler" | typeof QUEUE_NAME>({
 	name: QUEUE_NAME,
 	options: {
 		defaultJobOptions: {

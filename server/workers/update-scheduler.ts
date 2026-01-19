@@ -1,5 +1,6 @@
 import { defineWorker } from "#processor"
 import { MetricsTime, type Job } from "bullmq"
+import indexerQueue from "../queues/indexer"
 import pageRetryQueue from "../queues/page-retry"
 import serieInserterQueue from "../queues/serie-inserter"
 import type { UpdateSchedulerJobData } from "../queues/update-scheduler"
@@ -312,6 +313,34 @@ async function handleRetryFailedPages(job: Job<UpdateSchedulerJobData>) {
 	await job.updateProgress(100)
 }
 
+/**
+ * REINDEX_ALL task: Queue indexer jobs for all series to force Meilisearch re-indexing.
+ */
+async function handleReindexAll(job: Job<UpdateSchedulerJobData>) {
+	job.log("Starting REINDEX_ALL task")
+	await job.updateProgress(5)
+
+	// Get all non-deleted series
+	const series = await db.serie.findMany({
+		where: { soft_deleted_at: null },
+		select: { id: true },
+	})
+
+	job.log(`Found ${series.length} series to reindex`)
+
+	// Queue indexer jobs with staggered delays (100ms apart)
+	for (const [i, serie] of series.entries()) {
+		await indexerQueue.add(
+			`reindex-${serie.id}`,
+			{ serie_id: serie.id, type: "UPDATE" },
+			{ delay: i * 100 },
+		)
+	}
+
+	job.log(`REINDEX_ALL complete. Queued: ${series.length} indexer jobs`)
+	await job.updateProgress(100)
+}
+
 export default defineWorker<typeof QUEUE_NAME, UpdateSchedulerJobData, undefined>({
 	name: QUEUE_NAME,
 	options: {
@@ -329,6 +358,9 @@ export default defineWorker<typeof QUEUE_NAME, UpdateSchedulerJobData, undefined
 		}
 		else if (data.type === "RETRY_FAILED_PAGES") {
 			await handleRetryFailedPages(job)
+		}
+		else if (data.type === "REINDEX_ALL") {
+			await handleReindexAll(job)
 		}
 	},
 })
