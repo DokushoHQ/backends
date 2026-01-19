@@ -18,12 +18,15 @@ interface Job {
 	stacktrace?: string[]
 	logs?: string[]
 	returnvalue?: unknown
+	state?: string
 }
 
 interface QueueStats {
 	name: string
 	displayName: string
 	waiting: number
+	prioritized: number
+	waitingChildren: number
 	active: number
 	completed: number
 	failed: number
@@ -82,6 +85,10 @@ const statusTabs = [
 
 function getTabCount(key: string): number | null | undefined {
 	if (!data.value?.stats || key === "latest") return null
+	if (key === "waiting") {
+		const stats = data.value.stats
+		return stats.waiting + stats.prioritized + stats.waitingChildren
+	}
 	return data.value.stats[key as keyof QueueStats] as number | undefined
 }
 
@@ -232,6 +239,27 @@ async function handleDuplicate(input: { name: string, data: unknown, opts?: unkn
 
 // Utility functions
 function getJobStatus(job: Job): { status: string, color: string } {
+	// Use state from API if available
+	if (job.state) {
+		switch (job.state) {
+			case "failed":
+				return { status: "failed", color: "text-red-600 border-red-600/50" }
+			case "completed":
+				return { status: "completed", color: "text-green-600 border-green-600/50" }
+			case "active":
+				return { status: "active", color: "text-blue-600 border-blue-600/50" }
+			case "delayed":
+				return { status: "delayed", color: "text-cyan-600 border-cyan-600/50" }
+			case "waiting-children":
+				return { status: "waiting-children", color: "text-purple-600 border-purple-600/50" }
+			case "prioritized":
+				return { status: "prioritized", color: "text-orange-600 border-orange-600/50" }
+			case "waiting":
+			case "wait":
+				return { status: "waiting", color: "text-yellow-600 border-yellow-600/50" }
+		}
+	}
+	// Fallback to inferring from job properties
 	if (job.failedReason) return { status: "failed", color: "text-red-600 border-red-600/50" }
 	if (job.finishedOn) return { status: "completed", color: "text-green-600 border-green-600/50" }
 	if (job.processedOn) return { status: "active", color: "text-blue-600 border-blue-600/50" }

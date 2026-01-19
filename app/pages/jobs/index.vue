@@ -37,6 +37,8 @@ async function togglePauseAllQueues() {
 function getQueueSegments(queue: {
 	active?: number
 	waiting?: number
+	prioritized?: number
+	waitingChildren?: number
 	completed?: number
 	failed?: number
 	delayed?: number
@@ -48,6 +50,8 @@ function getQueueSegments(queue: {
 	return [
 		{ key: "active", count: queue.active ?? 0 },
 		{ key: "waiting", count: queue.waiting ?? 0 },
+		{ key: "prioritized", count: queue.prioritized ?? 0 },
+		{ key: "waitingChildren", count: queue.waitingChildren ?? 0 },
 		{ key: "completed", count: queue.completed ?? 0 },
 		{ key: "failed", count: queue.failed ?? 0 },
 		{ key: "delayed", count: queue.delayed ?? 0 },
@@ -319,6 +323,8 @@ onUnmounted(() => {
 											:class="{
 												'bg-blue-500': segment.key === 'active',
 												'bg-yellow-500': segment.key === 'waiting',
+												'bg-orange-500': segment.key === 'prioritized',
+												'bg-purple-500': segment.key === 'waitingChildren',
 												'bg-green-500': segment.key === 'completed',
 												'bg-red-500': segment.key === 'failed',
 												'bg-cyan-500': segment.key === 'delayed',
