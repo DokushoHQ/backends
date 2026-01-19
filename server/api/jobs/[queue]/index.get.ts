@@ -24,8 +24,10 @@ export default defineEventHandler(async (event) => {
 	// Calculate total based on status
 	const total
 		= status === "latest"
-			? stats.waiting + stats.active + stats.completed + stats.failed + stats.delayed
-			: stats[status as keyof typeof stats]
+			? stats.waiting + stats.prioritized + stats.waitingChildren + stats.active + stats.completed + stats.failed + stats.delayed
+			: status === "waiting"
+				? stats.waiting + stats.prioritized + stats.waitingChildren
+				: stats[status as keyof typeof stats]
 	const totalCount = typeof total === "number" ? total : 0
 	const totalPages = Math.ceil(totalCount / pageSize)
 
