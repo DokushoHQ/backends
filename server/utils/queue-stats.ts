@@ -1,40 +1,40 @@
 import type { Job, Queue } from "bullmq"
+import backupParserQueue, {
+	DISPLAY_NAME as BACKUP_PARSER_DISPLAY,
+	QUEUE_NAME as BACKUP_PARSER_NAME,
+} from "../queues/backup-parser"
 import chapterDataQueue, {
-	QUEUE_NAME as CHAPTER_DATA_NAME,
 	DISPLAY_NAME as CHAPTER_DATA_DISPLAY,
+	QUEUE_NAME as CHAPTER_DATA_NAME,
 } from "../queues/chapter-data"
 import coverUpdateQueue, {
-	QUEUE_NAME as COVER_UPDATE_NAME,
 	DISPLAY_NAME as COVER_UPDATE_DISPLAY,
+	QUEUE_NAME as COVER_UPDATE_NAME,
 } from "../queues/cover-update"
 import deleteSerieQueue, {
-	QUEUE_NAME as DELETE_SERIE_NAME,
 	DISPLAY_NAME as DELETE_SERIE_DISPLAY,
+	QUEUE_NAME as DELETE_SERIE_NAME,
 } from "../queues/delete-serie"
 import emailQueue, {
-	QUEUE_NAME as EMAIL_NAME,
 	DISPLAY_NAME as EMAIL_DISPLAY,
+	QUEUE_NAME as EMAIL_NAME,
 } from "../queues/email"
 import indexerQueue, {
-	QUEUE_NAME as INDEXER_NAME,
 	DISPLAY_NAME as INDEXER_DISPLAY,
+	QUEUE_NAME as INDEXER_NAME,
 } from "../queues/indexer"
 import pageRetryQueue, {
-	QUEUE_NAME as PAGE_RETRY_NAME,
 	DISPLAY_NAME as PAGE_RETRY_DISPLAY,
+	QUEUE_NAME as PAGE_RETRY_NAME,
 } from "../queues/page-retry"
 import serieInserterQueue, {
-	QUEUE_NAME as SERIE_INSERTER_NAME,
 	DISPLAY_NAME as SERIE_INSERTER_DISPLAY,
+	QUEUE_NAME as SERIE_INSERTER_NAME,
 } from "../queues/serie-inserter"
 import updateSchedulerQueue, {
-	QUEUE_NAME as UPDATE_SCHEDULER_NAME,
 	DISPLAY_NAME as UPDATE_SCHEDULER_DISPLAY,
+	QUEUE_NAME as UPDATE_SCHEDULER_NAME,
 } from "../queues/update-scheduler"
-import backupParserQueue, {
-	QUEUE_NAME as BACKUP_PARSER_NAME,
-	DISPLAY_NAME as BACKUP_PARSER_DISPLAY,
-} from "../queues/backup-parser"
 
 const queues = {
 	serieInserter: serieInserterQueue,
@@ -85,26 +85,28 @@ export function getQueue(name: QueueName): Queue {
 
 export async function getQueueStats(name: QueueName) {
 	const queue = queues[name]
-	const [waiting, active, completed, failed, delayed, paused]
-		= await Promise.all([
-			queue.getWaitingCount(),
-			queue.getActiveCount(),
-			queue.getCompletedCount(),
-			queue.getFailedCount(),
-			queue.getDelayedCount(),
-			queue.isPaused(),
-		])
+	const [counts, paused] = await Promise.all([
+		queue.getJobCounts("waiting", "prioritized", "active", "completed", "failed", "delayed", "waiting-children"),
+		queue.isPaused(),
+	])
+
+	// Combine all "waiting" type states for display
+	const waiting = counts.waiting
+	const prioritized = counts.prioritized
+	const waitingChildren = counts["waiting-children"]
 
 	return {
 		name,
 		displayName: queueConfig[name].displayName,
 		waiting,
-		active,
-		completed,
-		failed,
-		delayed,
+		prioritized,
+		waitingChildren,
+		active: counts.active,
+		completed: counts.completed,
+		failed: counts.failed,
+		delayed: counts.delayed,
 		paused,
-		total: waiting + active + completed + failed + delayed,
+		total: waiting + prioritized + waitingChildren + counts.active + counts.completed + counts.failed + counts.delayed,
 	}
 }
 
@@ -128,14 +130,14 @@ export async function getJobs(
 		case "active":
 			return queue.getActive(start, end)
 		case "waiting":
-			return queue.getWaiting(start, end)
+			return queue.getJobs(["prioritized", "waiting", "waiting-children"], start, end)
 		case "delayed":
 			return queue.getDelayed(start, end)
 		case "paused":
-			return queue.getWaiting(start, end)
+			return queue.getJobs(["waiting", "prioritized", "paused"], start, end)
 		case "latest":
 			return queue.getJobs(
-				["completed", "failed", "active", "waiting", "delayed"],
+				["active", "failed", "completed", "waiting", "prioritized", "delayed", "waiting-children"],
 				start,
 				end,
 			)
@@ -174,12 +176,14 @@ export interface SerializedJob {
 	logs?: string[]
 	delay?: number
 	scheduledAt?: number
+	state?: string
 }
 
-export function serializeJob(job: Job, logs?: string[]): SerializedJob {
+export async function serializeJob(job: Job, logs?: string[]): Promise<SerializedJob> {
 	const delay = job.opts?.delay
 	const scheduledAt
 		= delay && job.timestamp ? job.timestamp + delay : undefined
+	const state = await job.getState()
 
 	return {
 		id: job.id ?? "unknown",
@@ -197,6 +201,7 @@ export function serializeJob(job: Job, logs?: string[]): SerializedJob {
 		logs,
 		delay,
 		scheduledAt,
+		state,
 	}
 }
 
