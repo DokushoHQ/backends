@@ -151,7 +151,7 @@ async function handleFetchLatest(
 
 			await serieInserterQueue.add(
 				"serie-inserter",
-				{ source_id: dbSource.id, source_serie_id: externalId },
+				{ source_id: dbSource.id, source_serie_id: externalId, expect_new_chapters: true },
 				{ priority: JOB_PRIORITY.HIGH },
 			)
 
