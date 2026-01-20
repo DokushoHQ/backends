@@ -1,10 +1,10 @@
 import { defineWorker } from "#processor"
-import { MetricsTime } from "bullmq"
+import { DelayedError, MetricsTime } from "bullmq"
 import type { ChapterDataJobData } from "../queues/chapter-data"
 import type { CoverUpdateJobData } from "../queues/cover-update"
 import type { IndexerJobData } from "../queues/indexer"
 import type { SerieInserterJobData, SerieInserterJobResult } from "../queues/serie-inserter"
-import serieInserterQueue, { JOB_PRIORITY, QUEUE_NAME, serieInserterJobDataSchema } from "../queues/serie-inserter"
+import { JOB_PRIORITY, QUEUE_NAME, serieInserterJobDataSchema } from "../queues/serie-inserter"
 import type { Language, Prisma } from "../utils/db"
 import { db } from "../utils/db"
 import { getFlowProducer } from "../utils/flow-producer"
@@ -18,7 +18,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 		limiter: { max: 2, duration: 5000 },
 		metrics: { maxDataPoints: MetricsTime.ONE_WEEK * 2 },
 	},
-	async processor(job) {
+	async processor(job, token) {
 		const log = (msg: string) => job.log(`[Attempt ${job.attemptsMade + 1}] ${msg}`)
 		const {
 			source_id: sourceId,
@@ -330,20 +330,17 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					const delayDesc = retryAttempt === 0 ? "10 min" : retryAttempt === 1 ? "1h" : retryAttempt === 2 ? "2h" : "6h"
 					log(`No new chapters found but expected (source cache issue?). Retry ${retryAttempt + 1}/${MAX_CACHE_RETRIES} in ${delayDesc}`)
 
-					await serieInserterQueue.add(
-						"serie-inserter",
-						{
-							...job.data,
-							cache_retry_attempt: retryAttempt + 1,
-						},
-						{
-							delay: delayMs,
-							priority: job.opts.priority,
-						},
-					)
+					// Update job data with incremented retry count, then move to delayed
+					// This preserves job metadata (logs, ID, parent/children relationships)
+					await job.updateData({
+						...job.data,
+						cache_retry_attempt: retryAttempt + 1,
+					})
+					await job.moveToDelayed(Date.now() + delayMs, token)
 
-					// Return early - don't update last_checked_at yet, don't spawn child jobs
-					return { serie_id, chapters_queued: 0 }
+					// Throw DelayedError to signal worker the job was intentionally deferred
+					// Don't update last_checked_at yet, don't spawn child jobs
+					throw new DelayedError()
 				}
 				else {
 					log(`No new chapters after ${MAX_CACHE_RETRIES} cache retries`)
@@ -413,6 +410,11 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 			return { serie_id, chapters_queued: chapter_ids.length }
 		}
 		catch (error) {
+			// Re-throw DelayedError without treating it as a failure
+			if (error instanceof DelayedError) {
+				throw error
+			}
+
 			// Increment consecutive_failures on error
 			if (existingSerieSource) {
 				await db.serieSource.update({
