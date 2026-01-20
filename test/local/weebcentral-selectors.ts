@@ -210,7 +210,7 @@ async function main() {
 
 		if (failed > 0) {
 			console.log("\nFailed tests:")
-			results.filter(r => !r.passed).forEach(r => {
+			results.filter(r => !r.passed).forEach((r) => {
 				console.log(`  - ${r.name}: ${r.message}`)
 			})
 			process.exit(1)
