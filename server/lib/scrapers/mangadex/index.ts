@@ -39,6 +39,16 @@ import {
 	transformSourceStatus,
 } from "./types"
 
+// Default excluded groups - official publisher accounts that link to external services
+const DEFAULT_EXCLUDED_GROUPS = [
+	"5fed0576-8b94-4f9a-b6a7-08eecd69800d", // Azuki
+	"06a9fecb-b608-4f19-b93c-7caab06b7f44", // Bilibili
+	"8d8ecf83-8d42-4f8c-add8-60963f9f28d9", // Comikey
+	"caa63201-4a17-4b7f-95ff-ed884a2b7e60", // INKR
+	"319c1b10-cbd0-4f55-a46e-c4ee17e65139", // MangaHot
+	"4f1de6a2-f0c5-4ac5-bce5-02c7dbb67deb", // MANGA Plus
+] as const
+
 export class Mangadex implements SourceProvider {
 	#information: SourceInformation
 
@@ -231,6 +241,10 @@ export class Mangadex implements SourceProvider {
 			if (dexLang) chapterParams.append("translatedLanguage[]", dexLang)
 		}
 
+		for (const groupId of DEFAULT_EXCLUDED_GROUPS) {
+			chapterParams.append("excludedGroups[]", groupId)
+		}
+
 		const chapterUrl = new URL(`chapter?${chapterParams}`, this.#apiInformation.api_url)
 		const chapterData = await fetch(chapterUrl, { method: "GET" })
 
@@ -341,6 +355,10 @@ export class Mangadex implements SourceProvider {
 			.forEach((lang) => {
 				params.append("translatedLanguage[]", lang)
 			})
+
+		for (const groupId of DEFAULT_EXCLUDED_GROUPS) {
+			params.append("excludedGroups[]", groupId)
+		}
 
 		params.append("includes[]", "scanlation_group")
 
