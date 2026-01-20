@@ -11,7 +11,7 @@ export const indexerJobDataSchema = z.object({
 
 export type IndexerJobData = z.infer<typeof indexerJobDataSchema>
 
-export default defineQueue<IndexerJobData, undefined, typeof QUEUE_NAME>({
+export default defineQueue<IndexerJobData, undefined, `reindex-${string}` | typeof QUEUE_NAME>({
 	name: QUEUE_NAME,
 	options: {
 		defaultJobOptions: {
