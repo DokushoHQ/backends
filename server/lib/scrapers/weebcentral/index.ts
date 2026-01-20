@@ -364,6 +364,46 @@ export class WeebCentral implements SourceProvider {
 		}
 	}
 
+	/**
+	 * Fetch chapters from the chapter-select endpoint that are newer than the given chapter.
+	 * The endpoint shows the current_chapter as a <button>, all others as <a> links.
+	 * Chapters appearing before the button are NEWER than current_chapter.
+	 */
+	async fetchNewerChaptersFromSelector(
+		serieId: SourceSerieId,
+		latestKnownChapterId: string,
+	): Promise<{ id: string, title: string }[]> {
+		const url = new URL(`series/${serieId}/chapter-select`, this.#information.url)
+		url.searchParams.append("current_chapter", latestKnownChapterId)
+
+		const data = await fetch(url, { method: "GET" })
+		if (!data.ok) return []
+
+		const html = await data.text()
+		const $ = load(html)
+
+		const newerChapters: { id: string, title: string }[] = []
+
+		// Iterate through elements in order - stop when we hit the button (current chapter)
+		$("div.grid > a, div.grid > button").each((_, el) => {
+			const $el = $(el)
+
+			// Stop at the button (current chapter marker)
+			if ($el.is("button")) return false
+
+			const href = $el.attr("href")
+			const title = $el.text().trim()
+			if (!href) return
+
+			const match = href.match(/\/chapters\/([^/]+)/)
+			if (match?.[1]) {
+				newerChapters.push({ id: match[1], title })
+			}
+		})
+
+		return newerChapters
+	}
+
 	async fetchSerieChapters(serieId: SourceSerieId): Promise<SourceChapters> {
 		const url = new URL(`series/${serieId}/full-chapter-list`, this.#information.url)
 
@@ -422,6 +462,31 @@ export class WeebCentral implements SourceProvider {
 				groups,
 			})
 		})
+
+		// Check chapter-select for newer chapters not in cached full-chapter-list
+		if (chapterData.length > 0) {
+			const latestChapterId = chapterData[0]?.id // First chapter is newest in the list
+			if (latestChapterId) {
+				const newerChapters = await this.fetchNewerChaptersFromSelector(serieId, latestChapterId)
+
+				if (newerChapters.length > 0) {
+					console.log(`[WeebCentral] Cache bypass: found ${newerChapters.length} newer chapters via selector`)
+					// Prepend newer chapters (they come before the latest known)
+					for (const chapter of newerChapters.reverse()) { // reverse to maintain order
+						chapterData.unshift({
+							id: chapter.id,
+							title: { [SourceLanguage.En]: [chapter.title] },
+							dateUpload: new Date(),
+							language: SourceLanguage.En,
+							externalUrl: new URL(`/chapters/${chapter.id}`, this.#information.url),
+							volumeName: undefined,
+							volumeNumber: undefined,
+							groups: [],
+						})
+					}
+				}
+			}
+		}
 
 		// Extract titles for batch processing
 		const titles = chapterData.map(chapter => Object.values(chapter.title).flat()[0] ?? "")
