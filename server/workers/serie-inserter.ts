@@ -4,7 +4,7 @@ import type { ChapterDataJobData } from "../queues/chapter-data"
 import type { CoverUpdateJobData } from "../queues/cover-update"
 import type { IndexerJobData } from "../queues/indexer"
 import type { SerieInserterJobData, SerieInserterJobResult } from "../queues/serie-inserter"
-import { JOB_PRIORITY, QUEUE_NAME, serieInserterJobDataSchema } from "../queues/serie-inserter"
+import serieInserterQueue, { JOB_PRIORITY, QUEUE_NAME, serieInserterJobDataSchema } from "../queues/serie-inserter"
 import type { Language, Prisma } from "../utils/db"
 import { db } from "../utils/db"
 import { getFlowProducer } from "../utils/flow-producer"
@@ -61,7 +61,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 			const serieTitle = resolveMultiLanguage(serieData.title)
 			log(`Fetched serie: ${serieTitle} with ${chaptersResult.chapters.length} chapters`)
 
-			const { chapter_ids, serie_id, serie_source_id } = await db.$transaction(async (tx) => {
+			const { chapter_ids, serie_id, serie_source_id, has_new_chapters } = await db.$transaction(async (tx) => {
 				// Create genres, artists, authors first (skip duplicates)
 				if (serieData.genres.length > 0) {
 					await tx.genre.createMany({
@@ -307,10 +307,49 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					serie_id: serieId,
 					serie_source_id: serieSourceId,
 					chapter_ids: chaptersToRefresh.map(c => c.id),
+					has_new_chapters: hasNewChapters,
 				}
 			})
 
 			await job.updateProgress(70)
+
+			// Handle source cache issues with delayed retry (applicable to any source)
+			// Only retry for updates (existingSerieSource), not new imports
+			if (!has_new_chapters && job.data.expect_new_chapters && existingSerieSource) {
+				const retryAttempt = job.data.cache_retry_attempt ?? 0
+				const MAX_CACHE_RETRIES = 4
+				const RETRY_DELAYS_MS = [
+					10 * 60 * 1000, // 10 minutes
+					60 * 60 * 1000, // 1 hour
+					2 * 60 * 60 * 1000, // 2 hours
+					6 * 60 * 60 * 1000, // 6 hours
+				]
+
+				if (retryAttempt < MAX_CACHE_RETRIES) {
+					const delayMs = RETRY_DELAYS_MS[retryAttempt] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]!
+					const delayDesc = retryAttempt === 0 ? "10 min" : retryAttempt === 1 ? "1h" : retryAttempt === 2 ? "2h" : "6h"
+					log(`No new chapters found but expected (source cache issue?). Retry ${retryAttempt + 1}/${MAX_CACHE_RETRIES} in ${delayDesc}`)
+
+					await serieInserterQueue.add(
+						"serie-inserter",
+						{
+							...job.data,
+							cache_retry_attempt: retryAttempt + 1,
+						},
+						{
+							delay: delayMs,
+							priority: job.opts.priority,
+						},
+					)
+
+					// Return early - don't update last_checked_at yet, don't spawn child jobs
+					return { serie_id, chapters_queued: 0 }
+				}
+				else {
+					log(`No new chapters after ${MAX_CACHE_RETRIES} cache retries`)
+				}
+			}
+
 			const mode = existingSerieSource ? "Updated" : targetSerieId ? "Linked to" : "Created"
 			log(`${mode} serie ${serie_id} with ${chapter_ids.length} chapters to process`)
 

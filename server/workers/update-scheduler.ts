@@ -6,7 +6,8 @@ import serieInserterQueue, { JOB_PRIORITY } from "../queues/serie-inserter"
 import type { UpdateSchedulerJobData } from "../queues/update-scheduler"
 import { QUEUE_NAME, updateSchedulerJobDataSchema } from "../queues/update-scheduler"
 import { db } from "../utils/db"
-import { createSources, getSourceById } from "../utils/sources"
+import { findFingerprintPosition } from "../utils/fingerprint"
+import { getSourceById } from "../utils/sources"
 
 // Failure backoff configuration (days to skip based on consecutive failures)
 const FAILURE_BACKOFF_DAYS: Record<number, number> = {
@@ -15,26 +16,6 @@ const FAILURE_BACKOFF_DAYS: Record<number, number> = {
 	3: 3, // Skip 3 days
 	4: 7, // Skip 1 week
 	5: 14, // Skip 2 weeks
-}
-
-/**
- * Find the position of the fingerprint sequence in the collected IDs.
- * Returns the index where the fingerprint starts, or -1 if not found.
- */
-function findFingerprintPosition(collectedIds: string[], fingerprint: string[]): number {
-	if (fingerprint.length === 0) return -1
-
-	for (let i = 0; i <= collectedIds.length - fingerprint.length; i++) {
-		let match = true
-		for (let j = 0; j < fingerprint.length; j++) {
-			if (collectedIds[i + j] !== fingerprint[j]) {
-				match = false
-				break
-			}
-		}
-		if (match) return i
-	}
-	return -1
 }
 
 /**
@@ -70,16 +51,7 @@ async function handleFetchLatest(
 
 	job.log(`Found ${dbSources.length} source(s) with tracked series to check${sourceId ? " (filtered by sourceId)" : ""}`)
 
-	// Create sources instance
-	const enabledLanguages = config.enabledLanguages
-		?.split(",")
-		.map((lang: string) => lang.trim())
-		.filter(Boolean) as ("En" | "Fr")[]
-	const sources = await createSources({
-		ENABLED_LANGUAGE: enabledLanguages?.length ? enabledLanguages : ["En"],
-		BYPARR_URL: config.byparrUrl,
-		SUWAYOMI_URL: config.suwayomiUrl,
-	})
+	const sources = await getSources()
 
 	let totalQueued = 0
 
@@ -179,7 +151,7 @@ async function handleFetchLatest(
 
 			await serieInserterQueue.add(
 				"serie-inserter",
-				{ source_id: dbSource.id, source_serie_id: externalId },
+				{ source_id: dbSource.id, source_serie_id: externalId, expect_new_chapters: true },
 				{ priority: JOB_PRIORITY.HIGH },
 			)
 

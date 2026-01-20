@@ -364,6 +364,46 @@ export class WeebCentral implements SourceProvider {
 		}
 	}
 
+	/**
+	 * Fetch chapters from the chapter-select endpoint that are newer than the given chapter.
+	 * The endpoint shows the current_chapter as a <button>, all others as <a> links.
+	 * Chapters appearing before the button are NEWER than current_chapter.
+	 */
+	async fetchNewerChaptersFromSelector(
+		serieId: SourceSerieId,
+		latestKnownChapterId: string,
+	): Promise<{ id: string, title: string }[]> {
+		const url = new URL(`series/${serieId}/chapter-select`, this.#information.url)
+		url.searchParams.append("current_chapter", latestKnownChapterId)
+
+		const data = await fetch(url, { method: "GET" })
+		if (!data.ok) return []
+
+		const html = await data.text()
+		const $ = load(html)
+
+		const newerChapters: { id: string, title: string }[] = []
+
+		// Iterate through elements in order - stop when we hit the button (current chapter)
+		$("div.grid > a, div.grid > button").each((_, el) => {
+			const $el = $(el)
+
+			// Stop at the button (current chapter marker)
+			if ($el.is("button")) return false
+
+			const href = $el.attr("href")
+			const title = $el.text().trim()
+			if (!href) return
+
+			const match = href.match(/\/chapters\/([^/]+)/)
+			if (match?.[1]) {
+				newerChapters.push({ id: match[1], title })
+			}
+		})
+
+		return newerChapters
+	}
+
 	async fetchSerieChapters(serieId: SourceSerieId): Promise<SourceChapters> {
 		const url = new URL(`series/${serieId}/full-chapter-list`, this.#information.url)
 
@@ -379,12 +419,12 @@ export class WeebCentral implements SourceProvider {
 		// Collect chapter data first (without chapterNumber)
 		const chapterData: Omit<SourceSerieChapter, "chapterNumber">[] = []
 
-		$("div.flex.items-center").each((_, element) => {
-			const $div = $(element)
-			const link = $div.find("a[href*=\"/chapters/\"]")
-			const href = link.attr("href")
+		// Use Mihon's selector: div[x-data] > a (direct anchor children of div with x-data attribute)
+		$("div[x-data] > a").each((_, element) => {
+			const $link = $(element)
+			const href = $link.attr("href")
 
-			if (!href) return
+			if (!href || !href.includes("/chapters/")) return
 
 			const chapterMatch = href.match(/\/chapters\/([^/]+)/)
 			if (!chapterMatch) return
@@ -392,14 +432,22 @@ export class WeebCentral implements SourceProvider {
 			const id = chapterMatch[1]
 			if (!id) throw new Error(`Invalid chapter ID: ${id}`)
 
-			// Get chapter title
-			const titleSpan = link.find("span.grow span").first()
+			// Get chapter title from span.flex > span (Mihon's selector)
+			const titleSpan = $link.find("span.flex > span").first()
 			const titleText = titleSpan.text().trim()
 
-			// Get upload date
-			const timeElement = $div.find("time")
+			// Get upload date from time[datetime]
+			const timeElement = $link.find("time[datetime]")
 			const dateString = timeElement.attr("datetime")
 			const dateUpload = dateString ? new Date(dateString) : new Date()
+
+			// Detect scanlator from SVG stroke color (Mihon's approach)
+			// #d8b4fe = Official, #4C4D54 = Unknown
+			const groups: { id: string, name: string }[] = []
+			const svgStroke = $link.find("svg").attr("stroke")
+			if (svgStroke === "#d8b4fe") {
+				groups.push({ id: "official", name: "Official" })
+			}
 
 			const externalUrl = new URL(href, this.#information.url)
 
@@ -411,9 +459,34 @@ export class WeebCentral implements SourceProvider {
 				externalUrl,
 				volumeName: undefined,
 				volumeNumber: undefined,
-				groups: [],
+				groups,
 			})
 		})
+
+		// Check chapter-select for newer chapters not in cached full-chapter-list
+		if (chapterData.length > 0) {
+			const latestChapterId = chapterData[0]?.id // First chapter is newest in the list
+			if (latestChapterId) {
+				const newerChapters = await this.fetchNewerChaptersFromSelector(serieId, latestChapterId)
+
+				if (newerChapters.length > 0) {
+					console.log(`[WeebCentral] Cache bypass: found ${newerChapters.length} newer chapters via selector`)
+					// Prepend newer chapters (they come before the latest known)
+					for (const chapter of newerChapters.reverse()) { // reverse to maintain order
+						chapterData.unshift({
+							id: chapter.id,
+							title: { [SourceLanguage.En]: [chapter.title] },
+							dateUpload: new Date(),
+							language: SourceLanguage.En,
+							externalUrl: new URL(`/chapters/${chapter.id}`, this.#information.url),
+							volumeName: undefined,
+							volumeNumber: undefined,
+							groups: [],
+						})
+					}
+				}
+			}
+		}
 
 		// Extract titles for batch processing
 		const titles = chapterData.map(chapter => Object.values(chapter.title).flat()[0] ?? "")
@@ -442,6 +515,8 @@ export class WeebCentral implements SourceProvider {
 
 	async fetchChapterData(_serieId: SourceSerieId, chapterId: SourceSerieChapterId): Promise<SourceSerieChapterData> {
 		const url = new URL(`chapters/${chapterId}/images`, this.#information.url)
+		// Match Mihon's query parameters
+		url.searchParams.append("is_prev", "False")
 		url.searchParams.append("reading_style", "long_strip")
 
 		const data = await fetch(url, { method: "GET" })
@@ -458,24 +533,16 @@ export class WeebCentral implements SourceProvider {
 
 		const images: SourceSerieChapterImage[] = []
 
-		$("img").each((_, element) => {
+		// Target images inside the scroll section (x-data contains scroll functions)
+		// Mihon uses ~= but that matches space-separated words; *= matches substring
+		$("section[x-data*=scroll] > img").each((index, element) => {
 			const $img = $(element)
 			const src = $img.attr("src")
-			const alt = $img.attr("alt")
 
 			if (!src) return
 
-			// Extract page number from alt text (e.g., "Page 1" -> 1)
-			let index = images.length + 1
-			if (alt) {
-				const pageMatch = alt.match(/Page (\d+)/)
-				if (pageMatch) {
-					index = parseInt(pageMatch[1] ?? "", 10)
-				}
-			}
-
 			images.push({
-				index,
+				index: index + 1,
 				url: new URL(src),
 				type: "image",
 			})
