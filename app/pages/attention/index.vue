@@ -5,16 +5,16 @@ definePageMeta({
 
 // Fetch duplicate count and recent duplicates
 const { data: duplicatesData } = await useFetch("/api/v1/duplicates", {
-	query: { status: "Pending", limit: 3 },
+	query: { status: "Pending", limit: 5 },
 })
 
 // Fetch issues with counts and preview
 const { data: issuesData } = await useFetch("/api/v1/attention/issues", {
-	query: { type: "all", limit: 4 },
+	query: { type: "all", limit: 5 },
 })
 
 const pendingDuplicates = computed(() => duplicatesData.value?.pagination?.total ?? 0)
-const recentDuplicates = computed(() => duplicatesData.value?.groups?.slice(0, 3) ?? [])
+const recentDuplicates = computed(() => duplicatesData.value?.groups?.slice(0, 5) ?? [])
 
 const issueCounts = computed(() => issuesData.value?.counts ?? {
 	all: 0,
@@ -23,7 +23,7 @@ const issueCounts = computed(() => issuesData.value?.counts ?? {
 	scrape_failures: 0,
 	chapter_data_missing: 0,
 })
-const recentIssues = computed(() => issuesData.value?.series?.slice(0, 4) ?? [])
+const recentIssues = computed(() => issuesData.value?.series?.slice(0, 5) ?? [])
 
 const totalItems = computed(() => pendingDuplicates.value + issueCounts.value.all)
 
@@ -33,15 +33,11 @@ const issueTypes: Array<{ key: string, label: string, icon: string, color: "oran
 	{ key: "scrape_failures", label: "Scrape Failed", icon: "i-lucide-wifi-off", color: "red" },
 	{ key: "chapter_data_missing", label: "Chapter Data", icon: "i-lucide-file-warning", color: "purple" },
 ]
-
-function getIssueColor(issue: string) {
-	return issueTypes.find(t => t.key === issue)?.color ?? "gray"
-}
 </script>
 
 <template>
-	<div class="attention-page">
-		<UDashboardPanel>
+	<div class="attention-page flex flex-col flex-1 min-h-0">
+		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
 				<UDashboardNavbar title="Attention Center">
 					<template #description>
@@ -119,49 +115,11 @@ function getIssueColor(issue: string) {
 									v-if="recentDuplicates.length > 0"
 									class="preview-list"
 								>
-									<NuxtLink
+									<AttentionDuplicateRow
 										v-for="group in recentDuplicates"
 										:key="group.id"
-										to="/attention/duplicates"
-										class="preview-item duplicate-preview"
-									>
-										<div class="duplicate-covers">
-											<div class="cover-stack">
-												<div
-													v-for="(serie, idx) in group.series.slice(0, 2)"
-													:key="serie.id"
-													class="stacked-cover"
-													:style="{ '--idx': idx }"
-												>
-													<NuxtImg
-														v-if="serie.cover"
-														:src="serie.cover"
-														:alt="serie.title"
-														class="cover-img"
-													/>
-													<div
-														v-else
-														class="cover-placeholder"
-													>
-														<UIcon
-															name="i-lucide-image"
-															class="h-4 w-4"
-														/>
-													</div>
-												</div>
-											</div>
-										</div>
-										<div class="preview-info">
-											<span class="preview-title">{{ group.series[0]?.title }}</span>
-											<span class="preview-meta">
-												<span class="confidence">{{ group.confidence }}% match</span>
-											</span>
-										</div>
-										<UIcon
-											name="i-lucide-chevron-right"
-											class="h-4 w-4 text-muted-foreground"
-										/>
-									</NuxtLink>
+										:group="group"
+									/>
 								</div>
 
 								<div
@@ -184,53 +142,11 @@ function getIssueColor(issue: string) {
 									v-if="recentIssues.length > 0"
 									class="preview-list"
 								>
-									<NuxtLink
+									<AttentionIssueRow
 										v-for="serie in recentIssues"
 										:key="serie.id"
-										:to="`/series/${serie.id}`"
-										class="preview-item"
-									>
-										<div class="serie-cover">
-											<NuxtImg
-												v-if="serie.cover"
-												:src="serie.cover"
-												:alt="serie.title"
-												class="cover-img"
-											/>
-											<div
-												v-else
-												class="cover-placeholder"
-											>
-												<UIcon
-													name="i-lucide-image-off"
-													class="h-4 w-4"
-												/>
-											</div>
-										</div>
-										<div class="preview-info">
-											<span class="preview-title">{{ serie.title }}</span>
-											<div class="issue-badges">
-												<span
-													v-for="issue in serie.issues.slice(0, 2)"
-													:key="issue"
-													class="issue-badge"
-													:class="`color-${getIssueColor(issue)}`"
-												>
-													{{ issueTypes.find(t => t.key === issue)?.label }}
-												</span>
-												<span
-													v-if="serie.issues.length > 2"
-													class="issue-badge color-gray"
-												>
-													+{{ serie.issues.length - 2 }}
-												</span>
-											</div>
-										</div>
-										<UIcon
-											name="i-lucide-chevron-right"
-											class="h-4 w-4 text-muted-foreground"
-										/>
-									</NuxtLink>
+										:serie="serie"
+									/>
 								</div>
 
 								<div
@@ -254,12 +170,6 @@ function getIssueColor(issue: string) {
 	--purple-soft: oklch(0.7 0.15 280 / 0.12);
 	--amber: oklch(0.75 0.15 70);
 	--amber-soft: oklch(0.75 0.15 70 / 0.12);
-	--orange: oklch(0.72 0.16 45);
-	--orange-soft: oklch(0.72 0.16 45 / 0.12);
-	--yellow: oklch(0.8 0.14 85);
-	--yellow-soft: oklch(0.8 0.14 85 / 0.12);
-	--red: oklch(0.65 0.2 25);
-	--red-soft: oklch(0.65 0.2 25 / 0.12);
 	--success: oklch(0.72 0.15 160);
 	--success-soft: oklch(0.72 0.15 160 / 0.12);
 }
@@ -378,133 +288,6 @@ function getIssueColor(issue: string) {
 	display: flex;
 	flex-direction: column;
 }
-
-.preview-item {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	padding: 0.75rem 1rem;
-	text-decoration: none;
-	transition: background 0.15s ease;
-	border-bottom: 1px solid var(--color-border);
-}
-
-.preview-item:last-child {
-	border-bottom: none;
-}
-
-.preview-item:hover {
-	background: var(--color-muted);
-}
-
-.serie-cover {
-	width: 2.5rem;
-	height: 3.5rem;
-	border-radius: 0.25rem;
-	overflow: hidden;
-	background: var(--color-muted);
-	flex-shrink: 0;
-}
-
-.cover-img {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-}
-
-.cover-placeholder {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 100%;
-	height: 100%;
-	color: var(--color-text-muted);
-}
-
-/* Duplicate preview with stacked covers */
-.duplicate-covers {
-	width: 3.5rem;
-	flex-shrink: 0;
-}
-
-.cover-stack {
-	position: relative;
-	width: 2.5rem;
-	height: 3.5rem;
-}
-
-.stacked-cover {
-	position: absolute;
-	width: 2rem;
-	height: 2.75rem;
-	border-radius: 0.25rem;
-	overflow: hidden;
-	background: var(--color-muted);
-	border: 2px solid var(--color-background);
-	transition: transform 0.15s ease;
-}
-
-.stacked-cover:nth-child(1) {
-	z-index: 2;
-	left: 0;
-	top: 0;
-}
-
-.stacked-cover:nth-child(2) {
-	z-index: 1;
-	left: 0.75rem;
-	top: 0.5rem;
-}
-
-.preview-item:hover .stacked-cover:nth-child(2) {
-	transform: translateX(2px);
-}
-
-.preview-info {
-	flex: 1;
-	min-width: 0;
-}
-
-.preview-title {
-	display: block;
-	font-size: var(--font-size-md);
-	font-weight: 500;
-	color: var(--color-text);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	margin-bottom: 0.25rem;
-}
-
-.preview-meta {
-	font-size: var(--font-size-sm);
-	color: var(--color-text-muted);
-}
-
-.confidence {
-	color: var(--purple);
-	font-weight: 500;
-}
-
-/* Issue badges */
-.issue-badges {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.375rem;
-}
-
-.issue-badge {
-	padding: 0.1875rem 0.5rem;
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	border-radius: 0.25rem;
-}
-
-.issue-badge.color-orange { color: var(--orange); background: var(--orange-soft); }
-.issue-badge.color-yellow { color: var(--yellow); background: var(--yellow-soft); }
-.issue-badge.color-red { color: var(--red); background: var(--red-soft); }
-.issue-badge.color-purple { color: var(--purple); background: var(--purple-soft); }
-.issue-badge.color-gray { color: var(--color-text-muted); background: var(--color-muted); }
 
 /* Empty preview */
 .empty-preview {

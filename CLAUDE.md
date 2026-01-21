@@ -111,6 +111,57 @@ Series have `soft_deleted_at` and `pending_delete_job_id`. Deletion flow:
 
 All external images (covers, chapter pages) are downloaded and uploaded to S3. Source URLs may expire; S3 URLs are stable. The `s3.ts` utility handles uploads via AWS SDK.
 
+## Frontend Development
+
+### Using the Frontend Skill
+
+When working on `.vue` files, always invoke the `frontend-design` skill first. This ensures high-quality, distinctive UI that avoids generic "AI slop" aesthetics.
+
+### Component Patterns
+
+**Splitting Pages into Components:**
+- Extract repeated row/card patterns into dedicated components (e.g., `Attention/DuplicateRow.vue`, `Attention/IssueRow.vue`)
+- Keep page-specific components in a folder matching the page name (e.g., `components/Attention/`)
+- Generic reusable components go in `components/ui/`
+
+**Generic Components (`components/ui/`):**
+- `UiStatCard` - Stat display with icon, value, label, and color
+- `UiStatCardGrid` - Responsive grid with smart last-card spanning
+- `UiContentCard` - Section card with header (icon, title, description, link) and body slot
+- `UiSegmentedControl` - Tab-like filter control
+- `UiPagination` - Mobile-friendly pagination
+- `UiBackButton` - Navigation back button
+
+**When to Extract Components:**
+- When the same structure repeats 3+ times
+- When a section has complex styling that clutters the page
+- When the component could be reused elsewhere
+
+### CSS Theming
+
+**Global Typography Scale (`app/assets/css/main.css`):**
+```css
+--font-size-xs: 0.75rem;      /* 12px - badges, small text */
+--font-size-sm: 0.8125rem;    /* 13px - labels, meta text */
+--font-size-base: 0.875rem;   /* 14px - body text, descriptions */
+--font-size-md: 0.9375rem;    /* 15px - preview titles */
+--font-size-lg: 1.0625rem;    /* 17px - card titles */
+--font-size-xl: 1.25rem;      /* 20px - section headings */
+--font-size-2xl: 1.5rem;      /* 24px - stat values, large headings */
+```
+
+**Color Variables:**
+- Use oklch color format for better perceptual uniformity
+- Define colors and their soft variants (e.g., `--purple` and `--purple-soft` for backgrounds)
+- Scoped component colors can be defined in the component's `<style scoped>` section
+
+**Scrolling Fix:**
+Pages using `UDashboardPanel` need proper flex classes on the root wrapper:
+```vue
+<div class="page-name flex flex-col flex-1 min-h-0">
+  <UDashboardPanel class="flex-1 min-h-0">
+```
+
 ## Git Workflow
 
 - Always work inside a feature branch, never commit directly to main
