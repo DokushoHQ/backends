@@ -6,9 +6,15 @@ useHead({
 </script>
 
 <template>
-	<UApp>
-		<NuxtLayout>
-			<NuxtPage />
-		</NuxtLayout>
-	</UApp>
+	<Transition>
+		<KeepAlive>
+			<Suspense>
+				<UApp>
+					<NuxtLayout>
+						<NuxtPage />
+					</NuxtLayout>
+				</UApp>
+			</Suspense>
+		</KeepAlive>
+	</Transition>
 </template>

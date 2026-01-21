@@ -21,6 +21,7 @@ const navigation = computed(() => {
 
 	if (isAdmin.value) {
 		items.push(
+			{ label: "Duplicates", icon: "i-lucide-copy", to: "/series/duplicates", active: isActiveRoute("/series/duplicates") },
 			{ label: "Users", icon: "i-lucide-users", to: "/users", active: isActiveRoute("/users") },
 			{ label: "Jobs", icon: "i-lucide-briefcase", to: "/jobs", active: isActiveRoute("/jobs") },
 		)

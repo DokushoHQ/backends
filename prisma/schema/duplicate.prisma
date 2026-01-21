@@ -1,0 +1,25 @@
+model DuplicateGroup {
+    id         String               @id @default(uuid()) @db.Uuid
+    created_at DateTime             @default(now()) @db.Timestamptz()
+    updated_at DateTime             @default(now()) @updatedAt @db.Timestamptz()
+    status     DuplicateGroupStatus @default(Pending)
+    confidence Float
+
+    /// [DuplicateGroupMembersType]
+    members Json // Array of { serieId, similarity, titles }
+
+    suggested_primary_id String?   @db.Uuid
+    merged_into_id       String?   @db.Uuid
+    merged_at            DateTime? @db.Timestamptz()
+
+    @@index([status])
+    @@map("duplicate_group")
+}
+
+enum DuplicateGroupStatus {
+    Pending
+    Merged
+    Dismissed
+
+    @@map("DuplicateGroupStatus")
+}

@@ -3,6 +3,14 @@ import backupParserQueue, {
 	DISPLAY_NAME as BACKUP_PARSER_DISPLAY,
 	QUEUE_NAME as BACKUP_PARSER_NAME,
 } from "../queues/backup-parser"
+import duplicateDetectorQueue, {
+	DISPLAY_NAME as DUPLICATE_DETECTOR_DISPLAY,
+	QUEUE_NAME as DUPLICATE_DETECTOR_NAME,
+} from "../queues/duplicate-detector"
+import duplicateMergeQueue, {
+	DISPLAY_NAME as DUPLICATE_MERGE_DISPLAY,
+	QUEUE_NAME as DUPLICATE_MERGE_NAME,
+} from "../queues/duplicate-merge"
 import chapterDataQueue, {
 	DISPLAY_NAME as CHAPTER_DATA_DISPLAY,
 	QUEUE_NAME as CHAPTER_DATA_NAME,
@@ -46,6 +54,8 @@ const queues = {
 	email: emailQueue,
 	pageRetry: pageRetryQueue,
 	backupParser: backupParserQueue,
+	duplicateDetector: duplicateDetectorQueue,
+	duplicateMerge: duplicateMergeQueue,
 }
 
 export type QueueName = keyof typeof queues
@@ -71,6 +81,8 @@ export const queueConfig: Record<
 	email: { name: EMAIL_NAME, displayName: EMAIL_DISPLAY },
 	pageRetry: { name: PAGE_RETRY_NAME, displayName: PAGE_RETRY_DISPLAY },
 	backupParser: { name: BACKUP_PARSER_NAME, displayName: BACKUP_PARSER_DISPLAY },
+	duplicateDetector: { name: DUPLICATE_DETECTOR_NAME, displayName: DUPLICATE_DETECTOR_DISPLAY },
+	duplicateMerge: { name: DUPLICATE_MERGE_NAME, displayName: DUPLICATE_MERGE_DISPLAY },
 }
 
 export const allQueueNames = Object.keys(queueConfig) as QueueName[]
