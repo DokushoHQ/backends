@@ -120,18 +120,10 @@ useHead({
 								@retried="() => refreshChapters()"
 							/>
 						</template>
-						<UButton
-							variant="outline"
-							size="sm"
+						<UiBackButton
 							to="/series"
-							class="shrink-0"
-						>
-							<UIcon
-								name="i-lucide-arrow-left"
-								class="h-4 w-4 sm:mr-2"
-							/>
-							<span class="hidden sm:inline">Back to Series</span>
-						</UButton>
+							label="Back to Series"
+						/>
 					</div>
 				</template>
 			</UDashboardNavbar>

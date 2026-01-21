@@ -151,6 +151,12 @@ const statusOptions = [
 	{ label: "Merged", value: "Merged" },
 	{ label: "Dismissed", value: "Dismissed" },
 ]
+
+// Two-way binding for segmented control
+const selectedStatus = computed({
+	get: () => statusFilter.value,
+	set: (value: string) => setStatus(value),
+})
 </script>
 
 <template>
@@ -163,17 +169,10 @@ const statusOptions = [
 				>
 					<template #right>
 						<div class="flex items-center gap-3">
-							<div class="status-tabs">
-								<button
-									v-for="opt in statusOptions"
-									:key="opt.value"
-									class="status-tab"
-									:class="{ active: statusFilter === opt.value }"
-									@click="setStatus(opt.value)"
-								>
-									{{ opt.label }}
-								</button>
-							</div>
+							<UiSegmentedControl
+								v-model="selectedStatus"
+								:options="statusOptions"
+							/>
 							<button
 								class="scan-button"
 								:class="{ scanning: detecting }"
@@ -187,6 +186,7 @@ const statusOptions = [
 								/>
 								<span>{{ detecting ? 'Scanning' : 'Scan' }}</span>
 							</button>
+							<UiBackButton to="/attention" />
 						</div>
 					</template>
 				</UDashboardNavbar>
@@ -300,35 +300,6 @@ const statusOptions = [
 	--success-soft: oklch(0.72 0.15 160 / 0.15);
 	--danger: oklch(0.65 0.2 25);
 	--danger-soft: oklch(0.65 0.2 25 / 0.15);
-}
-
-/* Status tabs */
-.status-tabs {
-	display: flex;
-	align-items: center;
-	gap: 0.125rem;
-	padding: 0.25rem;
-	background: var(--color-muted);
-	border-radius: 0.5rem;
-}
-
-.status-tab {
-	padding: 0.375rem 0.75rem;
-	font-size: 0.8125rem;
-	font-weight: 500;
-	color: var(--color-text-muted);
-	border-radius: 0.375rem;
-	transition: all 0.15s ease;
-}
-
-.status-tab:hover {
-	color: var(--color-text);
-}
-
-.status-tab.active {
-	background: var(--color-background);
-	color: var(--color-text);
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* Scan button */

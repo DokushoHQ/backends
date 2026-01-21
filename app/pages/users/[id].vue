@@ -47,17 +47,10 @@ function formatDate(date: Date | string | null): string {
 					/>
 				</template>
 				<template #right>
-					<UButton
-						variant="outline"
-						size="sm"
+					<UiBackButton
 						to="/users"
-					>
-						<UIcon
-							name="i-lucide-arrow-left"
-							class="h-4 w-4 mr-2"
-						/>
-						Back to Users
-					</UButton>
+						label="Back to Users"
+					/>
 				</template>
 			</UDashboardNavbar>
 		</template>

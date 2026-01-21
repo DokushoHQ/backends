@@ -10,6 +10,12 @@ const router = useRouter()
 const page = computed(() => Math.max(1, Number.parseInt(String(route.query.page || "1"), 10)))
 const typeFilter = computed(() => (route.query.type as string) || "all")
 
+// Two-way binding for segmented control
+const selectedType = computed({
+	get: () => typeFilter.value,
+	set: (value: string) => setType(value),
+})
+
 // Fetch issues
 const { data, pending, error, refresh } = await useFetch("/api/v1/attention/issues", {
 	query: computed(() => ({
@@ -71,21 +77,11 @@ function setPage(newPage: number) {
 				>
 					<template #right>
 						<div class="flex items-center gap-3">
-							<div class="status-tabs">
-								<button
-									v-for="opt in filterOptions"
-									:key="opt.value"
-									class="status-tab"
-									:class="{ active: typeFilter === opt.value }"
-									@click="setType(opt.value)"
-								>
-									{{ opt.label }}
-									<span
-										v-if="opt.count > 0"
-										class="count"
-									>{{ opt.count }}</span>
-								</button>
-							</div>
+							<UiSegmentedControl
+								v-model="selectedType"
+								:options="filterOptions"
+							/>
+							<UiBackButton to="/attention" />
 						</div>
 					</template>
 				</UDashboardNavbar>
@@ -263,53 +259,6 @@ function setPage(newPage: number) {
 	--purple-soft: oklch(0.75 0.15 280 / 0.15);
 	--success: oklch(0.75 0.15 160);
 	--success-soft: oklch(0.75 0.15 160 / 0.15);
-}
-
-/* Status tabs */
-.status-tabs {
-	display: flex;
-	align-items: center;
-	gap: 0.125rem;
-	padding: 0.25rem;
-	background: var(--color-muted);
-	border-radius: 0.5rem;
-}
-
-.status-tab {
-	display: flex;
-	align-items: center;
-	gap: 0.375rem;
-	padding: 0.375rem 0.75rem;
-	font-size: 0.8125rem;
-	font-weight: 500;
-	color: var(--color-text-muted);
-	border-radius: 0.375rem;
-	transition: all 0.15s ease;
-	cursor: pointer;
-}
-
-.status-tab:hover {
-	color: var(--color-text);
-	background: var(--color-background);
-}
-
-.status-tab.active {
-	background: var(--color-background);
-	color: var(--color-text);
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.status-tab .count {
-	padding: 0.125rem 0.375rem;
-	font-size: 0.6875rem;
-	font-weight: 600;
-	background: var(--color-border);
-	border-radius: 0.25rem;
-	font-variant-numeric: tabular-nums;
-}
-
-.status-tab.active .count {
-	background: var(--color-muted);
 }
 
 /* State containers */
