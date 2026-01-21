@@ -108,23 +108,24 @@ defineProps<{
 .icon-wrapper.color-gray { background: var(--color-muted); color: var(--color-text-muted); }
 
 .card-header h3 {
-	font-size: 0.9375rem;
+	font-size: var(--font-size-lg);
 	font-weight: 600;
 	color: var(--color-text);
 	line-height: 1.2;
 }
 
 .card-header p {
-	font-size: 0.75rem;
+	font-size: var(--font-size-base);
 	color: var(--color-text-muted);
+	margin-top: 0.125rem;
 }
 
 .view-all-link {
 	display: flex;
 	align-items: center;
 	gap: 0.375rem;
-	padding: 0.375rem 0.625rem;
-	font-size: 0.75rem;
+	padding: 0.5rem 0.75rem;
+	font-size: var(--font-size-sm);
 	font-weight: 500;
 	color: var(--color-text-muted);
 	background: var(--color-muted);

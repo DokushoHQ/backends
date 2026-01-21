@@ -467,7 +467,7 @@ function getIssueColor(issue: string) {
 
 .preview-title {
 	display: block;
-	font-size: 0.8125rem;
+	font-size: var(--font-size-md);
 	font-weight: 500;
 	color: var(--color-text);
 	white-space: nowrap;
@@ -477,7 +477,7 @@ function getIssueColor(issue: string) {
 }
 
 .preview-meta {
-	font-size: 0.6875rem;
+	font-size: var(--font-size-sm);
 	color: var(--color-text-muted);
 }
 
@@ -490,12 +490,12 @@ function getIssueColor(issue: string) {
 .issue-badges {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.25rem;
+	gap: 0.375rem;
 }
 
 .issue-badge {
-	padding: 0.125rem 0.375rem;
-	font-size: 0.625rem;
+	padding: 0.1875rem 0.5rem;
+	font-size: var(--font-size-xs);
 	font-weight: 500;
 	border-radius: 0.25rem;
 }
@@ -513,7 +513,7 @@ function getIssueColor(issue: string) {
 }
 
 .empty-preview p {
-	font-size: 0.8125rem;
+	font-size: var(--font-size-md);
 	color: var(--color-text-muted);
 }
 </style>

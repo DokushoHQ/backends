@@ -54,7 +54,7 @@ const modelValue = defineModel<string>({ required: true })
 	justify-content: center;
 	gap: 0.375rem;
 	padding: 0.5rem 0.625rem;
-	font-size: 0.8125rem;
+	font-size: var(--font-size-sm);
 	font-weight: 500;
 	color: var(--color-text-muted);
 	border-radius: 0.375rem;
@@ -77,7 +77,7 @@ const modelValue = defineModel<string>({ required: true })
 
 .segment .count {
 	padding: 0.125rem 0.375rem;
-	font-size: 0.625rem;
+	font-size: calc(var(--font-size-xs) - 0.125rem);
 	font-weight: 600;
 	background: var(--color-border);
 	border-radius: 0.25rem;

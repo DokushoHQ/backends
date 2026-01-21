@@ -206,7 +206,7 @@ const paginationPages = computed(() => {
 	min-width: 2rem;
 	height: 2rem;
 	padding: 0 0.375rem;
-	font-size: 0.8125rem;
+	font-size: var(--font-size-sm);
 	font-weight: 500;
 	color: var(--color-text-muted);
 	background: var(--color-background);
@@ -230,12 +230,12 @@ const paginationPages = computed(() => {
 .page-ellipsis {
 	padding: 0 0.25rem;
 	color: var(--color-text-muted);
-	font-size: 0.8125rem;
+	font-size: var(--font-size-sm);
 }
 
 .page-info {
 	padding: 0 0.75rem;
-	font-size: 0.8125rem;
+	font-size: var(--font-size-sm);
 	font-weight: 500;
 	color: var(--color-text-muted);
 	font-variant-numeric: tabular-nums;
@@ -251,7 +251,7 @@ const paginationPages = computed(() => {
 }
 
 .page-jump span {
-	font-size: 0.75rem;
+	font-size: var(--font-size-xs);
 	color: var(--color-text-muted);
 }
 
@@ -259,7 +259,7 @@ const paginationPages = computed(() => {
 	width: 3rem;
 	height: 2rem;
 	padding: 0 0.375rem;
-	font-size: 0.8125rem;
+	font-size: var(--font-size-sm);
 	font-weight: 500;
 	text-align: center;
 	color: var(--color-text);
@@ -309,13 +309,13 @@ const paginationPages = computed(() => {
 		min-width: 2.25rem;
 		height: 2.25rem;
 		padding: 0 0.5rem;
-		font-size: 0.875rem;
+		font-size: var(--font-size-base);
 		border-radius: 0.5rem;
 	}
 
 	.page-ellipsis {
 		padding: 0 0.375rem;
-		font-size: 0.875rem;
+		font-size: var(--font-size-base);
 	}
 
 	.page-numbers {
@@ -328,14 +328,14 @@ const paginationPages = computed(() => {
 	}
 
 	.page-jump span {
-		font-size: 0.8125rem;
+		font-size: var(--font-size-sm);
 	}
 
 	.page-input {
 		width: 3.5rem;
 		height: 2.25rem;
 		padding: 0 0.5rem;
-		font-size: 0.875rem;
+		font-size: var(--font-size-base);
 		border-radius: 0.5rem;
 	}
 }

@@ -84,20 +84,21 @@ defineProps<{
 }
 
 .stat-value {
-	font-size: 1.25rem;
+	font-size: var(--font-size-2xl);
 	font-weight: 700;
 	color: var(--color-text);
-	line-height: 1;
+	line-height: 1.1;
 	font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
-	font-size: 0.6875rem;
+	font-size: var(--font-size-sm);
 	font-weight: 500;
 	color: var(--color-text-muted);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	margin-top: 0.125rem;
 }
 
 /* Dark mode */
