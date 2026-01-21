@@ -27,7 +27,7 @@ const recentIssues = computed(() => issuesData.value?.series?.slice(0, 4) ?? [])
 
 const totalItems = computed(() => pendingDuplicates.value + issueCounts.value.all)
 
-const issueTypes = [
+const issueTypes: Array<{ key: string, label: string, icon: string, color: "orange" | "yellow" | "red" | "purple" }> = [
 	{ key: "pending_deletion", label: "Pending Deletion", icon: "i-lucide-trash-2", color: "orange" },
 	{ key: "missing_cover", label: "Missing Cover", icon: "i-lucide-image-off", color: "yellow" },
 	{ key: "scrape_failures", label: "Scrape Failed", icon: "i-lucide-wifi-off", color: "red" },
@@ -87,37 +87,22 @@ function getIssueColor(issue: string) {
 					<template v-else>
 						<!-- Stats overview -->
 						<div class="stats-section">
-							<div class="stats-grid">
-								<div class="stat-card accent-purple">
-									<div class="stat-icon">
-										<UIcon
-											name="i-lucide-copy"
-											class="h-5 w-5"
-										/>
-									</div>
-									<div class="stat-content">
-										<span class="stat-value">{{ pendingDuplicates }}</span>
-										<span class="stat-label">Duplicates</span>
-									</div>
-								</div>
-								<div
+							<UiStatCardGrid :cols="5">
+								<UiStatCard
+									:value="pendingDuplicates"
+									label="Duplicates"
+									icon="i-lucide-copy"
+									color="purple"
+								/>
+								<UiStatCard
 									v-for="issue in issueTypes"
 									:key="issue.key"
-									class="stat-card"
-									:class="`accent-${issue.color}`"
-								>
-									<div class="stat-icon">
-										<UIcon
-											:name="issue.icon"
-											class="h-5 w-5"
-										/>
-									</div>
-									<div class="stat-content">
-										<span class="stat-value">{{ issueCounts[issue.key as keyof typeof issueCounts] }}</span>
-										<span class="stat-label">{{ issue.label }}</span>
-									</div>
-								</div>
-							</div>
+									:value="issueCounts[issue.key as keyof typeof issueCounts]"
+									:label="issue.label"
+									:icon="issue.icon"
+									:color="issue.color"
+								/>
+							</UiStatCardGrid>
 						</div>
 
 						<!-- Main sections -->
@@ -414,104 +399,6 @@ function getIssueColor(issue: string) {
 	margin-bottom: 1.5rem;
 }
 
-.stats-grid {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 0.75rem;
-}
-
-.stat-card:last-child:nth-child(odd) {
-	grid-column: 1 / -1;
-	justify-content: center;
-}
-
-@media (min-width: 640px) {
-	.stats-grid {
-		grid-template-columns: repeat(3, 1fr);
-	}
-
-	.stat-card:last-child:nth-child(odd) {
-		grid-column: auto;
-	}
-
-	.stat-card:last-child:nth-child(3n + 1) {
-		grid-column: 1 / -1;
-		justify-content: center;
-	}
-
-	.stat-card:last-child:nth-child(3n + 2) {
-		grid-column: span 2;
-		justify-content: center;
-	}
-}
-
-@media (min-width: 1024px) {
-	.stats-grid {
-		grid-template-columns: repeat(5, 1fr);
-	}
-
-	.stat-card:last-child:nth-child(odd),
-	.stat-card:last-child:nth-child(3n + 1),
-	.stat-card:last-child:nth-child(3n + 2) {
-		grid-column: auto;
-		justify-content: flex-start;
-	}
-}
-
-.stat-card {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	padding: 0.875rem;
-	background: var(--color-background);
-	border: 1px solid var(--color-border);
-	border-radius: 0.625rem;
-	transition: all 0.15s ease;
-}
-
-.stat-card:hover {
-	border-color: var(--color-text-muted);
-}
-
-.stat-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 2.25rem;
-	height: 2.25rem;
-	border-radius: 0.5rem;
-	flex-shrink: 0;
-}
-
-.stat-card.accent-purple .stat-icon { background: var(--purple-soft); color: var(--purple); }
-.stat-card.accent-amber .stat-icon { background: var(--amber-soft); color: var(--amber); }
-.stat-card.accent-orange .stat-icon { background: var(--orange-soft); color: var(--orange); }
-.stat-card.accent-yellow .stat-icon { background: var(--yellow-soft); color: var(--yellow); }
-.stat-card.accent-red .stat-icon { background: var(--red-soft); color: var(--red); }
-
-.stat-content {
-	display: flex;
-	flex-direction: column;
-	min-width: 0;
-}
-
-.stat-value {
-	font-size: 1.25rem;
-	font-weight: 700;
-	color: var(--color-text);
-	line-height: 1;
-	font-variant-numeric: tabular-nums;
-}
-
-.stat-label {
-	font-size: 0.6875rem;
-	font-weight: 500;
-	color: var(--color-text-muted);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
 /* Sections grid */
 .sections-grid {
 	display: grid;
@@ -742,7 +629,6 @@ function getIssueColor(issue: string) {
 }
 
 /* Dark mode */
-:root.dark .stat-card,
 :root.dark .content-section {
 	background: oklch(0.2 0.01 250);
 }
