@@ -257,9 +257,15 @@ function setPage(newPage: number) {
 
 .mobile-filter-bar {
 	display: flex;
-	padding: 0.5rem 1rem;
+	justify-content: center;
+	padding: 0.75rem 1rem;
 	border-bottom: 1px solid var(--color-border);
 	background: var(--color-background);
+}
+
+.mobile-filter-bar :deep(.segmented-control) {
+	flex: 1;
+	max-width: 24rem;
 }
 
 @media (min-width: 640px) {

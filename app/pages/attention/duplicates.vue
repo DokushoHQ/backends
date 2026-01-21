@@ -322,9 +322,15 @@ const selectedStatus = computed({
 
 .mobile-filter-bar {
 	display: flex;
-	padding: 0.5rem 1rem;
+	justify-content: center;
+	padding: 0.75rem 1rem;
 	border-bottom: 1px solid var(--color-border);
 	background: var(--color-background);
+}
+
+.mobile-filter-bar :deep(.segmented-control) {
+	flex: 1;
+	max-width: 24rem;
 }
 
 @media (min-width: 640px) {
@@ -450,14 +456,25 @@ const selectedStatus = computed({
 
 /* Pairs grid */
 .pairs-container {
-	padding: 1rem;
+	padding: 0.75rem;
 }
 
 .pairs-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-	grid-auto-rows: 1fr;
-	gap: 1rem;
+	grid-template-columns: 1fr;
+	gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+	.pairs-container {
+		padding: 1rem;
+	}
+
+	.pairs-grid {
+		grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+		grid-auto-rows: 1fr;
+		gap: 1rem;
+	}
 }
 
 /* Dark mode */

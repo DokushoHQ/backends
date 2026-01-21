@@ -34,7 +34,7 @@ const modelValue = defineModel<string>({ required: true })
 .segmented-control {
 	display: flex;
 	align-items: center;
-	gap: 0.125rem;
+	gap: 0.375rem;
 	padding: 0.25rem;
 	background: var(--color-muted);
 	border-radius: 0.5rem;
@@ -51,16 +51,17 @@ const modelValue = defineModel<string>({ required: true })
 .segment {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	gap: 0.375rem;
-	padding: 0.375rem 0.5rem;
-	font-size: 0.75rem;
+	padding: 0.5rem 0.625rem;
+	font-size: 0.8125rem;
 	font-weight: 500;
 	color: var(--color-text-muted);
 	border-radius: 0.375rem;
 	transition: all 0.15s ease;
 	cursor: pointer;
 	white-space: nowrap;
-	flex-shrink: 0;
+	flex: 1 0 auto;
 }
 
 .segment:hover {
@@ -89,8 +90,8 @@ const modelValue = defineModel<string>({ required: true })
 
 @media (min-width: 640px) {
 	.segment {
+		flex: 0 0 auto;
 		padding: 0.375rem 0.75rem;
-		font-size: 0.8125rem;
 	}
 
 	.segment .count {
