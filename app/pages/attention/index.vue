@@ -108,32 +108,13 @@ function getIssueColor(issue: string) {
 						<!-- Main sections -->
 						<div class="sections-grid">
 							<!-- Duplicates section -->
-							<section class="content-section">
-								<div class="section-header">
-									<div class="section-title-row">
-										<div class="section-icon purple">
-											<UIcon
-												name="i-lucide-copy"
-												class="h-5 w-5"
-											/>
-										</div>
-										<div>
-											<h3>Duplicate Series</h3>
-											<p>{{ pendingDuplicates }} pairs to review</p>
-										</div>
-									</div>
-									<NuxtLink
-										to="/attention/duplicates"
-										class="view-all-link"
-									>
-										View all
-										<UIcon
-											name="i-lucide-arrow-right"
-											class="h-4 w-4"
-										/>
-									</NuxtLink>
-								</div>
-
+							<UiContentCard
+								title="Duplicate Series"
+								:description="`${pendingDuplicates} pairs to review`"
+								icon="i-lucide-copy"
+								color="purple"
+								link-to="/attention/duplicates"
+							>
 								<div
 									v-if="recentDuplicates.length > 0"
 									class="preview-list"
@@ -189,35 +170,16 @@ function getIssueColor(issue: string) {
 								>
 									<p>No duplicates detected</p>
 								</div>
-							</section>
+							</UiContentCard>
 
 							<!-- Issues section -->
-							<section class="content-section">
-								<div class="section-header">
-									<div class="section-title-row">
-										<div class="section-icon amber">
-											<UIcon
-												name="i-lucide-alert-triangle"
-												class="h-5 w-5"
-											/>
-										</div>
-										<div>
-											<h3>Series Issues</h3>
-											<p>{{ issueCounts.all }} series need attention</p>
-										</div>
-									</div>
-									<NuxtLink
-										to="/attention/issues"
-										class="view-all-link"
-									>
-										View all
-										<UIcon
-											name="i-lucide-arrow-right"
-											class="h-4 w-4"
-										/>
-									</NuxtLink>
-								</div>
-
+							<UiContentCard
+								title="Series Issues"
+								:description="`${issueCounts.all} series need attention`"
+								icon="i-lucide-alert-triangle"
+								color="amber"
+								link-to="/attention/issues"
+							>
 								<div
 									v-if="recentIssues.length > 0"
 									class="preview-list"
@@ -277,7 +239,7 @@ function getIssueColor(issue: string) {
 								>
 									<p>No issues detected</p>
 								</div>
-							</section>
+							</UiContentCard>
 						</div>
 					</template>
 				</div>
@@ -409,79 +371,6 @@ function getIssueColor(issue: string) {
 	.sections-grid {
 		grid-template-columns: repeat(2, 1fr);
 	}
-}
-
-.content-section {
-	background: var(--color-background);
-	border: 1px solid var(--color-border);
-	border-radius: 0.75rem;
-	overflow: hidden;
-}
-
-.section-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1rem;
-	padding: 1rem;
-	border-bottom: 1px solid var(--color-border);
-}
-
-.section-title-row {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-}
-
-.section-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 2.5rem;
-	height: 2.5rem;
-	border-radius: 0.625rem;
-	flex-shrink: 0;
-}
-
-.section-icon.purple {
-	background: var(--purple-soft);
-	color: var(--purple);
-}
-
-.section-icon.amber {
-	background: var(--amber-soft);
-	color: var(--amber);
-}
-
-.section-header h3 {
-	font-size: 0.9375rem;
-	font-weight: 600;
-	color: var(--color-text);
-	line-height: 1.2;
-}
-
-.section-header p {
-	font-size: 0.75rem;
-	color: var(--color-text-muted);
-}
-
-.view-all-link {
-	display: flex;
-	align-items: center;
-	gap: 0.375rem;
-	padding: 0.375rem 0.625rem;
-	font-size: 0.75rem;
-	font-weight: 500;
-	color: var(--color-text-muted);
-	background: var(--color-muted);
-	border-radius: 0.375rem;
-	transition: all 0.15s ease;
-	white-space: nowrap;
-}
-
-.view-all-link:hover {
-	color: var(--color-text);
-	background: var(--color-border);
 }
 
 /* Preview list */
@@ -626,10 +515,5 @@ function getIssueColor(issue: string) {
 .empty-preview p {
 	font-size: 0.8125rem;
 	color: var(--color-text-muted);
-}
-
-/* Dark mode */
-:root.dark .content-section {
-	background: oklch(0.2 0.01 250);
 }
 </style>
