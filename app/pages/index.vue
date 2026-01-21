@@ -251,6 +251,12 @@ function getIssueBadge(issue: string) {
 									</template>
 								</p>
 							</div>
+							<NuxtLink
+								to="/attention"
+								class="text-sm text-primary hover:underline"
+							>
+								View all
+							</NuxtLink>
 						</div>
 					</template>
 

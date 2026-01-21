@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DuplicateGroup } from "~/types/duplicates"
 
-const props = defineProps<{
+defineProps<{
 	group: DuplicateGroup
 	animate?: boolean
 	delay?: number

@@ -15,13 +15,19 @@ function isActiveRoute(path: string): boolean {
 const navigation = computed(() => {
 	const items = [
 		{ label: "Overview", icon: "i-lucide-home", to: "/", active: isActiveRoute("/") },
-		{ label: "Series", icon: "i-lucide-book-open", to: "/series", active: isActiveRoute("/series") },
-		{ label: "Sources", icon: "i-lucide-server", to: "/sources", active: isActiveRoute("/sources") },
 	]
 
 	if (isAdmin.value) {
+		items.push({ label: "Attention", icon: "i-lucide-alert-triangle", to: "/attention", active: isActiveRoute("/attention") })
+	}
+
+	items.push(
+		{ label: "Series", icon: "i-lucide-book-open", to: "/series", active: isActiveRoute("/series") },
+		{ label: "Sources", icon: "i-lucide-server", to: "/sources", active: isActiveRoute("/sources") },
+	)
+
+	if (isAdmin.value) {
 		items.push(
-			{ label: "Duplicates", icon: "i-lucide-copy", to: "/series/duplicates", active: isActiveRoute("/series/duplicates") },
 			{ label: "Users", icon: "i-lucide-users", to: "/users", active: isActiveRoute("/users") },
 			{ label: "Jobs", icon: "i-lucide-briefcase", to: "/jobs", active: isActiveRoute("/jobs") },
 		)

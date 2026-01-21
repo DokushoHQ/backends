@@ -122,7 +122,6 @@ async function finalize(
 			const chapters1 = serie1._count.chapters
 			const chapters2 = serie2._count.chapters
 			const hasPrimary1 = serie1.sources.some(s => s.is_primary)
-			const hasPrimary2 = serie2.sources.some(s => s.is_primary)
 
 			let suggestedPrimaryId: string
 			if (chapters1 > chapters2) {
