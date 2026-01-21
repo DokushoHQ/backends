@@ -38,19 +38,29 @@ const modelValue = defineModel<string>({ required: true })
 	padding: 0.25rem;
 	background: var(--color-muted);
 	border-radius: 0.5rem;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+.segmented-control::-webkit-scrollbar {
+	display: none;
 }
 
 .segment {
 	display: flex;
 	align-items: center;
 	gap: 0.375rem;
-	padding: 0.375rem 0.75rem;
-	font-size: 0.8125rem;
+	padding: 0.375rem 0.5rem;
+	font-size: 0.75rem;
 	font-weight: 500;
 	color: var(--color-text-muted);
 	border-radius: 0.375rem;
 	transition: all 0.15s ease;
 	cursor: pointer;
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .segment:hover {
@@ -66,7 +76,7 @@ const modelValue = defineModel<string>({ required: true })
 
 .segment .count {
 	padding: 0.125rem 0.375rem;
-	font-size: 0.6875rem;
+	font-size: 0.625rem;
 	font-weight: 600;
 	background: var(--color-border);
 	border-radius: 0.25rem;
@@ -75,5 +85,16 @@ const modelValue = defineModel<string>({ required: true })
 
 .segment.active .count {
 	background: var(--color-muted);
+}
+
+@media (min-width: 640px) {
+	.segment {
+		padding: 0.375rem 0.75rem;
+		font-size: 0.8125rem;
+	}
+
+	.segment .count {
+		font-size: 0.6875rem;
+	}
 }
 </style>

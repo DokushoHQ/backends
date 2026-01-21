@@ -168,10 +168,11 @@ const selectedStatus = computed({
 					:description="`${pagination.total} pairs to review`"
 				>
 					<template #right>
-						<div class="flex items-center gap-3">
+						<div class="navbar-right">
 							<UiSegmentedControl
 								v-model="selectedStatus"
 								:options="statusOptions"
+								class="desktop-only"
 							/>
 							<button
 								class="scan-button"
@@ -184,12 +185,18 @@ const selectedStatus = computed({
 									class="scan-icon"
 									:class="{ 'animate-spin': detecting }"
 								/>
-								<span>{{ detecting ? 'Scanning' : 'Scan' }}</span>
+								<span class="scan-label">{{ detecting ? 'Scanning' : 'Scan' }}</span>
 							</button>
 							<UiBackButton to="/attention" />
 						</div>
 					</template>
 				</UDashboardNavbar>
+				<div class="mobile-filter-bar">
+					<UiSegmentedControl
+						v-model="selectedStatus"
+						:options="statusOptions"
+					/>
+				</div>
 			</template>
 
 			<template #body>
@@ -302,19 +309,63 @@ const selectedStatus = computed({
 	--danger-soft: oklch(0.65 0.2 25 / 0.15);
 }
 
+/* Responsive navbar */
+.navbar-right {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.desktop-only {
+	display: none;
+}
+
+.mobile-filter-bar {
+	display: flex;
+	padding: 0.5rem 1rem;
+	border-bottom: 1px solid var(--color-border);
+	background: var(--color-background);
+}
+
+@media (min-width: 640px) {
+	.desktop-only {
+		display: flex;
+	}
+
+	.mobile-filter-bar {
+		display: none;
+	}
+}
+
 /* Scan button */
 .scan-button {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
-	padding: 0.5rem 1rem;
-	font-size: 0.875rem;
+	gap: 0.375rem;
+	padding: 0.375rem;
+	font-size: 0.8125rem;
 	font-weight: 500;
 	color: white;
 	background: linear-gradient(135deg, var(--accent), oklch(0.6 0.18 250));
-	border-radius: 0.5rem;
+	border-radius: 0.375rem;
 	transition: all 0.2s ease;
 	box-shadow: 0 2px 8px oklch(0.7 0.15 250 / 0.3);
+}
+
+.scan-label {
+	display: none;
+}
+
+@media (min-width: 640px) {
+	.scan-button {
+		gap: 0.5rem;
+		padding: 0.5rem 1rem;
+		border-radius: 0.5rem;
+	}
+
+	.scan-label {
+		display: inline;
+	}
 }
 
 .scan-button:hover:not(:disabled) {

@@ -76,15 +76,22 @@ function setPage(newPage: number) {
 					:description="`${pagination.total} series need attention`"
 				>
 					<template #right>
-						<div class="flex items-center gap-3">
+						<div class="navbar-right">
 							<UiSegmentedControl
 								v-model="selectedType"
 								:options="filterOptions"
+								class="desktop-only"
 							/>
 							<UiBackButton to="/attention" />
 						</div>
 					</template>
 				</UDashboardNavbar>
+				<div class="mobile-filter-bar">
+					<UiSegmentedControl
+						v-model="selectedType"
+						:options="filterOptions"
+					/>
+				</div>
 			</template>
 
 			<template #body>
@@ -259,6 +266,34 @@ function setPage(newPage: number) {
 	--purple-soft: oklch(0.75 0.15 280 / 0.15);
 	--success: oklch(0.75 0.15 160);
 	--success-soft: oklch(0.75 0.15 160 / 0.15);
+}
+
+/* Responsive navbar */
+.navbar-right {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.desktop-only {
+	display: none;
+}
+
+.mobile-filter-bar {
+	display: flex;
+	padding: 0.5rem 1rem;
+	border-bottom: 1px solid var(--color-border);
+	background: var(--color-background);
+}
+
+@media (min-width: 640px) {
+	.desktop-only {
+		display: flex;
+	}
+
+	.mobile-filter-bar {
+		display: none;
+	}
 }
 
 /* State containers */
