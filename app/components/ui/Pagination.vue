@@ -64,9 +64,9 @@ const paginationPages = computed(() => {
 		v-if="totalPages > 1"
 		class="pagination"
 	>
-		<!-- First page -->
+		<!-- First page (desktop only) -->
 		<button
-			class="page-button"
+			class="page-button desktop-only"
 			:disabled="page <= 1"
 			title="First page"
 			@click="setPage(1)"
@@ -90,8 +90,8 @@ const paginationPages = computed(() => {
 			/>
 		</button>
 
-		<!-- Page numbers -->
-		<div class="page-numbers">
+		<!-- Page numbers (desktop) -->
+		<div class="page-numbers desktop-only">
 			<template
 				v-for="p in paginationPages"
 				:key="p"
@@ -111,6 +111,11 @@ const paginationPages = computed(() => {
 			</template>
 		</div>
 
+		<!-- Page info (mobile) -->
+		<span class="page-info mobile-only">
+			{{ page }} / {{ totalPages }}
+		</span>
+
 		<!-- Next -->
 		<button
 			class="page-button"
@@ -124,9 +129,9 @@ const paginationPages = computed(() => {
 			/>
 		</button>
 
-		<!-- Last page -->
+		<!-- Last page (desktop only) -->
 		<button
-			class="page-button"
+			class="page-button desktop-only"
 			:disabled="page >= totalPages"
 			title="Last page"
 			@click="setPage(totalPages)"
@@ -137,8 +142,8 @@ const paginationPages = computed(() => {
 			/>
 		</button>
 
-		<!-- Jump to page -->
-		<div class="page-jump">
+		<!-- Jump to page (desktop only) -->
+		<div class="page-jump desktop-only">
 			<span>Go to</span>
 			<input
 				type="number"
@@ -155,8 +160,6 @@ const paginationPages = computed(() => {
 
 <style scoped>
 .pagination {
-	--accent: oklch(0.7 0.15 250);
-
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -170,18 +173,18 @@ const paginationPages = computed(() => {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 2.25rem;
-	height: 2.25rem;
+	width: 2rem;
+	height: 2rem;
 	color: var(--color-text-muted);
 	background: var(--color-background);
 	border: 1px solid var(--color-border);
-	border-radius: 0.5rem;
+	border-radius: 0.375rem;
 	transition: all 0.15s ease;
 }
 
 .page-button:hover:not(:disabled) {
 	color: var(--color-text);
-	border-color: var(--accent);
+	border-color: var(--color-text-muted);
 }
 
 .page-button:disabled {
@@ -193,68 +196,76 @@ const paginationPages = computed(() => {
 	display: flex;
 	align-items: center;
 	gap: 0.25rem;
-	margin: 0 0.5rem;
+	margin: 0 0.25rem;
 }
 
 .page-number {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 2.25rem;
-	height: 2.25rem;
-	padding: 0 0.5rem;
-	font-size: 0.875rem;
+	min-width: 2rem;
+	height: 2rem;
+	padding: 0 0.375rem;
+	font-size: 0.8125rem;
 	font-weight: 500;
 	color: var(--color-text-muted);
 	background: var(--color-background);
 	border: 1px solid var(--color-border);
-	border-radius: 0.5rem;
+	border-radius: 0.375rem;
 	transition: all 0.15s ease;
 	font-variant-numeric: tabular-nums;
 }
 
 .page-number:hover {
 	color: var(--color-text);
-	border-color: var(--accent);
+	border-color: var(--color-text-muted);
 }
 
 .page-number.active {
-	color: white;
-	background: var(--accent);
-	border-color: var(--accent);
+	color: var(--color-text);
+	background: var(--color-muted);
+	border-color: var(--color-text-muted);
 }
 
 .page-ellipsis {
-	padding: 0 0.375rem;
+	padding: 0 0.25rem;
 	color: var(--color-text-muted);
-	font-size: 0.875rem;
+	font-size: 0.8125rem;
+}
+
+.page-info {
+	padding: 0 0.75rem;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	color: var(--color-text-muted);
+	font-variant-numeric: tabular-nums;
 }
 
 .page-jump {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	margin-left: 1rem;
-	padding-left: 1rem;
+	margin-left: 0.75rem;
+	padding-left: 0.75rem;
 	border-left: 1px solid var(--color-border);
 }
 
 .page-jump span {
-	font-size: 0.8125rem;
+	font-size: 0.75rem;
 	color: var(--color-text-muted);
 }
 
 .page-input {
-	width: 3.5rem;
-	height: 2.25rem;
-	padding: 0 0.5rem;
-	font-size: 0.875rem;
+	width: 3rem;
+	height: 2rem;
+	padding: 0 0.375rem;
+	font-size: 0.8125rem;
 	font-weight: 500;
 	text-align: center;
 	color: var(--color-text);
 	background: var(--color-background);
 	border: 1px solid var(--color-border);
-	border-radius: 0.5rem;
+	border-radius: 0.375rem;
 	font-variant-numeric: tabular-nums;
 	-moz-appearance: textfield;
 }
@@ -267,6 +278,65 @@ const paginationPages = computed(() => {
 
 .page-input:focus {
 	outline: none;
-	border-color: var(--accent);
+	border-color: var(--color-text-muted);
+}
+
+/* Responsive visibility */
+.mobile-only {
+	display: flex;
+}
+
+.desktop-only {
+	display: none;
+}
+
+@media (min-width: 640px) {
+	.mobile-only {
+		display: none;
+	}
+
+	.desktop-only {
+		display: flex;
+	}
+
+	.page-button {
+		width: 2.25rem;
+		height: 2.25rem;
+		border-radius: 0.5rem;
+	}
+
+	.page-number {
+		min-width: 2.25rem;
+		height: 2.25rem;
+		padding: 0 0.5rem;
+		font-size: 0.875rem;
+		border-radius: 0.5rem;
+	}
+
+	.page-ellipsis {
+		padding: 0 0.375rem;
+		font-size: 0.875rem;
+	}
+
+	.page-numbers {
+		margin: 0 0.5rem;
+	}
+
+	.page-jump {
+		margin-left: 1rem;
+		padding-left: 1rem;
+	}
+
+	.page-jump span {
+		font-size: 0.8125rem;
+	}
+
+	.page-input {
+		width: 3.5rem;
+		height: 2.25rem;
+		padding: 0 0.5rem;
+		font-size: 0.875rem;
+		border-radius: 0.5rem;
+	}
 }
 </style>

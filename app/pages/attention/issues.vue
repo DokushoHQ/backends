@@ -219,35 +219,11 @@ function setPage(newPage: number) {
 						</NuxtLink>
 					</div>
 
-					<!-- Pagination -->
-					<div
-						v-if="pagination.totalPages > 1"
-						class="pagination"
-					>
-						<button
-							class="page-button"
-							:disabled="page <= 1"
-							@click="setPage(page - 1)"
-						>
-							<UIcon
-								name="i-lucide-chevron-left"
-								class="h-4 w-4"
-							/>
-						</button>
-						<span class="page-info">
-							Page {{ page }} of {{ pagination.totalPages }}
-						</span>
-						<button
-							class="page-button"
-							:disabled="page >= pagination.totalPages"
-							@click="setPage(page + 1)"
-						>
-							<UIcon
-								name="i-lucide-chevron-right"
-								class="h-4 w-4"
-							/>
-						</button>
-					</div>
+					<UiPagination
+						:page="page"
+						:total-pages="pagination.totalPages"
+						@update:page="setPage"
+					/>
 				</div>
 			</template>
 		</UDashboardPanel>
@@ -469,43 +445,6 @@ function setPage(newPage: number) {
 	flex-wrap: wrap;
 	gap: 0.5rem;
 	font-size: 0.75rem;
-	color: var(--color-text-muted);
-}
-
-/* Pagination */
-.pagination {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 1rem;
-	margin-top: 1.5rem;
-	padding-top: 1rem;
-	border-top: 1px solid var(--color-border);
-}
-
-.page-button {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 2rem;
-	height: 2rem;
-	color: var(--color-text);
-	background: var(--color-muted);
-	border-radius: 0.375rem;
-	transition: all 0.15s ease;
-}
-
-.page-button:hover:not(:disabled) {
-	background: var(--color-border);
-}
-
-.page-button:disabled {
-	opacity: 0.4;
-	cursor: not-allowed;
-}
-
-.page-info {
-	font-size: 0.8125rem;
 	color: var(--color-text-muted);
 }
 

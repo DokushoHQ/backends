@@ -280,7 +280,7 @@ const selectedStatus = computed({
 						/>
 					</div>
 
-					<DuplicatesPagination
+					<UiPagination
 						:page="page"
 						:total-pages="pagination.totalPages"
 						@update:page="setPage"
