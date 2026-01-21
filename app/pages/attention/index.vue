@@ -8,11 +8,13 @@ const { data: duplicatesData } = await useFetch("/api/v1/duplicates", {
 	query: { status: "Pending", limit: 1 },
 })
 
-// Fetch attention series
-const { data: attentionData } = await useFetch("/api/dashboard/attention")
+// Fetch issues count
+const { data: issuesData } = await useFetch("/api/v1/attention/issues", {
+	query: { type: "all", limit: 1 },
+})
 
 const pendingDuplicates = computed(() => duplicatesData.value?.pagination?.total ?? 0)
-const seriesWithIssues = computed(() => attentionData.value?.length ?? 0)
+const seriesWithIssues = computed(() => issuesData.value?.counts?.all ?? 0)
 
 const categories = computed(() => [
 	{
@@ -31,9 +33,9 @@ const categories = computed(() => [
 		description: "Series with missing covers, failed scrapes, or pending deletion",
 		icon: "i-lucide-alert-triangle",
 		count: seriesWithIssues.value,
-		route: "/",
+		route: "/attention/issues",
 		color: "amber",
-		action: "View on dashboard",
+		action: "View issues",
 	},
 ])
 
@@ -135,12 +137,12 @@ const totalItems = computed(() => pendingDuplicates.value + seriesWithIssues.val
 
 <style scoped>
 .attention-page {
-	--purple: oklch(0.65 0.18 280);
-	--purple-soft: oklch(0.65 0.18 280 / 0.12);
-	--amber: oklch(0.75 0.15 70);
-	--amber-soft: oklch(0.75 0.15 70 / 0.12);
-	--success: oklch(0.72 0.15 160);
-	--success-soft: oklch(0.72 0.15 160 / 0.12);
+	--purple: oklch(0.75 0.15 280);
+	--purple-soft: oklch(0.75 0.15 280 / 0.12);
+	--amber: oklch(0.78 0.15 70);
+	--amber-soft: oklch(0.78 0.15 70 / 0.12);
+	--success: oklch(0.75 0.15 160);
+	--success-soft: oklch(0.75 0.15 160 / 0.12);
 }
 
 .attention-content {
@@ -232,7 +234,7 @@ const totalItems = computed(() => pendingDuplicates.value + seriesWithIssues.val
 }
 
 .scan-link:hover {
-	background: oklch(0.65 0.18 280 / 0.2);
+	background: oklch(0.75 0.15 280 / 0.2);
 }
 
 /* Categories grid */
@@ -266,12 +268,12 @@ const totalItems = computed(() => pendingDuplicates.value + seriesWithIssues.val
 
 .category-card.color-purple.has-items {
 	background: linear-gradient(135deg, var(--purple-soft), transparent 60%);
-	border-color: oklch(0.65 0.18 280 / 0.25);
+	border-color: oklch(0.75 0.15 280 / 0.25);
 }
 
 .category-card.color-amber.has-items {
 	background: linear-gradient(135deg, var(--amber-soft), transparent 60%);
-	border-color: oklch(0.75 0.15 70 / 0.25);
+	border-color: oklch(0.78 0.15 70 / 0.25);
 }
 
 .card-header {
@@ -388,10 +390,10 @@ const totalItems = computed(() => pendingDuplicates.value + seriesWithIssues.val
 }
 
 :root.dark .category-card.color-purple.has-items {
-	background: linear-gradient(135deg, oklch(0.65 0.18 280 / 0.15), oklch(0.2 0.01 250) 60%);
+	background: linear-gradient(135deg, oklch(0.75 0.15 280 / 0.15), oklch(0.2 0.01 250) 60%);
 }
 
 :root.dark .category-card.color-amber.has-items {
-	background: linear-gradient(135deg, oklch(0.75 0.15 70 / 0.15), oklch(0.2 0.01 250) 60%);
+	background: linear-gradient(135deg, oklch(0.78 0.15 70 / 0.15), oklch(0.2 0.01 250) 60%);
 }
 </style>
