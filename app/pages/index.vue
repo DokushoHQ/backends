@@ -247,7 +247,7 @@ function getIssueBadge(issue: string) {
 										Loading...
 									</template>
 									<template v-else>
-										{{ attentionData?.length || 0 }} series with issues
+										Series with issues
 									</template>
 								</p>
 							</div>
