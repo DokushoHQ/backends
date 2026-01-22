@@ -1,6 +1,6 @@
 {
 	"name": "dokusho-backends",
-	"version": "0.6.4",
+	"version": "0.6.5",
 	"packageManager": "pnpm@10.27.0",
 	"private": true,
 	"type": "module",
