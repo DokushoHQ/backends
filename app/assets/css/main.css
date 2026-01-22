@@ -5,6 +5,16 @@
 
 :root {
 	--radius: 0.625rem;
+
+	/* Typography scale */
+	--font-size-xs: 0.75rem;      /* 12px - badges, small text */
+	--font-size-sm: 0.8125rem;    /* 13px - labels, meta text */
+	--font-size-base: 0.875rem;   /* 14px - body text, descriptions */
+	--font-size-md: 0.9375rem;    /* 15px - preview titles */
+	--font-size-lg: 1.0625rem;    /* 17px - card titles */
+	--font-size-xl: 1.25rem;      /* 20px - section headings */
+	--font-size-2xl: 1.5rem;      /* 24px - stat values, large headings */
+
 	/* Soft gray background with slight blue tint */
 	--background: oklch(0.97 0.005 250);
 	--foreground: oklch(0.2 0.02 260);

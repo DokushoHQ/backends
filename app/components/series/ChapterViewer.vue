@@ -6,13 +6,19 @@ const props = defineProps<{
 	serieId: string
 }>()
 
+const emit = defineEmits<{
+	refetched: []
+}>()
+
 const open = defineModel<boolean>("open", { default: false })
+const toast = useToast()
 
 const pages = ref<UIChapterPage[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const loadedImages = ref<Set<number>>(new Set())
 const togglingPages = ref<Set<number>>(new Set())
+const refetching = ref(false)
 
 watch([() => open.value, () => props.chapter], async ([isOpen, chapter]) => {
 	if (isOpen && chapter) {
@@ -85,6 +91,36 @@ const pageStats = computed(() => {
 	const corrupted = imagePages.value.filter(p => p.image_quality === "corrupted").length
 	return { total, successful, failed, permanentlyFailed, degraded, corrupted }
 })
+
+async function refetchChapter() {
+	if (!props.chapter) return
+
+	refetching.value = true
+	try {
+		await $fetch(`/api/v1/serie/${props.serieId}/chapters/retry`, {
+			method: "POST",
+			body: { chapterIds: [props.chapter.id] },
+		})
+
+		toast.add({
+			title: "Re-fetch Queued",
+			description: "Chapter data will be re-fetched from source",
+			color: "success",
+		})
+
+		emit("refetched")
+	}
+	catch {
+		toast.add({
+			title: "Re-fetch Failed",
+			description: "Failed to queue chapter re-fetch",
+			color: "error",
+		})
+	}
+	finally {
+		refetching.value = false
+	}
+}
 </script>
 
 <template>
@@ -105,13 +141,27 @@ const pageStats = computed(() => {
 							<span v-if="chapter?.volume_number !== null">Vol. {{ chapter?.volume_number }}</span>
 							Ch. {{ chapter?.chapter_number }}
 						</h3>
-						<UButton
-							variant="ghost"
-							size="sm"
-							icon="i-lucide-x"
-							class="shrink-0 -mr-2 -mt-1"
-							@click="open = false"
-						/>
+						<div class="flex items-center gap-1 shrink-0 -mr-2 -mt-1">
+							<UButton
+								variant="ghost"
+								size="sm"
+								:loading="refetching"
+								:disabled="refetching"
+								@click="refetchChapter"
+							>
+								<UIcon
+									name="i-lucide-refresh-cw"
+									class="h-4 w-4"
+								/>
+								Re-fetch
+							</UButton>
+							<UButton
+								variant="ghost"
+								size="sm"
+								icon="i-lucide-x"
+								@click="open = false"
+							/>
+						</div>
 					</div>
 					<div class="flex items-center gap-2 flex-wrap text-sm text-muted-foreground mt-1">
 						<span v-if="chapter?.title">{{ chapter.title }}</span>

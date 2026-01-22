@@ -56,14 +56,82 @@ export const serieIndex = new Proxy({} as Index<SerieIndex>, {
 	},
 })
 
+const EMBEDDER_NAME = "openrouter"
+// Liquid template for embedding - includes title and all language variants
+// Uses conditionals to handle missing optional fields
+const EMBEDDER_DOCUMENT_TEMPLATE = `{{ doc.title }}. {% if doc.title_En %}{% for t in doc.title_En %}{{ t }}. {% endfor %}{% endif %}{% if doc.title_Jp %}{% for t in doc.title_Jp %}{{ t }}. {% endfor %}{% endif %}{% if doc.title_JpRo %}{% for t in doc.title_JpRo %}{{ t }}. {% endfor %}{% endif %}{% if doc.title_Ko %}{% for t in doc.title_Ko %}{{ t }}. {% endfor %}{% endif %}{% if doc.title_KoRo %}{% for t in doc.title_KoRo %}{{ t }}. {% endfor %}{% endif %}{% if doc.alternates_titles_En %}{% for t in doc.alternates_titles_En %}{{ t }}. {% endfor %}{% endif %}{% if doc.alternates_titles_Jp %}{% for t in doc.alternates_titles_Jp %}{{ t }}. {% endfor %}{% endif %}{% if doc.authors %}{% for a in doc.authors %}{{ a }}. {% endfor %}{% endif %}`
+
 /**
  * Configure the serie index with required settings for filtering and sorting.
  * Should be called once during application startup or when settings need to be updated.
+ * If embedder settings changed, triggers a REINDEX_ALL job to regenerate embeddings.
  */
 export async function configureSerieIndex() {
+	const config = useRuntimeConfig()
 	const index = getSerieIndex()
-	await index.updateSettings({
+
+	// Get current settings to check if embedder needs to be updated
+	let currentSettings: Awaited<ReturnType<typeof index.getSettings>> | null = null
+	try {
+		currentSettings = await index.getSettings()
+	}
+	catch {
+		// Index might not exist yet
+	}
+
+	const settings: Parameters<typeof index.updateSettings>[0] = {
 		sortableAttributes: ["updated_at"],
 		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists"],
-	})
+	}
+
+	let needsReindex = false
+
+	// Configure OpenRouter embedder for hybrid search if API key is available
+	// Uses REST source to allow custom model names (OpenRouter requires openai/ prefix)
+	if (config.openrouterApiKey) {
+		settings.embedders = {
+			[EMBEDDER_NAME]: {
+				source: "rest",
+				url: "https://openrouter.ai/api/v1/embeddings",
+				apiKey: config.openrouterApiKey,
+				dimensions: 1536, // text-embedding-3-small dimensions
+				documentTemplate: EMBEDDER_DOCUMENT_TEMPLATE,
+				request: {
+					model: "openai/text-embedding-3-small",
+					input: ["{{text}}", "{{..}}"],
+				},
+				response: {
+					data: [{ embedding: "{{embedding}}" }, "{{..}}"],
+				},
+			},
+		}
+
+		// Check if embedder was not configured before or template changed
+		const currentEmbedder = currentSettings?.embedders?.[EMBEDDER_NAME] as { documentTemplate?: string } | undefined
+		if (!currentEmbedder) {
+			console.log("Meilisearch embedder newly configured - will trigger reindex")
+			needsReindex = true
+		}
+		else if (currentEmbedder.documentTemplate !== EMBEDDER_DOCUMENT_TEMPLATE) {
+			console.log("Meilisearch embedder template changed - will trigger reindex")
+			needsReindex = true
+		}
+		else {
+			console.log("Meilisearch embedder already configured")
+		}
+	}
+
+	await index.updateSettings(settings)
+
+	// Trigger reindex if embedder was newly added or changed
+	if (needsReindex) {
+		try {
+			const { default: updateSchedulerQueue } = await import("../queues/update-scheduler")
+			await updateSchedulerQueue.add("update-scheduler", { type: "REINDEX_ALL" })
+			console.log("REINDEX_ALL job queued to generate embeddings")
+		}
+		catch (error) {
+			console.error("Failed to queue REINDEX_ALL job:", error)
+		}
+	}
 }

@@ -8,9 +8,16 @@ export type ImageMetadataIssues = {
 	issues: string[]
 }
 
+export type DuplicateGroupMember = {
+	serieId: string
+	similarity: number
+	titles: string[]
+}
+
 declare global {
 	namespace PrismaJson {
 		type ImageQualityType = ImageQuality
 		type ImageMetadataIssuesType = ImageMetadataIssues
+		type DuplicateGroupMembersType = DuplicateGroupMember[]
 	}
 }

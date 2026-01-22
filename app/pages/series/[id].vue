@@ -26,6 +26,38 @@ const chapters = computed(() => chaptersData.value?.chapters ?? [])
 const enabledChapters = computed(() => chapters.value.filter(c => c.enabled))
 const disabledCount = computed(() => chapters.value.length - enabledChapters.value.length)
 
+// Transform chapters for health panel (extract only needed fields)
+interface ChapterHealthItem {
+	id: string
+	chapter_number: number | null
+	volume_number: number | null
+	title: string | null
+	page_fetch_status: string
+	source: { name: string }
+}
+
+const chaptersForHealth = computed<ChapterHealthItem[]>(() =>
+	chapters.value.map((c) => {
+		// Type cast through unknown to handle serialized Prisma types
+		const chapter = c as unknown as {
+			id: string
+			chapter_number: number | null
+			volume_number: number | null
+			title: string | null
+			page_fetch_status: string
+			source: { name: string }
+		}
+		return {
+			id: chapter.id,
+			chapter_number: chapter.chapter_number,
+			volume_number: chapter.volume_number,
+			title: chapter.title,
+			page_fetch_status: chapter.page_fetch_status,
+			source: { name: chapter.source.name },
+		}
+	}),
+)
+
 // Count chapters that were removed from source but not yet acknowledged
 const unacknowledgedRemovedCount = computed(() =>
 	chapters.value.filter(c => c.source_removed_at !== null && c.source_removal_acknowledged_at === null).length,
@@ -120,18 +152,10 @@ useHead({
 								@retried="() => refreshChapters()"
 							/>
 						</template>
-						<UButton
-							variant="outline"
-							size="sm"
+						<UiBackButton
 							to="/series"
-							class="shrink-0"
-						>
-							<UIcon
-								name="i-lucide-arrow-left"
-								class="h-4 w-4 sm:mr-2"
-							/>
-							<span class="hidden sm:inline">Back to Series</span>
-						</UButton>
+							label="Back to Series"
+						/>
 					</div>
 				</template>
 			</UDashboardNavbar>
@@ -174,7 +198,10 @@ useHead({
 			</div>
 
 			<!-- Main content -->
-			<template v-else-if="serie">
+			<div
+				v-else-if="serie"
+				class="serie-content"
+			>
 				<!-- Deletion banner -->
 				<SeriesDeletionBanner
 					v-if="deletionStatus?.isDeleted"
@@ -194,6 +221,16 @@ useHead({
 					:unacknowledged-removed-count="unacknowledgedRemovedCount"
 					class="mb-6"
 					@refresh-cover="handleRefresh"
+				/>
+
+				<!-- Chapter health panel (admin only) -->
+				<SeriesChapterHealthPanel
+					v-if="isAdmin && serie.chapterHealthCounts"
+					:serie-id="serieId"
+					:health-counts="serie.chapterHealthCounts"
+					:chapters="chaptersForHealth"
+					class="mb-6"
+					@retried="refreshChapters"
 				/>
 
 				<div class="grid gap-6 lg:grid-cols-[300px_1fr] items-start">
@@ -418,7 +455,13 @@ useHead({
 						</UCard>
 					</div>
 				</div>
-			</template>
+			</div>
 		</template>
 	</UDashboardPanel>
 </template>
+
+<style scoped>
+.serie-content {
+	padding: 1rem;
+}
+</style>

@@ -1,4 +1,5 @@
 import {
+	CopyObjectCommand,
 	DeleteObjectCommand,
 	DeleteObjectsCommand,
 	GetObjectCommand,
@@ -329,4 +330,75 @@ export async function deleteByPrefix(prefix: string): Promise<number> {
 	} while (continuationToken)
 
 	return deletedCount
+}
+
+/**
+ * Move all S3 objects from one prefix to another (copy + delete)
+ * Returns an array of { oldKey, newKey, newUrl } for updating database references
+ */
+export async function moveByPrefix(
+	oldPrefix: string,
+	newPrefix: string,
+): Promise<Array<{ oldKey: string, newKey: string, newUrl: string }>> {
+	const s3 = getS3Client()
+	const bucket = getBucketName()
+	const moved: Array<{ oldKey: string, newKey: string, newUrl: string }> = []
+	let continuationToken: string | undefined
+
+	do {
+		// List objects with old prefix
+		const listResponse = await s3.send(
+			new ListObjectsV2Command({
+				Bucket: bucket,
+				Prefix: oldPrefix,
+				ContinuationToken: continuationToken,
+			}),
+		)
+
+		const objects = listResponse.Contents
+		if (!objects || objects.length === 0) break
+
+		// Copy and track each object
+		for (const obj of objects) {
+			if (!obj.Key) continue
+
+			const newKey = obj.Key.replace(oldPrefix, newPrefix)
+
+			// Copy to new location
+			await s3.send(
+				new CopyObjectCommand({
+					Bucket: bucket,
+					CopySource: `${bucket}/${obj.Key}`,
+					Key: newKey,
+					ACL: "public-read",
+				}),
+			)
+
+			moved.push({
+				oldKey: obj.Key,
+				newKey,
+				newUrl: getPublicUrl(newKey),
+			})
+		}
+
+		// Delete original objects in batch
+		const keysToDelete = objects
+			.map(obj => obj.Key)
+			.filter((key): key is string => key !== undefined)
+
+		if (keysToDelete.length > 0) {
+			await s3.send(
+				new DeleteObjectsCommand({
+					Bucket: bucket,
+					Delete: {
+						Objects: keysToDelete.map(Key => ({ Key })),
+					},
+				}),
+			)
+		}
+
+		continuationToken = listResponse.NextContinuationToken
+	} while (continuationToken)
+
+	return moved
 }

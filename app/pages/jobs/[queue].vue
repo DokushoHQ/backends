@@ -355,18 +355,10 @@ function getJobDefaultTabIndex(job: Job): number {
 							/>
 							<span class="hidden sm:inline">{{ data?.stats?.paused ? 'Resume Queue' : 'Pause Queue' }}</span>
 						</UButton>
-						<UButton
-							variant="outline"
-							size="sm"
+						<UiBackButton
 							to="/jobs"
-							class="shrink-0"
-						>
-							<UIcon
-								name="i-lucide-arrow-left"
-								class="h-4 w-4 sm:mr-2"
-							/>
-							<span class="hidden sm:inline">Back to Jobs</span>
-						</UButton>
+							label="Back to Jobs"
+						/>
 					</div>
 				</template>
 			</UDashboardNavbar>
