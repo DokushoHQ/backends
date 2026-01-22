@@ -64,6 +64,7 @@ defineProps<{
 	align-items: center;
 	gap: 0.75rem;
 	padding: 0.75rem 1rem;
+	flex: 1;
 	text-decoration: none;
 	transition: background 0.15s ease;
 	border-bottom: 1px solid var(--color-border);

@@ -11,25 +11,27 @@ export default defineEventHandler(async (event) => {
 	const query = await getValidatedQuery(event, querySchema.parse)
 	const serieId = query.serie_id
 
-	// Build where clause
-	const where: Prisma.ChapterWhereInput = {
-		page_fetch_status: { in: ["Partial", "Failed"] },
+	// Build where clause - include Pending, Partial, and Failed
+	const baseWhere: Prisma.ChapterWhereInput = {
+		page_fetch_status: { in: ["Pending", "Partial", "Failed"] },
 		...(serieId && { serie_id: serieId }),
 	}
 
-	const [partialCount, failedCount, failedPages] = await Promise.all([
-		db.chapter.count({ where: { ...where, page_fetch_status: "Partial" } }),
-		db.chapter.count({ where: { ...where, page_fetch_status: "Failed" } }),
+	const [pendingCount, partialCount, failedCount, failedPages] = await Promise.all([
+		db.chapter.count({ where: { ...baseWhere, page_fetch_status: "Pending" } }),
+		db.chapter.count({ where: { ...baseWhere, page_fetch_status: "Partial" } }),
+		db.chapter.count({ where: { ...baseWhere, page_fetch_status: "Failed" } }),
 		db.chapterData.count({
 			where: {
 				url: null,
 				source_url: { not: null },
-				chapter: where,
+				chapter: baseWhere,
 			},
 		}),
 	])
 
 	return {
+		pendingChapters: pendingCount,
 		partialChapters: partialCount,
 		failedChapters: failedCount,
 		failedPages,

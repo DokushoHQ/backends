@@ -13,6 +13,14 @@ const { data: issuesData } = await useFetch("/api/v1/attention/issues", {
 	query: { type: "all", limit: 5 },
 })
 
+// Fetch chapter health stats
+const { data: chapterStats } = await useFetch("/api/v1/chapters/failed-stats")
+
+// Fetch series with chapter data issues
+const { data: chapterIssuesData } = await useFetch("/api/v1/attention/issues", {
+	query: { type: "chapter_data_missing", limit: 5 },
+})
+
 const pendingDuplicates = computed(() => duplicatesData.value?.pagination?.total ?? 0)
 const recentDuplicates = computed(() => duplicatesData.value?.groups?.slice(0, 5) ?? [])
 
@@ -33,6 +41,24 @@ const issueTypes: Array<{ key: string, label: string, icon: string, color: "oran
 	{ key: "scrape_failures", label: "Scrape Failed", icon: "i-lucide-wifi-off", color: "red" },
 	{ key: "chapter_data_missing", label: "Chapter Data", icon: "i-lucide-file-warning", color: "purple" },
 ]
+
+// Chapter health data
+const chapterHealthData = computed(() => ({
+	pendingChapters: chapterStats.value?.pendingChapters ?? 0,
+	failedChapters: chapterStats.value?.failedChapters ?? 0,
+	partialChapters: chapterStats.value?.partialChapters ?? 0,
+	failedPages: chapterStats.value?.failedPages ?? 0,
+}))
+
+const chapterHealthSeries = computed(() =>
+	(chapterIssuesData.value?.series ?? []).slice(0, 5),
+)
+
+const hasChapterIssues = computed(() =>
+	chapterHealthData.value.pendingChapters > 0
+	|| chapterHealthData.value.failedChapters > 0
+	|| chapterHealthData.value.partialChapters > 0,
+)
 </script>
 
 <template>
@@ -156,6 +182,16 @@ const issueTypes: Array<{ key: string, label: string, icon: string, color: "oran
 									<p>No issues detected</p>
 								</div>
 							</UiContentCard>
+
+							<!-- Chapter Health section -->
+							<AttentionChapterHealthCard
+								v-if="hasChapterIssues"
+								:pending-chapters="chapterHealthData.pendingChapters"
+								:failed-chapters="chapterHealthData.failedChapters"
+								:partial-chapters="chapterHealthData.partialChapters"
+								:failed-pages="chapterHealthData.failedPages"
+								:series="chapterHealthSeries"
+							/>
 						</div>
 					</template>
 				</div>
@@ -283,10 +319,17 @@ const issueTypes: Array<{ key: string, label: string, icon: string, color: "oran
 	}
 }
 
+@media (min-width: 1200px) {
+	.sections-grid:has(> :nth-child(3)) {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
 /* Preview list */
 .preview-list {
 	display: flex;
 	flex-direction: column;
+	flex: 1;
 }
 
 /* Empty preview */

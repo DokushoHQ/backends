@@ -29,17 +29,20 @@ defineProps<{
 					</p>
 				</div>
 			</div>
-			<NuxtLink
-				v-if="linkTo"
-				:to="linkTo"
-				class="view-all-link"
-			>
-				{{ linkLabel || 'View all' }}
-				<UIcon
-					name="i-lucide-arrow-right"
-					class="h-4 w-4"
-				/>
-			</NuxtLink>
+			<div class="header-actions">
+				<slot name="header-actions" />
+				<NuxtLink
+					v-if="linkTo"
+					:to="linkTo"
+					class="view-all-link"
+				>
+					{{ linkLabel || 'View all' }}
+					<UIcon
+						name="i-lucide-arrow-right"
+						class="h-4 w-4"
+					/>
+				</NuxtLink>
+			</div>
 		</div>
 
 		<div class="card-body">
@@ -65,6 +68,8 @@ defineProps<{
 	--blue: oklch(0.65 0.15 250);
 	--blue-soft: oklch(0.65 0.15 250 / 0.12);
 
+	display: flex;
+	flex-direction: column;
 	background: var(--color-background);
 	border: 1px solid var(--color-border);
 	border-radius: 0.75rem;
@@ -75,7 +80,8 @@ defineProps<{
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 1rem;
+	flex-wrap: wrap;
+	gap: 0.75rem;
 	padding: 1rem;
 	border-bottom: 1px solid var(--color-border);
 }
@@ -84,6 +90,7 @@ defineProps<{
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
+	min-width: 0;
 }
 
 .icon-wrapper {
@@ -120,6 +127,13 @@ defineProps<{
 	margin-top: 0.125rem;
 }
 
+.header-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-shrink: 0;
+}
+
 .view-all-link {
 	display: flex;
 	align-items: center;
@@ -142,6 +156,11 @@ defineProps<{
 .card-body {
 	display: flex;
 	flex-direction: column;
+	flex: 1;
+}
+
+.card-body:empty {
+	display: none;
 }
 
 /* Dark mode */

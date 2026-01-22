@@ -69,6 +69,8 @@ export default defineEventHandler(async (event) => {
 		success: 0,
 		partial: 0,
 		failed: 0,
+		permanentlyFailed: 0,
+		incomplete: 0,
 	}
 	for (const h of chapterHealth) {
 		switch (h.page_fetch_status) {
@@ -86,6 +88,12 @@ export default defineEventHandler(async (event) => {
 				break
 			case "Failed":
 				chapterHealthCounts.failed = h._count
+				break
+			case "PermanentlyFailed":
+				chapterHealthCounts.permanentlyFailed = h._count
+				break
+			case "Incomplete":
+				chapterHealthCounts.incomplete = h._count
 				break
 		}
 	}

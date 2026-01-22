@@ -256,3 +256,28 @@ export async function resumeQueue(name: QueueName): Promise<void> {
 	const queue = queues[name]
 	await queue.resume()
 }
+
+export async function obliterateQueue(name: QueueName): Promise<void> {
+	const queue = queues[name]
+	await queue.obliterate({ force: true })
+}
+
+export async function obliterateAllQueues(): Promise<{ purged: string[], errors: Array<{ queue: string, error: string }> }> {
+	const purged: string[] = []
+	const errors: Array<{ queue: string, error: string }> = []
+
+	for (const name of allQueueNames) {
+		try {
+			await obliterateQueue(name)
+			purged.push(name)
+		}
+		catch (err) {
+			errors.push({
+				queue: name,
+				error: err instanceof Error ? err.message : String(err),
+			})
+		}
+	}
+
+	return { purged, errors }
+}

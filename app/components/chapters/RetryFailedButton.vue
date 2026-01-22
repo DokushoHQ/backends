@@ -2,9 +2,12 @@
 interface Props {
 	scope: "global" | "serie"
 	serieId?: string
+	showModal?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+	showModal: false,
+})
 
 const emit = defineEmits<{
 	retried: [queued: number]
@@ -12,6 +15,7 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const loading = ref(false)
+const modalOpen = ref(false)
 
 const queryParams = computed(() => props.serieId ? { serie_id: props.serieId } : {})
 
@@ -22,6 +26,15 @@ const { data: stats, refresh } = await useLazyFetch("/api/v1/chapters/failed-sta
 const hasFailures = computed(() =>
 	stats.value && (stats.value.partialChapters > 0 || stats.value.failedChapters > 0),
 )
+
+function handleClick() {
+	if (props.showModal) {
+		modalOpen.value = true
+	}
+	else {
+		handleRetry()
+	}
+}
 
 async function handleRetry() {
 	loading.value = true
@@ -54,20 +67,35 @@ async function handleRetry() {
 		loading.value = false
 	}
 }
+
+function handleModalCompleted() {
+	emit("retried", 0)
+	refresh()
+}
 </script>
 
 <template>
-	<UButton
-		v-if="hasFailures"
-		variant="outline"
-		size="sm"
-		:loading="loading"
-		@click="handleRetry"
-	>
-		<UIcon
-			name="i-lucide-refresh-cw"
-			class="h-4 w-4 mr-2"
+	<div>
+		<UButton
+			v-if="hasFailures"
+			variant="outline"
+			size="sm"
+			:loading="loading"
+			@click="handleClick"
+		>
+			<UIcon
+				name="i-lucide-refresh-cw"
+				class="h-4 w-4 mr-2"
+			/>
+			Retry Failed ({{ stats?.failedPages ?? 0 }} pages)
+		</UButton>
+
+		<ChaptersRetryProgressModal
+			v-if="showModal"
+			v-model:open="modalOpen"
+			:scope="scope"
+			:serie-id="serieId"
+			@completed="handleModalCompleted"
 		/>
-		Retry Failed ({{ stats?.failedPages ?? 0 }} pages)
-	</UButton>
+	</div>
 </template>
