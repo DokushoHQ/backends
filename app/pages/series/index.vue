@@ -60,31 +60,32 @@ const pageDescription = computed(() => {
 	return `${total} series in your library`
 })
 
+// Empty state type
+const emptyStateType = computed(() => {
+	if (isFailingFilter.value) return "no-failures" as const
+	if (searchQuery.value || hasActiveFilters.value) return "no-results" as const
+	return "empty" as const
+})
+
 // Helper to update URL params
 function updateFilters(updates: Record<string, string | undefined>) {
-	// Convert route.query values to string | undefined (ignoring arrays and nulls)
 	const query: Record<string, string | undefined> = {}
+
+	// Copy existing string query params
 	for (const [key, value] of Object.entries(route.query)) {
 		if (typeof value === "string") {
 			query[key] = value
 		}
 	}
 
-	for (const [key, value] of Object.entries(updates)) {
-		if (value === undefined) {
-			query[key] = undefined
-		}
-		else {
-			query[key] = value
-		}
-	}
+	// Apply updates
+	Object.assign(query, updates)
 
 	// Reset page when changing other filters
 	if (!("page" in updates) && Object.keys(updates).length > 0) {
 		query.page = undefined
 	}
 
-	// Filter out undefined values for router
 	const cleanQuery = Object.fromEntries(
 		Object.entries(query).filter(([_, v]) => v !== undefined),
 	)
@@ -104,40 +105,10 @@ function setPage(newPage: number) {
 		updateFilters({ page: String(newPage) })
 	}
 }
-
-// Get failure count for a series
-function getFailureCount(serie: unknown): number {
-	if (typeof serie === "object" && serie !== null && "failureCount" in serie) {
-		return (serie as { failureCount: number }).failureCount ?? 0
-	}
-	return 0
-}
-
-// Filter dropdown items
-const filterItems = computed(() => {
-	const items = [
-		[
-			{ label: "All", onSelect: () => updateFilters({ filter: undefined }) },
-			{ label: "Failing", onSelect: () => updateFilters({ filter: "failing" }) },
-		],
-	]
-
-	if (sources.value?.length) {
-		items.push([
-			{ label: "All sources", onSelect: () => updateFilters({ source: undefined }) },
-			...sources.value.map(s => ({
-				label: s.name,
-				onSelect: () => updateFilters({ source: s.id }),
-			})),
-		])
-	}
-
-	return items
-})
 </script>
 
 <template>
-	<div class="flex flex-col flex-1 min-h-0">
+	<div class="series-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
 				<UDashboardNavbar
@@ -145,59 +116,197 @@ const filterItems = computed(() => {
 					:description="pageDescription"
 				>
 					<template #right>
-						<div class="flex items-center gap-1.5 sm:gap-2">
-							<!-- Active filter badges (hidden on mobile) -->
+						<div class="toolbar">
+							<!-- Active filter chips (hidden on mobile) -->
 							<div
 								v-if="hasActiveFilters"
-								class="hidden sm:flex items-center gap-1"
+								class="filter-chips"
 							>
-								<UBadge
+								<button
 									v-if="isFailingFilter"
-									variant="subtle"
-									class="gap-1"
+									class="filter-chip filter-chip-error"
+									@click="updateFilters({ filter: undefined })"
 								>
-									Failing
-									<UButton
-										variant="ghost"
-										size="xs"
-										icon="i-lucide-x"
-										class="ml-0.5 -mr-1"
-										@click="updateFilters({ filter: undefined })"
+									<UIcon
+										name="i-lucide-alert-triangle"
+										class="chip-icon"
 									/>
-								</UBadge>
-								<UBadge
+									Failing
+									<UIcon
+										name="i-lucide-x"
+										class="chip-close"
+									/>
+								</button>
+								<button
 									v-if="currentSourceName"
-									variant="subtle"
-									class="gap-1"
+									class="filter-chip"
+									@click="updateFilters({ source: undefined })"
 								>
 									{{ currentSourceName }}
-									<UButton
-										variant="ghost"
-										size="xs"
-										icon="i-lucide-x"
-										class="ml-0.5 -mr-1"
-										@click="updateFilters({ source: undefined })"
+									<UIcon
+										name="i-lucide-x"
+										class="chip-close"
 									/>
-								</UBadge>
+								</button>
 							</div>
 
-							<UInput
-								v-model="searchInput"
-								placeholder="Search..."
-								icon="i-lucide-search"
-								class="w-32 sm:w-64"
-							/>
-
-							<UDropdownMenu :items="filterItems">
-								<UButton
-									variant="outline"
-									icon="i-lucide-filter"
-									class="shrink-0"
+							<!-- Search input -->
+							<div class="search-wrapper">
+								<UIcon
+									name="i-lucide-search"
+									class="search-icon"
+								/>
+								<input
+									v-model="searchInput"
+									type="text"
+									placeholder="Search library..."
+									class="search-input"
 								>
-									<span class="hidden sm:inline">Filter</span>
-								</UButton>
-							</UDropdownMenu>
+								<button
+									v-if="searchInput"
+									class="search-clear"
+									@click="searchInput = ''"
+								>
+									<UIcon name="i-lucide-x" />
+								</button>
+							</div>
 
+							<!-- Filter popover -->
+							<UPopover>
+								<button
+									class="filter-button"
+									:class="{ active: hasActiveFilters }"
+								>
+									<UIcon
+										name="i-lucide-sliders-horizontal"
+										class="filter-button-icon"
+									/>
+									<span class="filter-button-label">Filter</span>
+									<span
+										v-if="hasActiveFilters"
+										class="filter-count"
+									>
+										{{ (isFailingFilter ? 1 : 0) + (currentSourceName ? 1 : 0) }}
+									</span>
+								</button>
+
+								<template #content>
+									<div class="filter-panel">
+										<!-- Status section -->
+										<div class="filter-section">
+											<div class="filter-section-header">
+												Status
+											</div>
+											<div class="filter-options">
+												<button
+													class="filter-option"
+													:class="{ active: !filterType }"
+													@click="updateFilters({ filter: undefined })"
+												>
+													<UIcon
+														name="i-lucide-library"
+														class="filter-option-icon"
+													/>
+													<span class="filter-option-label">All series</span>
+													<UIcon
+														v-if="!filterType"
+														name="i-lucide-check"
+														class="filter-option-check"
+													/>
+												</button>
+												<button
+													class="filter-option"
+													:class="{ active: isFailingFilter }"
+													@click="updateFilters({ filter: 'failing' })"
+												>
+													<UIcon
+														name="i-lucide-alert-triangle"
+														class="filter-option-icon filter-option-icon-error"
+													/>
+													<span class="filter-option-label">Failing updates</span>
+													<UIcon
+														v-if="isFailingFilter"
+														name="i-lucide-check"
+														class="filter-option-check"
+													/>
+												</button>
+											</div>
+										</div>
+
+										<!-- Sources section -->
+										<div
+											v-if="sources?.length"
+											class="filter-section"
+										>
+											<div class="filter-section-header">
+												Source
+											</div>
+											<div class="filter-options">
+												<button
+													class="filter-option"
+													:class="{ active: !sourceFilter }"
+													@click="updateFilters({ source: undefined })"
+												>
+													<UIcon
+														name="i-lucide-database"
+														class="filter-option-icon"
+													/>
+													<span class="filter-option-label">All sources</span>
+													<UIcon
+														v-if="!sourceFilter"
+														name="i-lucide-check"
+														class="filter-option-check"
+													/>
+												</button>
+												<button
+													v-for="source in sources"
+													:key="source.id"
+													class="filter-option"
+													:class="{ active: sourceFilter === source.id }"
+													@click="updateFilters({ source: source.id })"
+												>
+													<NuxtImg
+														v-if="source.icon"
+														:src="source.icon"
+														:alt="source.name"
+														class="filter-option-img"
+													/>
+													<UIcon
+														v-else
+														name="i-lucide-globe"
+														class="filter-option-icon"
+													/>
+													<span class="filter-option-label">{{ source.name }}</span>
+													<UIcon
+														v-if="sourceFilter === source.id"
+														name="i-lucide-check"
+														class="filter-option-check"
+													/>
+												</button>
+											</div>
+										</div>
+
+										<!-- Clear filters -->
+										<div
+											v-if="hasActiveFilters"
+											class="filter-section filter-section-clear"
+										>
+											<button
+												class="filter-clear-button"
+												@click="updateFilters({ filter: undefined, source: undefined })"
+											>
+												<UIcon
+													name="i-lucide-x"
+													class="filter-clear-icon"
+												/>
+												Clear all filters
+											</button>
+										</div>
+									</div>
+								</template>
+							</UPopover>
+
+							<!-- Import button -->
 							<UButton
 								v-if="isAdmin"
 								icon="i-lucide-plus"
@@ -213,34 +322,28 @@ const filterItems = computed(() => {
 
 			<template #body>
 				<!-- Loading state -->
-				<div
+				<SeriesGridSkeleton
 					v-if="pending"
-					class="flex items-center justify-center py-12"
-				>
-					<UIcon
-						name="i-lucide-loader-2"
-						class="h-8 w-8 animate-spin text-muted-foreground"
-					/>
-				</div>
+					:count="24"
+				/>
 
 				<!-- Error state -->
 				<div
 					v-else-if="error"
-					class="flex flex-col items-center justify-center py-12 text-center"
+					class="error-state"
 				>
 					<UIcon
 						name="i-lucide-alert-circle"
-						class="h-12 w-12 text-destructive mb-4"
+						class="error-icon"
 					/>
-					<h3 class="text-lg font-semibold">
+					<h3 class="error-title">
 						Failed to load series
 					</h3>
-					<p class="text-muted-foreground mt-1">
+					<p class="error-message">
 						{{ error.message }}
 					</p>
 					<UButton
 						variant="outline"
-						class="mt-4"
 						@click="refresh()"
 					>
 						Try again
@@ -248,91 +351,27 @@ const filterItems = computed(() => {
 				</div>
 
 				<!-- Empty state -->
-				<div
+				<SeriesEmptyState
 					v-else-if="series.length === 0"
-					class="flex flex-col items-center justify-center py-12 text-center"
-				>
-					<UIcon
-						:name="isFailingFilter ? 'i-lucide-alert-triangle' : 'i-lucide-book-open'"
-						class="h-12 w-12 text-muted-foreground mb-4"
-					/>
-					<h3 class="text-lg font-semibold">
-						{{ isFailingFilter ? "No failing series" : searchQuery ? "No results found" : "No series yet" }}
-					</h3>
-					<p class="text-muted-foreground mt-1">
-						<template v-if="isFailingFilter">
-							All series are updating successfully.
-						</template>
-						<template v-else-if="searchQuery">
-							No series matching "{{ searchQuery }}". Try a different search term.
-						</template>
-						<template v-else>
-							Your library is empty. Series will appear here once added.
-						</template>
-					</p>
-					<UButton
-						v-if="hasActiveFilters || searchQuery"
-						variant="outline"
-						class="mt-4"
-						@click="clearFilters"
-					>
-						Clear filters
-					</UButton>
-				</div>
+					:type="emptyStateType"
+					:search-query="searchQuery"
+					:is-admin="isAdmin"
+					@clear-filters="clearFilters"
+				/>
 
 				<!-- Series grid -->
 				<div
 					v-else
-					class="flex flex-col min-h-full"
+					class="series-page-content"
 				>
-					<div class="flex-1">
-						<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-							<NuxtLink
-								v-for="serie in series"
-								:key="serie.id"
-								:to="`/series/${serie.id}`"
-								class="group block rounded-lg bg-elevated overflow-hidden hover:ring-1 hover:ring-primary/50 transition-all"
-							>
-								<div class="aspect-2/3 relative bg-muted overflow-hidden">
-									<NuxtImg
-										v-if="serie.cover"
-										:src="serie.cover"
-										:alt="serie.title"
-										class="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-									/>
-									<div
-										v-else
-										class="absolute inset-0 flex items-center justify-center"
-									>
-										<UIcon
-											name="i-lucide-book-open"
-											class="h-12 w-12 text-muted-foreground/50"
-										/>
-									</div>
-									<div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent p-3 pt-8">
-										<p class="font-medium text-white text-sm truncate">{{ serie.title }}</p>
-									</div>
-								</div>
-								<div class="p-2 flex items-center gap-1.5">
-									<span class="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium">
-										{{ serie._count?.chapters ?? 0 }} ch
-									</span>
-									<span
-										v-if="getFailureCount(serie) > 0"
-										class="inline-flex items-center gap-0.5 rounded-md bg-red-500/10 text-red-500 px-2 py-1 text-xs font-medium"
-									>
-										<UIcon
-											name="i-lucide-alert-triangle"
-											class="h-3 w-3"
-										/>
-										{{ getFailureCount(serie) }}
-									</span>
-								</div>
-							</NuxtLink>
-						</div>
+					<div class="series-grid">
+						<SeriesCard
+							v-for="serie in series"
+							:key="serie.id"
+							:serie="serie"
+						/>
 					</div>
 
-					<!-- Pagination -->
 					<UiPagination
 						:page="page"
 						:total-pages="pagination.totalPages"
@@ -343,3 +382,419 @@ const filterItems = computed(() => {
 		</UDashboardPanel>
 	</div>
 </template>
+
+<style scoped>
+/* Toolbar */
+.toolbar {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+	.toolbar {
+		gap: 0.625rem;
+	}
+}
+
+/* Filter chips */
+.filter-chips {
+	display: none;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+@media (min-width: 640px) {
+	.filter-chips {
+		display: flex;
+	}
+}
+
+.filter-chip {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.375rem 0.5rem;
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+	color: var(--ui-text);
+	background: var(--ui-bg-muted);
+	border: 1px solid var(--ui-border);
+	border-radius: 2rem;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.filter-chip:hover {
+	background: var(--ui-bg-elevated);
+	border-color: var(--ui-text-muted);
+}
+
+.filter-chip-error {
+	background: var(--ui-error-soft);
+	border-color: color-mix(in oklch, var(--ui-error) 30%, transparent);
+	color: var(--ui-error);
+}
+
+.filter-chip-error:hover {
+	background: color-mix(in oklch, var(--ui-error) 20%, transparent);
+}
+
+.chip-icon {
+	width: 0.75rem;
+	height: 0.75rem;
+}
+
+.chip-close {
+	width: 0.75rem;
+	height: 0.75rem;
+	opacity: 0.6;
+	transition: opacity 0.15s ease;
+}
+
+.filter-chip:hover .chip-close {
+	opacity: 1;
+}
+
+/* Search input */
+.search-wrapper {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.search-icon {
+	position: absolute;
+	left: 0.625rem;
+	width: 1rem;
+	height: 1rem;
+	color: var(--ui-text-muted);
+	pointer-events: none;
+	transition: color 0.15s ease;
+}
+
+.search-input {
+	width: 8rem;
+	padding: 0.5rem 2rem 0.5rem 2.25rem;
+	font-size: var(--font-size-sm);
+	color: var(--ui-text);
+	background: var(--ui-bg-muted);
+	border: 1px solid transparent;
+	border-radius: 2rem;
+	outline: none;
+	transition: all 0.2s ease;
+}
+
+@media (min-width: 640px) {
+	.search-input {
+		width: 14rem;
+	}
+}
+
+.search-input::placeholder {
+	color: var(--ui-text-dimmed);
+}
+
+.search-input:hover {
+	background: var(--ui-bg-elevated);
+	border-color: var(--ui-border);
+}
+
+.search-input:focus {
+	width: 16rem;
+	background: var(--ui-bg-elevated);
+	border-color: var(--ui-primary);
+	box-shadow: 0 0 0 3px color-mix(in oklch, var(--ui-primary) 15%, transparent);
+}
+
+@media (max-width: 639px) {
+	.search-input:focus {
+		width: 10rem;
+	}
+}
+
+.search-wrapper:focus-within .search-icon {
+	color: var(--ui-primary);
+}
+
+.search-clear {
+	position: absolute;
+	right: 0.5rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.25rem;
+	height: 1.25rem;
+	color: var(--ui-text-muted);
+	background: transparent;
+	border: none;
+	border-radius: 50%;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.search-clear:hover {
+	color: var(--ui-text);
+	background: var(--ui-bg-muted);
+}
+
+/* Filter button */
+.filter-button {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.5rem 0.75rem;
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.5rem;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.filter-button:hover {
+	color: var(--ui-text);
+	border-color: var(--ui-text-muted);
+}
+
+.filter-button.active {
+	color: var(--ui-primary);
+	background: var(--ui-primary-soft);
+	border-color: color-mix(in oklch, var(--ui-primary) 30%, transparent);
+}
+
+.filter-button.active:hover {
+	background: color-mix(in oklch, var(--ui-primary) 20%, transparent);
+}
+
+.filter-button-icon {
+	width: 1rem;
+	height: 1rem;
+}
+
+.filter-button-label {
+	display: none;
+}
+
+@media (min-width: 640px) {
+	.filter-button-label {
+		display: inline;
+	}
+}
+
+.filter-count {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 1.125rem;
+	height: 1.125rem;
+	padding: 0 0.25rem;
+	font-size: 0.625rem;
+	font-weight: 700;
+	color: white;
+	background: var(--ui-primary);
+	border-radius: 2rem;
+}
+
+/* Filter panel */
+.filter-panel {
+	width: 14rem;
+	padding: 0.5rem;
+}
+
+.filter-section {
+	padding: 0.25rem 0;
+}
+
+.filter-section:not(:last-child) {
+	border-bottom: 1px solid var(--ui-border);
+	padding-bottom: 0.5rem;
+	margin-bottom: 0.25rem;
+}
+
+.filter-section-header {
+	padding: 0.375rem 0.5rem;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--ui-text-muted);
+}
+
+.filter-options {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+}
+
+.filter-option {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	padding: 0.5rem;
+	font-size: var(--font-size-sm);
+	color: var(--ui-text);
+	background: transparent;
+	border: none;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	transition: all 0.15s ease;
+	text-align: left;
+}
+
+.filter-option:hover {
+	background: var(--ui-bg-muted);
+}
+
+.filter-option.active {
+	background: var(--ui-primary-soft);
+	color: var(--ui-primary);
+}
+
+.filter-option-icon {
+	width: 1rem;
+	height: 1rem;
+	color: var(--ui-text-muted);
+	flex-shrink: 0;
+}
+
+.filter-option-img {
+	width: 1rem;
+	height: 1rem;
+	border-radius: 0.25rem;
+	object-fit: cover;
+	flex-shrink: 0;
+}
+
+.filter-option.active .filter-option-icon {
+	color: var(--ui-primary);
+}
+
+.filter-option-icon-error {
+	color: var(--ui-error);
+}
+
+.filter-option.active .filter-option-icon-error {
+	color: var(--ui-error);
+}
+
+.filter-option-label {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.filter-option-check {
+	width: 1rem;
+	height: 1rem;
+	color: var(--ui-primary);
+	flex-shrink: 0;
+}
+
+.filter-section-clear {
+	border-bottom: none;
+	padding-bottom: 0.25rem;
+	margin-bottom: 0;
+}
+
+.filter-clear-button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	width: 100%;
+	padding: 0.5rem;
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text-muted);
+	background: transparent;
+	border: 1px dashed var(--ui-border);
+	border-radius: 0.375rem;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.filter-clear-button:hover {
+	color: var(--ui-error);
+	border-color: var(--ui-error);
+	background: var(--ui-error-soft);
+}
+
+.filter-clear-icon {
+	width: 0.875rem;
+	height: 0.875rem;
+}
+
+/* Series grid */
+.series-grid {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(2, 1fr);
+	align-items: start;
+}
+
+@media (min-width: 640px) {
+	.series-grid {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+@media (min-width: 768px) {
+	.series-grid {
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+@media (min-width: 1024px) {
+	.series-grid {
+		grid-template-columns: repeat(5, 1fr);
+	}
+}
+
+@media (min-width: 1280px) {
+	.series-grid {
+		grid-template-columns: repeat(6, 1fr);
+	}
+}
+
+@media (min-width: 1536px) {
+	.series-grid {
+		grid-template-columns: repeat(8, 1fr);
+	}
+}
+
+/* Error state */
+.error-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 3rem 1.5rem;
+	text-align: center;
+}
+
+.error-icon {
+	width: 3rem;
+	height: 3rem;
+	color: var(--ui-error);
+	margin-bottom: 1rem;
+}
+
+.error-title {
+	font-size: var(--font-size-lg);
+	font-weight: 600;
+	color: var(--ui-text);
+	margin: 0 0 0.25rem;
+}
+
+.error-message {
+	font-size: var(--font-size-base);
+	color: var(--ui-text-muted);
+	margin: 0 0 1rem;
+}
+</style>
