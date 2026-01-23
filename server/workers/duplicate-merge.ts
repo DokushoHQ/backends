@@ -1,6 +1,7 @@
 import { defineWorker } from "#processor"
 import { MetricsTime } from "bullmq"
 import { join } from "node:path"
+import deleteSerieQueue from "../queues/delete-serie"
 import type { DuplicateMergeJobData } from "../queues/duplicate-merge"
 import { duplicateMergeJobDataSchema, QUEUE_NAME } from "../queues/duplicate-merge"
 import indexerQueue from "../queues/indexer"
@@ -153,14 +154,14 @@ export default defineWorker<typeof QUEUE_NAME, DuplicateMergeJobData, undefined>
 		job.log(`Merged metadata: ${allGenreIds.length} genres, ${allAuthorIds.length} authors, ${allArtistIds.length} artists`)
 		await job.updateProgress(70)
 
-		// 6. Soft-delete source series
+		// 6. Queue soft-delete for source series
 		for (const source of sourceSeries) {
-			await db.serie.update({
-				where: { id: source.id },
-				data: { soft_deleted_at: new Date() },
+			await deleteSerieQueue.add("delete-serie", {
+				serie_id: source.id,
+				type: "SOFT_DELETE",
 			})
 		}
-		job.log(`Soft-deleted ${sourceSeries.length} source series`)
+		job.log(`Queued soft-delete for ${sourceSeries.length} source series`)
 
 		await job.updateProgress(80)
 
