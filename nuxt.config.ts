@@ -2,7 +2,6 @@
 export default defineNuxtConfig({
 	modules: ["@nuxt/ui", "@dokushohq/nuxt-processor", "@vueuse/nuxt", "@nuxt/eslint", "nuxt-nodemailer", "nuxt-email-renderer", "nuxt-charts", "@nuxt/test-utils/module", "@nuxt/image"],
 	devtools: { enabled: true },
-	css: ["~/assets/css/main.css"],
 	app: {
 		head: {
 			script: [
@@ -14,6 +13,7 @@ export default defineNuxtConfig({
 			],
 		},
 	},
+	css: ["~/assets/css/main.css"],
 	runtimeConfig: {
 		databaseUrl: "",
 		databaseMaxConnections: 10,
