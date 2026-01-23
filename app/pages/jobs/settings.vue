@@ -110,7 +110,7 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 </script>
 
 <template>
-	<div class="job-settings-page">
+	<div class="settings-page">
 		<UDashboardPanel>
 			<template #header>
 				<UDashboardNavbar
@@ -128,63 +128,67 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 			</template>
 
 			<template #body>
-				<div class="space-y-6">
+				<div class="page-content">
 					<!-- Manual Job Triggers Section -->
-					<div>
-						<h2 class="text-lg font-semibold mb-4">
-							Manual Job Triggers
-						</h2>
-						<div class="grid gap-4 md:grid-cols-2">
-							<UCard
+					<UiContentCard
+						title="Manual Job Triggers"
+						description="Queue background jobs to run immediately"
+						icon="i-lucide-play"
+						color="blue"
+					>
+						<div class="job-triggers-grid">
+							<div
 								v-for="job in jobs"
 								:key="job.type"
+								class="job-trigger-card"
 							>
-								<div class="flex items-start gap-4">
-									<div class="size-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-										<UIcon
-											:name="job.icon"
-											class="size-5 text-primary"
-										/>
-									</div>
-									<div class="flex-1 min-w-0">
-										<h3 class="font-medium">
-											{{ job.title }}
-										</h3>
-										<p class="text-sm text-muted-foreground mt-1">
-											{{ job.description }}
-										</p>
-										<UButton
-											class="mt-3"
-											size="sm"
-											:loading="job.loading"
-											@click="triggerJob(job)"
-										>
-											Run Now
-										</UButton>
-									</div>
-								</div>
-							</UCard>
-						</div>
-					</div>
-
-					<!-- Danger Zone Section -->
-					<div class="danger-zone">
-						<h2 class="text-lg font-semibold mb-4 text-red-500">
-							Danger Zone
-						</h2>
-						<UCard class="border-red-500/30">
-							<div class="flex items-start gap-4">
-								<div class="size-11 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+								<div class="job-icon-wrapper">
 									<UIcon
-										name="i-lucide-trash-2"
-										class="size-5 text-red-500"
+										:name="job.icon"
+										class="job-icon"
 									/>
 								</div>
-								<div class="flex-1 min-w-0">
-									<h3 class="font-medium">
+								<div class="job-info">
+									<h3 class="job-title">
+										{{ job.title }}
+									</h3>
+									<p class="job-description">
+										{{ job.description }}
+									</p>
+									<UButton
+										class="mt-3"
+										size="sm"
+										:loading="job.loading"
+										@click="triggerJob(job)"
+									>
+										Run Now
+									</UButton>
+								</div>
+							</div>
+						</div>
+					</UiContentCard>
+
+					<!-- Danger Zone Section -->
+					<UiContentCard
+						title="Danger Zone"
+						description="Destructive operations that cannot be undone"
+						icon="i-lucide-triangle-alert"
+						color="red"
+						danger
+					>
+						<div class="danger-content">
+							<div class="danger-item">
+								<div class="danger-icon-wrapper">
+									<UIcon
+										name="i-lucide-trash-2"
+										class="danger-icon"
+									/>
+								</div>
+								<div class="danger-info">
+									<h3 class="danger-title">
 										Purge All Queues
 									</h3>
-									<p class="text-sm text-muted-foreground mt-1">
+									<p class="danger-description">
 										Permanently delete all jobs from all queues. This includes active, waiting, completed, and failed jobs.
 									</p>
 									<UButton
@@ -202,8 +206,8 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 									</UButton>
 								</div>
 							</div>
-						</UCard>
-					</div>
+						</div>
+					</UiContentCard>
 				</div>
 			</template>
 		</UDashboardPanel>
@@ -278,12 +282,123 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 </template>
 
 <style scoped>
-.danger-zone {
-	margin-top: 2rem;
-	padding-top: 2rem;
-	border-top: 1px solid var(--ui-border);
+.settings-page {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
 }
 
+.page-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+/* Job triggers grid */
+.job-triggers-grid {
+	display: grid;
+	gap: 1rem;
+	padding: 1rem;
+}
+
+@media (min-width: 768px) {
+	.job-triggers-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.job-trigger-card {
+	display: flex;
+	gap: 1rem;
+	padding: 1rem;
+	background: var(--ui-bg-muted);
+	border-radius: 0.5rem;
+}
+
+.job-icon-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.75rem;
+	height: 2.75rem;
+	border-radius: 50%;
+	background: var(--ui-primary-soft);
+	flex-shrink: 0;
+}
+
+.job-icon {
+	width: 1.25rem;
+	height: 1.25rem;
+	color: var(--ui-primary);
+}
+
+.job-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.job-title {
+	font-size: var(--font-size-base);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.job-description {
+	font-size: var(--font-size-sm);
+	color: var(--ui-text-muted);
+	margin-top: 0.25rem;
+}
+
+/* Danger content */
+.danger-content {
+	padding: 1rem;
+}
+
+.danger-item {
+	display: flex;
+	gap: 1rem;
+	padding: 1rem;
+	background: var(--ui-error-soft);
+	border: 1px solid color-mix(in oklch, var(--ui-error) 25%, transparent);
+	border-radius: 0.5rem;
+}
+
+.danger-icon-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.75rem;
+	height: 2.75rem;
+	border-radius: 50%;
+	background: color-mix(in oklch, var(--ui-error) 15%, var(--ui-bg-elevated));
+	flex-shrink: 0;
+}
+
+.danger-icon {
+	width: 1.25rem;
+	height: 1.25rem;
+	color: var(--ui-error);
+}
+
+.danger-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.danger-title {
+	font-size: var(--font-size-base);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.danger-description {
+	font-size: var(--font-size-sm);
+	color: var(--ui-text-muted);
+	margin-top: 0.25rem;
+}
+
+/* Purge modal */
 .purge-modal {
 	padding: 1.5rem;
 }
@@ -317,7 +432,7 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 }
 
 .warning-text {
-	font-size: 0.875rem;
+	font-size: var(--font-size-sm);
 	color: var(--ui-text-muted);
 	margin-bottom: 0.75rem;
 }
@@ -335,7 +450,7 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 	list-style: disc;
 	padding-left: 1.25rem;
 	margin-bottom: 1rem;
-	font-size: 0.8125rem;
+	font-size: var(--font-size-sm);
 	color: var(--ui-text-muted);
 }
 
@@ -350,7 +465,7 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 }
 
 .confirm-input label {
-	font-size: 0.8125rem;
+	font-size: var(--font-size-sm);
 	color: var(--ui-text);
 }
 
@@ -358,7 +473,7 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 	padding: 0.125rem 0.375rem;
 	background: var(--ui-bg-muted);
 	border-radius: 0.25rem;
-	font-size: 0.8125rem;
+	font-size: var(--font-size-sm);
 	font-weight: 600;
 	color: var(--ui-error);
 }

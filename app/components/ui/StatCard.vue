@@ -3,7 +3,7 @@ defineProps<{
 	value: number | string
 	label: string
 	icon: string
-	color?: "purple" | "amber" | "orange" | "yellow" | "red" | "green" | "blue" | "gray"
+	color?: "purple" | "amber" | "orange" | "yellow" | "red" | "green" | "blue" | "cyan" | "gray"
 }>()
 </script>
 
@@ -60,6 +60,7 @@ defineProps<{
 .stat-card.accent-red .stat-icon { background: var(--ui-error-soft); color: var(--ui-error); }
 .stat-card.accent-green .stat-icon { background: var(--ui-success-soft); color: var(--ui-success); }
 .stat-card.accent-blue .stat-icon { background: var(--ui-primary-soft); color: var(--ui-primary); }
+.stat-card.accent-cyan .stat-icon { background: var(--color-cyan-soft); color: var(--color-cyan); }
 .stat-card.accent-gray .stat-icon { background: var(--ui-bg-muted); color: var(--ui-text-muted); }
 
 .stat-content {

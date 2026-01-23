@@ -8,17 +8,17 @@ const props = defineProps<Props>()
 const circumference = 2 * Math.PI * 20
 const offset = computed(() => circumference - (props.progress / 100) * circumference)
 
-const color = computed(() => {
-	if (props.progress === 100) return "text-green-500"
-	if (props.progress > 0) return "text-blue-500"
-	return "text-muted-foreground"
+const colorClass = computed(() => {
+	if (props.progress === 100) return "color-completed"
+	if (props.progress > 0) return "color-active"
+	return "color-neutral"
 })
 </script>
 
 <template>
-	<div class="relative h-14 w-14 shrink-0">
+	<div class="progress-circle">
 		<svg
-			class="h-14 w-14 -rotate-90"
+			class="progress-svg"
 			viewBox="0 0 48 48"
 			role="img"
 			:aria-label="`Progress: ${progress}%`"
@@ -31,7 +31,7 @@ const color = computed(() => {
 				fill="none"
 				stroke="currentColor"
 				stroke-width="3"
-				class="text-muted"
+				class="track-ring"
 			/>
 			<circle
 				cx="24"
@@ -43,11 +43,47 @@ const color = computed(() => {
 				:stroke-dasharray="circumference"
 				:stroke-dashoffset="offset"
 				stroke-linecap="round"
-				:class="color"
+				:class="colorClass"
 			/>
 		</svg>
-		<span :class="['absolute inset-0 flex items-center justify-center text-xs font-medium', color]">
+		<span
+			class="progress-value"
+			:class="colorClass"
+		>
 			{{ progress }}%
 		</span>
 	</div>
 </template>
+
+<style scoped>
+.progress-circle {
+	position: relative;
+	width: 3.5rem;
+	height: 3.5rem;
+	flex-shrink: 0;
+}
+
+.progress-svg {
+	width: 3.5rem;
+	height: 3.5rem;
+	transform: rotate(-90deg);
+}
+
+.track-ring {
+	color: var(--ui-bg-muted);
+}
+
+.progress-value {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+}
+
+.color-completed { color: var(--ui-success); }
+.color-active { color: var(--ui-primary); }
+.color-neutral { color: var(--ui-text-muted); }
+</style>

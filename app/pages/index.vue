@@ -33,6 +33,11 @@ const { data: jobsData, status: jobsStatus } = await useLazyFetch("/api/jobs", {
 	immediate: isAdmin.value,
 })
 
+const { data: metricsData } = await useLazyFetch("/api/queue-metrics-daily", {
+	query: { days: 7 },
+	immediate: isAdmin.value,
+})
+
 if (error.value) {
 	console.error("Dashboard stats error:", error.value)
 }
@@ -120,9 +125,9 @@ function getIssueLabel(issue: string): string {
 						link-to="/jobs"
 					>
 						<div class="jobs-content">
-							<!-- Mini Line Chart -->
+							<!-- Daily Summary Chart -->
 							<div class="chart-section">
-								<JobsActivityChart :height="120" />
+								<JobsDailySummaryChart :data="metricsData?.aggregated.daily ?? []" />
 							</div>
 
 							<!-- Loading state -->
@@ -420,7 +425,7 @@ function getIssueLabel(issue: string): string {
 }
 
 .chart-section {
-	padding-bottom: 1rem;
+	/*padding-bottom: 1rem;*/
 	border-bottom: 1px solid var(--ui-border-muted);
 }
 
