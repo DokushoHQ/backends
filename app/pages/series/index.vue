@@ -60,40 +60,6 @@ const pageDescription = computed(() => {
 	return `${total} series in your library`
 })
 
-// Pagination range with sliding window
-const paginationRange = computed(() => {
-	const total = pagination.value.totalPages
-	const current = page.value
-	const delta = 2 // Pages to show on each side of current
-
-	if (total <= 1) return [1]
-
-	const range: (number | "ellipsis")[] = []
-
-	// Always show first page
-	range.push(1)
-
-	// Calculate window start/end
-	const windowStart = Math.max(2, current - delta)
-	const windowEnd = Math.min(total - 1, current + delta)
-
-	// Add ellipsis before window if needed
-	if (windowStart > 2) range.push("ellipsis")
-
-	// Add window pages
-	for (let i = windowStart; i <= windowEnd; i++) {
-		range.push(i)
-	}
-
-	// Add ellipsis after window if needed
-	if (windowEnd < total - 1) range.push("ellipsis")
-
-	// Always show last page (if more than 1 page)
-	if (total > 1) range.push(total)
-
-	return range
-})
-
 // Helper to update URL params
 function updateFilters(updates: Record<string, string | undefined>) {
 	// Convert route.query values to string | undefined (ignoring arrays and nulls)
@@ -367,57 +333,11 @@ const filterItems = computed(() => {
 					</div>
 
 					<!-- Pagination -->
-					<div
-						v-if="pagination.totalPages > 1"
-						class="flex items-center justify-center gap-2 mt-6 pb-4"
-					>
-						<UButton
-							variant="outline"
-							size="sm"
-							:disabled="page <= 1"
-							@click="setPage(page - 1)"
-						>
-							<UIcon
-								name="i-lucide-chevron-left"
-								class="h-4 w-4 mr-1"
-							/>
-							Previous
-						</UButton>
-
-						<div class="flex items-center gap-1">
-							<template
-								v-for="(item, idx) in paginationRange"
-								:key="idx"
-							>
-								<span
-									v-if="item === 'ellipsis'"
-									class="px-2 text-gray-400"
-								>...</span>
-								<UButton
-									v-else
-									:variant="item === page ? 'solid' : 'outline'"
-									size="sm"
-									class="min-w-9"
-									@click="setPage(item)"
-								>
-									{{ item }}
-								</UButton>
-							</template>
-						</div>
-
-						<UButton
-							variant="outline"
-							size="sm"
-							:disabled="page >= pagination.totalPages"
-							@click="setPage(page + 1)"
-						>
-							Next
-							<UIcon
-								name="i-lucide-chevron-right"
-								class="h-4 w-4 ml-1"
-							/>
-						</UButton>
-					</div>
+					<UiPagination
+						:page="page"
+						:total-pages="pagination.totalPages"
+						@update:page="setPage"
+					/>
 				</div>
 			</template>
 		</UDashboardPanel>
