@@ -74,17 +74,14 @@ if (error.value) {
 	console.error("Queue fetch error:", error.value)
 }
 
-const statusTabs = [
-	{ key: "latest", label: "Latest" },
-	{ key: "active", label: "Active" },
-	{ key: "waiting", label: "Waiting" },
-	{ key: "completed", label: "Completed" },
-	{ key: "failed", label: "Failed" },
-	{ key: "delayed", label: "Delayed" },
-]
+// Two-way binding for segmented control
+const selectedStatus = computed({
+	get: () => currentStatus.value,
+	set: (value: string) => router.push({ query: { ...route.query, status: value, page: undefined } }),
+})
 
-function getTabCount(key: string): number | null | undefined {
-	if (!data.value?.stats || key === "latest") return null
+function getTabCount(key: string): number | undefined {
+	if (!data.value?.stats || key === "latest") return undefined
 	if (key === "waiting") {
 		const stats = data.value.stats
 		return stats.waiting + stats.prioritized + stats.waitingChildren
@@ -92,9 +89,14 @@ function getTabCount(key: string): number | null | undefined {
 	return data.value.stats[key as keyof QueueStats] as number | undefined
 }
 
-function setStatus(status: string) {
-	router.push({ query: { ...route.query, status, page: undefined } })
-}
+const statusOptions = computed(() => [
+	{ label: "Latest", value: "latest" },
+	{ label: "Active", value: "active", count: getTabCount("active") },
+	{ label: "Waiting", value: "waiting", count: getTabCount("waiting") },
+	{ label: "Completed", value: "completed", count: getTabCount("completed") },
+	{ label: "Failed", value: "failed", count: getTabCount("failed") },
+	{ label: "Delayed", value: "delayed", count: getTabCount("delayed") },
+])
 
 function setPage(page: number) {
 	router.push({ query: { ...route.query, page: page > 1 ? page : undefined } })
@@ -294,36 +296,44 @@ function getProgressValue(progress: number | string | object): number {
 	return 0
 }
 
-// Get tab items for a job
-function getJobTabItems(job: Job) {
-	const items = [
-		{ label: "Data", slot: "data" },
-		{ label: "Options", slot: "options" },
-		{ label: job.logs?.length ? `Logs (${job.logs.length})` : "Logs", slot: "logs" },
+// Track selected tab per job
+const jobSelectedTabs = ref<Map<string, string>>(new Map())
+
+function getJobSelectedTab(job: Job): string {
+	const existing = jobSelectedTabs.value.get(job.id)
+	if (existing) return existing
+
+	// Default to error tab if job has errors
+	if (job.failedReason || (job.stacktrace && job.stacktrace.length > 0)) {
+		return "error"
+	}
+	return "data"
+}
+
+function setJobSelectedTab(jobId: string, tab: string) {
+	jobSelectedTabs.value.set(jobId, tab)
+}
+
+// Get tab options for a job
+function getJobTabOptions(job: Job) {
+	const options = [
+		{ label: "Data", value: "data" },
+		{ label: "Options", value: "options" },
+		{ label: job.logs?.length ? `Logs (${job.logs.length})` : "Logs", value: "logs" },
 	]
 
 	if (job.failedReason || (job.stacktrace && job.stacktrace.length > 0)) {
 		const errorLabel = job.failedReason ? "Error" : "Errors"
 		const stackLength = job.stacktrace?.length ?? 0
 		const count = stackLength > 1 ? ` (${stackLength})` : ""
-		items.push({ label: `${errorLabel}${count}`, slot: "error" })
+		options.push({ label: `${errorLabel}${count}`, value: "error" })
 	}
 
 	if (job.returnvalue !== undefined && job.returnvalue !== null) {
-		items.push({ label: "Result", slot: "result" })
+		options.push({ label: "Result", value: "result" })
 	}
 
-	return items
-}
-
-// Get default tab index for a job
-function getJobDefaultTabIndex(job: Job): number {
-	if (job.failedReason || (job.stacktrace && job.stacktrace.length > 0)) {
-		// Find the error tab index
-		const items = getJobTabItems(job)
-		return items.findIndex(item => item.slot === "error")
-	}
-	return 0 // Default to Data tab
+	return options
 }
 </script>
 
@@ -400,28 +410,11 @@ function getJobDefaultTabIndex(job: Job): number {
 				class="space-y-6"
 			>
 				<!-- Status tabs -->
-				<div class="border-b">
-					<nav class="flex gap-1 -mb-px overflow-x-auto">
-						<button
-							v-for="tab in statusTabs"
-							:key="tab.key"
-							class="px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2"
-							:class="currentStatus === tab.key
-								? 'border-primary text-primary'
-								: 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'"
-							@click="setStatus(tab.key)"
-						>
-							{{ tab.label }}
-							<UBadge
-								v-if="getTabCount(tab.key) !== null && getTabCount(tab.key)! > 0"
-								:variant="currentStatus === tab.key ? 'solid' : 'subtle'"
-								size="xs"
-							>
-								{{ getTabCount(tab.key) }}
-							</UBadge>
-						</button>
-					</nav>
-				</div>
+				<UiSegmentedControl
+					v-model="selectedStatus"
+					:options="statusOptions"
+					class="w-full"
+				/>
 
 				<!-- Empty state -->
 				<div
@@ -589,21 +582,29 @@ function getJobDefaultTabIndex(job: Job): number {
 										</div>
 
 										<!-- Job data tabs -->
-										<UTabs
-											:items="getJobTabItems(job)"
-											:default-index="getJobDefaultTabIndex(job)"
+										<UiSegmentedControl
+											:model-value="getJobSelectedTab(job)"
+											:options="getJobTabOptions(job)"
 											class="w-full mt-3"
-										>
-											<template #data>
-												<pre class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-40 mt-2">{{ JSON.stringify(job.data, null, 2) }}</pre>
-											</template>
-											<template #options>
-												<pre class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-40 mt-2">{{ JSON.stringify(job.opts, null, 2) }}</pre>
-											</template>
-											<template #logs>
+											@update:model-value="setJobSelectedTab(job.id, $event)"
+										/>
+
+										<!-- Tab content -->
+										<div class="mt-2">
+											<pre
+												v-if="getJobSelectedTab(job) === 'data'"
+												class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-40"
+											>{{ JSON.stringify(job.data, null, 2) }}</pre>
+
+											<pre
+												v-else-if="getJobSelectedTab(job) === 'options'"
+												class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-40"
+											>{{ JSON.stringify(job.opts, null, 2) }}</pre>
+
+											<template v-else-if="getJobSelectedTab(job) === 'logs'">
 												<div
 													v-if="job.logs && job.logs.length > 0"
-													class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-60 font-mono space-y-1 mt-2"
+													class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-60 font-mono space-y-1"
 												>
 													<div
 														v-for="(log, index) in job.logs"
@@ -615,47 +616,51 @@ function getJobDefaultTabIndex(job: Job): number {
 												</div>
 												<p
 													v-else
-													class="text-xs text-muted-foreground p-3 mt-2"
+													class="text-xs text-muted-foreground p-3"
 												>
 													No logs available for this job.
 												</p>
 											</template>
-											<template #error>
-												<div :class="['text-xs p-3 rounded-md overflow-x-auto max-h-80 mt-2', job.failedReason ? 'bg-red-50 dark:bg-red-950/30' : 'bg-orange-50 dark:bg-orange-950/30']">
-													<p
-														v-if="job.failedReason"
-														class="mb-2"
-													>
-														<span class="text-red-600 font-semibold">Error: </span>
-														<span class="text-red-500">{{ job.failedReason }}</span>
-													</p>
-													<p
-														v-else
-														class="mb-2 text-orange-600"
-													>
-														Job succeeded after {{ job.attemptsMade }} attempts. Previous errors:
-													</p>
+
+											<div
+												v-else-if="getJobSelectedTab(job) === 'error'"
+												:class="['text-xs p-3 rounded-md overflow-x-auto max-h-80', job.failedReason ? 'bg-red-50 dark:bg-red-950/30' : 'bg-orange-50 dark:bg-orange-950/30']"
+											>
+												<p
+													v-if="job.failedReason"
+													class="mb-2"
+												>
+													<span class="text-red-600 font-semibold">Error: </span>
+													<span class="text-red-500">{{ job.failedReason }}</span>
+												</p>
+												<p
+													v-else
+													class="mb-2 text-orange-600"
+												>
+													Job succeeded after {{ job.attemptsMade }} attempts. Previous errors:
+												</p>
+												<div
+													v-if="job.stacktrace && job.stacktrace.length > 0"
+													class="space-y-3"
+												>
 													<div
-														v-if="job.stacktrace && job.stacktrace.length > 0"
-														class="space-y-3"
+														v-for="(trace, index) in job.stacktrace"
+														:key="index"
+														class="border-l-2 border-red-300 dark:border-red-700 pl-3"
 													>
-														<div
-															v-for="(trace, index) in job.stacktrace"
-															:key="index"
-															class="border-l-2 border-red-300 dark:border-red-700 pl-3"
-														>
-															<p class="text-red-600/80 text-[10px] mb-1">
-																Attempt {{ index + 1 }}
-															</p>
-															<pre class="text-red-600/70 whitespace-pre-wrap font-mono text-[11px] leading-relaxed">{{ trace }}</pre>
-														</div>
+														<p class="text-red-600/80 text-[10px] mb-1">
+															Attempt {{ index + 1 }}
+														</p>
+														<pre class="text-red-600/70 whitespace-pre-wrap font-mono text-[11px] leading-relaxed">{{ trace }}</pre>
 													</div>
 												</div>
-											</template>
-											<template #result>
-												<pre class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-40 mt-2">{{ JSON.stringify(job.returnvalue, null, 2) }}</pre>
-											</template>
-										</UTabs>
+											</div>
+
+											<pre
+												v-else-if="getJobSelectedTab(job) === 'result'"
+												class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-40"
+											>{{ JSON.stringify(job.returnvalue, null, 2) }}</pre>
+										</div>
 
 										<!-- Mobile timeline -->
 										<div class="mt-3 text-xs text-muted-foreground sm:hidden">

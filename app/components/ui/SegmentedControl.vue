@@ -53,7 +53,7 @@ const modelValue = defineModel<string>({ required: true })
 	align-items: center;
 	justify-content: center;
 	gap: 0.375rem;
-	padding: 0.5rem 0.625rem;
+	padding: 0.625rem 0.75rem;
 	font-size: var(--font-size-sm);
 	font-weight: 500;
 	color: var(--ui-text-muted);
@@ -91,7 +91,7 @@ const modelValue = defineModel<string>({ required: true })
 @media (min-width: 640px) {
 	.segment {
 		flex: 0 0 auto;
-		padding: 0.375rem 0.75rem;
+		padding: 0.5rem 1rem;
 	}
 
 	.segment .count {

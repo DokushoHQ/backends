@@ -17,9 +17,9 @@
 	--ui-border: oklch(0.90 0.005 260);       /* Light gray border */
 	--ui-border-muted: oklch(0.93 0.003 260); /* Very subtle border */
 
-	/* Text - neutral grays */
-	--ui-text-muted: oklch(0.55 0.01 260);    /* Muted text */
-	--ui-text-dimmed: oklch(0.65 0.005 260);  /* Dimmed text */
+	/* Text - derived from ui-text for consistency */
+	--ui-text-muted: color-mix(in oklch, var(--ui-text) 65%, var(--ui-bg));
+	--ui-text-dimmed: color-mix(in oklch, var(--ui-text) 50%, var(--ui-bg));
 
 	/* Custom purple for this theme */
 	--color-purple: oklch(0.55 0.2 285);
@@ -43,6 +43,10 @@
 	/* Borders - subtle dark borders */
 	--ui-border: oklch(0.30 0.01 260);        /* Visible border */
 	--ui-border-muted: oklch(0.25 0.008 260); /* Subtle border */
+
+	/* Text - derived from ui-text for consistency */
+	--ui-text-muted: color-mix(in oklch, var(--ui-text) 65%, var(--ui-bg));
+	--ui-text-dimmed: color-mix(in oklch, var(--ui-text) 50%, var(--ui-bg));
 
 	/* Custom purple - brighter for dark mode visibility */
 	--color-purple: oklch(0.7 0.16 280);
