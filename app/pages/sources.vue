@@ -122,7 +122,6 @@ async function triggerSourceRefresh(sourceId: string) {
 </template>
 
 <style scoped>
-
 /* Stats section */
 .stats-section {
 	margin-bottom: 1.5rem;

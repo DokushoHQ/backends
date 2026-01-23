@@ -72,57 +72,39 @@ async function handleChangePassword() {
 </script>
 
 <template>
-	<UCard>
-		<template #header>
-			<div>
-				<h3 class="text-lg font-semibold flex items-center gap-2">
-					<UIcon
-						name="i-lucide-shield"
-						class="size-4"
-					/>
-					Security
-				</h3>
-				<p class="text-sm text-muted-foreground">
-					Manage your account security settings
-				</p>
-			</div>
-		</template>
-
-		<div class="space-y-4">
+	<UiContentCard
+		title="Security"
+		description="Manage your account security settings"
+		icon="i-lucide-shield"
+		color="blue"
+	>
+		<div class="card-body">
 			<div
 				v-if="!hasPassword"
-				class="flex items-center gap-3 p-4 rounded-lg bg-muted/50"
+				class="info-box"
 			>
 				<UIcon
 					name="i-lucide-info"
-					class="size-5 text-muted-foreground"
+					class="info-icon"
 				/>
-				<div>
-					<p class="text-sm font-medium">
-						No password set
-					</p>
-					<p class="text-xs text-muted-foreground">
-						Your account uses external authentication only
-					</p>
+				<div class="info-content">
+					<span class="info-title">No password set</span>
+					<span class="info-description">Your account uses external authentication only</span>
 				</div>
 			</div>
 
 			<div
 				v-else
-				class="flex items-center justify-between p-4 rounded-lg bg-muted/50"
+				class="action-row"
 			>
-				<div class="flex items-center gap-3">
+				<div class="action-info">
 					<UIcon
 						name="i-lucide-key-round"
-						class="size-5 text-muted-foreground"
+						class="action-icon"
 					/>
-					<div>
-						<p class="text-sm font-medium">
-							Password
-						</p>
-						<p class="text-xs text-muted-foreground">
-							Update your account password
-						</p>
+					<div class="action-content">
+						<span class="action-title">Password</span>
+						<span class="action-description">Update your account password</span>
 					</div>
 				</div>
 
@@ -246,5 +228,83 @@ async function handleChangePassword() {
 				</UModal>
 			</div>
 		</div>
-	</UCard>
+	</UiContentCard>
 </template>
+
+<style scoped>
+.card-body {
+	padding: 1rem;
+}
+
+/* Info box */
+.info-box {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 1rem;
+	background: var(--ui-bg-muted);
+	border-radius: 0.5rem;
+}
+
+.info-icon {
+	width: 1.25rem;
+	height: 1.25rem;
+	color: var(--ui-text-muted);
+	flex-shrink: 0;
+}
+
+.info-content {
+	display: flex;
+	flex-direction: column;
+}
+
+.info-title {
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.info-description {
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-muted);
+}
+
+/* Action row */
+.action-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1rem;
+	background: var(--ui-bg-muted);
+	border-radius: 0.5rem;
+}
+
+.action-info {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.action-icon {
+	width: 1.25rem;
+	height: 1.25rem;
+	color: var(--ui-text-muted);
+	flex-shrink: 0;
+}
+
+.action-content {
+	display: flex;
+	flex-direction: column;
+}
+
+.action-title {
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.action-description {
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-muted);
+}
+</style>

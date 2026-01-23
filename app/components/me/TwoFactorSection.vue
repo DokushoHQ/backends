@@ -106,26 +106,17 @@ async function disable2FA() {
 </script>
 
 <template>
-	<UCard v-if="hasPassword">
-		<template #header>
-			<div>
-				<h3 class="text-lg font-semibold flex items-center gap-2">
-					<UIcon
-						name="i-lucide-shield-check"
-						class="size-4"
-					/>
-					Two-Factor Authentication
-				</h3>
-				<p class="text-sm text-muted-foreground">
-					Add an extra layer of security to your account
-				</p>
-			</div>
-		</template>
-
-		<div class="space-y-4">
+	<UiContentCard
+		v-if="hasPassword"
+		title="Two-Factor Authentication"
+		description="Add an extra layer of security to your account"
+		icon="i-lucide-shield-check"
+		color="green"
+	>
+		<div class="card-body">
 			<div
 				v-if="error"
-				class="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+				class="error-box"
 			>
 				{{ error }}
 			</div>
@@ -133,33 +124,27 @@ async function disable2FA() {
 			<!-- 2FA Enabled -->
 			<div
 				v-if="twoFactorEnabled"
-				class="space-y-4"
+				class="two-factor-enabled"
 			>
-				<div class="flex items-center justify-between p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-					<div class="flex items-center gap-3">
-						<UIcon
-							name="i-lucide-check-circle"
-							class="size-5 text-green-600 dark:text-green-400"
-						/>
-						<div>
-							<p class="text-sm font-medium">
-								2FA is enabled
-							</p>
-							<p class="text-xs text-muted-foreground">
-								Your account is protected with two-factor authentication
-							</p>
-						</div>
+				<div class="status-box enabled">
+					<UIcon
+						name="i-lucide-check-circle"
+						class="status-icon"
+					/>
+					<div class="status-content">
+						<span class="status-title">2FA is enabled</span>
+						<span class="status-description">Your account is protected with two-factor authentication</span>
 					</div>
 				</div>
 
-				<div class="flex gap-2">
+				<div class="action-buttons">
 					<UButton
 						variant="outline"
 						@click="openPasswordModal('backup')"
 					>
 						<UIcon
 							name="i-lucide-refresh-cw"
-							class="size-4 mr-2"
+							class="h-4 w-4"
 						/>
 						Regenerate Backup Codes
 					</UButton>
@@ -311,7 +296,7 @@ async function disable2FA() {
 									>
 										<UIcon
 											:name="copied ? 'i-lucide-check' : 'i-lucide-copy'"
-											class="size-4 mr-2"
+											class="h-4 w-4"
 										/>
 										{{ copied ? 'Copied!' : 'Copy Codes' }}
 									</UButton>
@@ -328,20 +313,16 @@ async function disable2FA() {
 			<!-- 2FA Not Enabled -->
 			<div
 				v-else
-				class="flex items-center justify-between p-4 rounded-lg bg-muted/50"
+				class="action-row"
 			>
-				<div class="flex items-center gap-3">
+				<div class="action-info">
 					<UIcon
 						name="i-lucide-shield-off"
-						class="size-5 text-muted-foreground"
+						class="action-icon"
 					/>
-					<div>
-						<p class="text-sm font-medium">
-							2FA is not enabled
-						</p>
-						<p class="text-xs text-muted-foreground">
-							Enable two-factor authentication to secure your account
-						</p>
+					<div class="action-content">
+						<span class="action-title">2FA is not enabled</span>
+						<span class="action-description">Enable two-factor authentication to secure your account</span>
 					</div>
 				</div>
 
@@ -353,5 +334,112 @@ async function disable2FA() {
 				</UButton>
 			</div>
 		</div>
-	</UCard>
+	</UiContentCard>
 </template>
+
+<style scoped>
+.card-body {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1rem;
+}
+
+/* Error box */
+.error-box {
+	padding: 0.75rem;
+	background: var(--ui-error-soft);
+	color: var(--ui-error);
+	border-radius: 0.5rem;
+	font-size: var(--font-size-sm);
+}
+
+/* Two factor enabled */
+.two-factor-enabled {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+/* Status box */
+.status-box {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 1rem;
+	border-radius: 0.5rem;
+}
+
+.status-box.enabled {
+	background: var(--ui-success-soft);
+	border: 1px solid color-mix(in oklch, var(--ui-success) 20%, transparent);
+}
+
+.status-icon {
+	width: 1.25rem;
+	height: 1.25rem;
+	color: var(--ui-success);
+	flex-shrink: 0;
+}
+
+.status-content {
+	display: flex;
+	flex-direction: column;
+}
+
+.status-title {
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.status-description {
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-muted);
+}
+
+/* Action buttons */
+.action-buttons {
+	display: flex;
+	gap: 0.5rem;
+}
+
+/* Action row */
+.action-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1rem;
+	background: var(--ui-bg-muted);
+	border-radius: 0.5rem;
+}
+
+.action-info {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.action-icon {
+	width: 1.25rem;
+	height: 1.25rem;
+	color: var(--ui-text-muted);
+	flex-shrink: 0;
+}
+
+.action-content {
+	display: flex;
+	flex-direction: column;
+}
+
+.action-title {
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.action-description {
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-muted);
+}
+</style>

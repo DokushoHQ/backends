@@ -6,11 +6,15 @@ defineProps<{
 	color?: "purple" | "amber" | "orange" | "yellow" | "red" | "green" | "blue" | "gray"
 	linkTo?: string
 	linkLabel?: string
+	danger?: boolean
 }>()
 </script>
 
 <template>
-	<section class="content-card">
+	<section
+		class="content-card"
+		:class="{ danger }"
+	>
 		<div class="card-header">
 			<div class="title-row">
 				<div
@@ -59,6 +63,18 @@ defineProps<{
 	border: 1px solid var(--ui-border);
 	border-radius: 0.75rem;
 	overflow: hidden;
+}
+
+.content-card.danger {
+	border-color: color-mix(in oklch, var(--ui-error) 30%, transparent);
+}
+
+.content-card.danger .card-header {
+	border-bottom-color: color-mix(in oklch, var(--ui-error) 15%, transparent);
+}
+
+.content-card.danger .card-header h3 {
+	color: var(--ui-error);
 }
 
 .card-header {

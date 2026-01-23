@@ -149,51 +149,38 @@ async function handleChangeEmail() {
 </script>
 
 <template>
-	<UCard>
-		<template #header>
-			<div>
-				<h3 class="text-lg font-semibold flex items-center gap-2">
-					<UIcon
-						name="i-lucide-user"
-						class="size-4"
-					/>
-					Profile Information
-				</h3>
-				<p class="text-sm text-muted-foreground">
-					Update your personal information
-				</p>
-			</div>
-		</template>
-
-		<div class="space-y-6">
+	<UiContentCard
+		title="Profile Information"
+		description="Update your personal information"
+		icon="i-lucide-user"
+		color="blue"
+	>
+		<div class="card-body">
 			<!-- Avatar and basic info -->
-			<div class="flex items-center gap-4">
+			<div class="profile-header">
 				<UAvatar
 					:src="image || undefined"
 					:text="userInitials"
-					class="size-16 text-xl"
+					class="profile-avatar"
 				/>
-				<div class="space-y-1">
-					<div class="flex items-center gap-2">
-						<span class="font-medium">{{ name || user.email }}</span>
-						<UBadge
-							:color="user.role === 'admin' ? 'primary' : 'neutral'"
-							variant="subtle"
-							size="sm"
+				<div class="profile-info">
+					<div class="profile-name-row">
+						<span class="profile-name">{{ name || user.email }}</span>
+						<span
+							class="role-badge"
+							:class="user.role === 'admin' ? 'role-admin' : 'role-user'"
 						>
 							{{ roleLabel }}
-						</UBadge>
+						</span>
 					</div>
-					<p class="text-sm text-muted-foreground">
-						Member since {{ memberSince }}
-					</p>
+					<span class="member-since">Member since {{ memberSince }}</span>
 				</div>
 			</div>
 
 			<!-- Edit form -->
-			<div class="grid gap-4">
-				<div class="grid gap-2">
-					<label class="text-sm font-medium">Name</label>
+			<div class="form-section">
+				<div class="form-field">
+					<label>Name</label>
 					<UInput
 						v-model="name"
 						placeholder="Your name"
@@ -201,13 +188,13 @@ async function handleChangeEmail() {
 					/>
 				</div>
 
-				<div class="grid gap-2">
-					<label class="text-sm font-medium">Email</label>
-					<div class="flex gap-2">
+				<div class="form-field">
+					<label>Email</label>
+					<div class="email-field">
 						<UInput
 							:model-value="user.email"
 							disabled
-							class="flex-1 bg-muted"
+							class="flex-1"
 						/>
 						<UModal
 							v-model:open="changeEmailOpen"
@@ -312,8 +299,8 @@ async function handleChangeEmail() {
 					</div>
 				</div>
 
-				<div class="grid gap-2">
-					<label class="text-sm font-medium">Profile Image URL</label>
+				<div class="form-field">
+					<label>Profile Image URL</label>
 					<UInput
 						v-model="image"
 						placeholder="https://example.com/avatar.jpg"
@@ -324,50 +311,38 @@ async function handleChangeEmail() {
 
 			<p
 				v-if="message"
-				class="text-sm"
-				:class="message.type === 'error' ? 'text-destructive' : 'text-green-600'"
+				class="message"
+				:class="message.type"
 			>
 				{{ message.text }}
 			</p>
 
 			<!-- Linked accounts -->
-			<div class="pt-4 border-t">
-				<h4 class="text-sm font-medium mb-3">
-					Linked Accounts
-				</h4>
-				<div class="space-y-2">
+			<div class="linked-accounts">
+				<h4>Linked Accounts</h4>
+				<div class="accounts-list">
 					<div
 						v-for="account in linkedAccounts"
 						:key="account.providerId"
-						class="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+						class="account-item"
 					>
-						<div class="flex items-center gap-3">
+						<div class="account-info">
 							<UIcon
 								:name="getProviderIcon(account.providerId)"
-								class="size-5 text-muted-foreground"
+								class="account-icon"
 							/>
-							<div>
-								<p class="text-sm font-medium">
-									{{ account.displayName }}
-								</p>
-								<p class="text-xs text-muted-foreground">
-									Linked {{ formatLinkedDate(account.linkedAt) }}
-								</p>
+							<div class="account-details">
+								<span class="account-name">{{ account.displayName }}</span>
+								<span class="account-date">Linked {{ formatLinkedDate(account.linkedAt) }}</span>
 							</div>
 						</div>
-						<UBadge
-							color="success"
-							variant="subtle"
-							size="xl"
-						>
-							Connected
-						</UBadge>
+						<span class="connected-badge">Connected</span>
 					</div>
 				</div>
 			</div>
 
 			<!-- Save button -->
-			<div class="flex justify-end pt-4 border-t">
+			<div class="actions-footer">
 				<UButton
 					variant="outline"
 					:loading="saving"
@@ -376,11 +351,187 @@ async function handleChangeEmail() {
 				>
 					<UIcon
 						name="i-lucide-save"
-						class="size-4"
+						class="h-4 w-4"
 					/>
 					Save Changes
 				</UButton>
 			</div>
 		</div>
-	</UCard>
+	</UiContentCard>
 </template>
+
+<style scoped>
+.card-body {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	padding: 1rem;
+}
+
+/* Profile header */
+.profile-header {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.profile-avatar {
+	width: 4rem;
+	height: 4rem;
+	font-size: var(--font-size-xl);
+}
+
+.profile-info {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.profile-name-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.profile-name {
+	font-size: var(--font-size-base);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.role-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.125rem 0.5rem;
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+	border-radius: 2rem;
+}
+
+.role-badge.role-admin {
+	background: var(--ui-primary-soft);
+	color: var(--ui-primary);
+}
+
+.role-badge.role-user {
+	background: var(--ui-bg-muted);
+	color: var(--ui-text-muted);
+}
+
+.member-since {
+	font-size: var(--font-size-sm);
+	color: var(--ui-text-muted);
+}
+
+/* Form section */
+.form-section {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.form-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+.form-field label {
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.email-field {
+	display: flex;
+	gap: 0.5rem;
+}
+
+/* Message */
+.message {
+	font-size: var(--font-size-sm);
+}
+
+.message.success {
+	color: var(--ui-success);
+}
+
+.message.error {
+	color: var(--ui-error);
+}
+
+/* Linked accounts */
+.linked-accounts {
+	padding-top: 1rem;
+	border-top: 1px solid var(--ui-border-muted);
+}
+
+.linked-accounts h4 {
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+	margin-bottom: 0.75rem;
+}
+
+.accounts-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.account-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.75rem;
+	background: var(--ui-bg-muted);
+	border-radius: 0.5rem;
+}
+
+.account-info {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.account-icon {
+	width: 1.25rem;
+	height: 1.25rem;
+	color: var(--ui-text-muted);
+}
+
+.account-details {
+	display: flex;
+	flex-direction: column;
+}
+
+.account-name {
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.account-date {
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-muted);
+}
+
+.connected-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.25rem 0.625rem;
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+	border-radius: 2rem;
+	background: var(--ui-success-soft);
+	color: var(--ui-success);
+}
+
+/* Actions footer */
+.actions-footer {
+	display: flex;
+	justify-content: flex-end;
+	padding-top: 1rem;
+	border-top: 1px solid var(--ui-border-muted);
+}
+</style>
