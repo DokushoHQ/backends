@@ -665,10 +665,10 @@ const columns = computed<TableColumn<UIChapterItem>[]>(() => {
 				sticky
 				:ui="{
 					root: 'min-w-full',
-					thead: 'bg-card',
+					thead: 'bg-elevated',
 					tr: 'hover:bg-muted/50 transition-colors cursor-pointer data-[selected=true]:bg-muted',
 					td: 'px-4 py-3',
-					th: 'px-4 py-3 text-left font-medium bg-card',
+					th: 'px-4 py-3 text-left font-medium bg-elevated',
 				}"
 				@select="handleRowSelect"
 			/>

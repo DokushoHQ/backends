@@ -27,33 +27,18 @@ defineProps<{
 
 <style scoped>
 .stat-card {
-	--purple: oklch(0.7 0.15 280);
-	--purple-soft: oklch(0.7 0.15 280 / 0.12);
-	--amber: oklch(0.75 0.15 70);
-	--amber-soft: oklch(0.75 0.15 70 / 0.12);
-	--orange: oklch(0.72 0.16 45);
-	--orange-soft: oklch(0.72 0.16 45 / 0.12);
-	--yellow: oklch(0.8 0.14 85);
-	--yellow-soft: oklch(0.8 0.14 85 / 0.12);
-	--red: oklch(0.65 0.2 25);
-	--red-soft: oklch(0.65 0.2 25 / 0.12);
-	--green: oklch(0.72 0.15 160);
-	--green-soft: oklch(0.72 0.15 160 / 0.12);
-	--blue: oklch(0.65 0.15 250);
-	--blue-soft: oklch(0.65 0.15 250 / 0.12);
-
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
 	padding: 0.875rem;
-	background: var(--color-background);
-	border: 1px solid var(--color-border);
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-border);
 	border-radius: 0.625rem;
 	transition: all 0.15s ease;
 }
 
 .stat-card:hover {
-	border-color: var(--color-text-muted);
+	border-color: var(--ui-text-muted);
 }
 
 .stat-icon {
@@ -64,18 +49,18 @@ defineProps<{
 	height: 2.25rem;
 	border-radius: 0.5rem;
 	flex-shrink: 0;
-	background: var(--color-muted);
-	color: var(--color-text-muted);
+	background: var(--ui-bg-muted);
+	color: var(--ui-text-muted);
 }
 
-.stat-card.accent-purple .stat-icon { background: var(--purple-soft); color: var(--purple); }
-.stat-card.accent-amber .stat-icon { background: var(--amber-soft); color: var(--amber); }
-.stat-card.accent-orange .stat-icon { background: var(--orange-soft); color: var(--orange); }
-.stat-card.accent-yellow .stat-icon { background: var(--yellow-soft); color: var(--yellow); }
-.stat-card.accent-red .stat-icon { background: var(--red-soft); color: var(--red); }
-.stat-card.accent-green .stat-icon { background: var(--green-soft); color: var(--green); }
-.stat-card.accent-blue .stat-icon { background: var(--blue-soft); color: var(--blue); }
-.stat-card.accent-gray .stat-icon { background: var(--color-muted); color: var(--color-text-muted); }
+.stat-card.accent-purple .stat-icon { background: var(--color-purple-soft); color: var(--color-purple); }
+.stat-card.accent-amber .stat-icon { background: var(--ui-warning-soft); color: var(--ui-warning); }
+.stat-card.accent-orange .stat-icon { background: var(--ui-warning-soft); color: var(--ui-warning); }
+.stat-card.accent-yellow .stat-icon { background: var(--ui-info-soft); color: var(--ui-info); }
+.stat-card.accent-red .stat-icon { background: var(--ui-error-soft); color: var(--ui-error); }
+.stat-card.accent-green .stat-icon { background: var(--ui-success-soft); color: var(--ui-success); }
+.stat-card.accent-blue .stat-icon { background: var(--ui-primary-soft); color: var(--ui-primary); }
+.stat-card.accent-gray .stat-icon { background: var(--ui-bg-muted); color: var(--ui-text-muted); }
 
 .stat-content {
 	display: flex;
@@ -86,7 +71,7 @@ defineProps<{
 .stat-value {
 	font-size: var(--font-size-2xl);
 	font-weight: 700;
-	color: var(--color-text);
+	color: var(--ui-text);
 	line-height: 1.1;
 	font-variant-numeric: tabular-nums;
 }
@@ -94,15 +79,10 @@ defineProps<{
 .stat-label {
 	font-size: var(--font-size-sm);
 	font-weight: 500;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	margin-top: 0.125rem;
-}
-
-/* Dark mode */
-:root.dark .stat-card {
-	background: oklch(0.2 0.01 250);
 }
 </style>

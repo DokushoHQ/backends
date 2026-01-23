@@ -53,6 +53,8 @@ onMounted(async () => {
 					:linked-accounts="data.linkedAccounts"
 				/>
 
+				<MeThemeSection />
+
 				<MePasswordSection :has-password="data.hasPassword" />
 
 				<MeTwoFactorSection

@@ -35,8 +35,6 @@ defineProps<{
 
 <style scoped>
 .scan-progress-container {
-	--accent: oklch(0.7 0.15 250);
-
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -56,7 +54,7 @@ defineProps<{
 .scan-ring {
 	position: absolute;
 	inset: 0;
-	border: 2px solid var(--accent);
+	border: 2px solid var(--ui-primary);
 	border-radius: 50%;
 	opacity: 0;
 	animation: scan-pulse 2s ease-out infinite;
@@ -92,26 +90,26 @@ defineProps<{
 .state-title {
 	font-size: 1.125rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 }
 
 .state-description {
 	font-size: 0.875rem;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	max-width: 24rem;
 }
 
 .progress-track {
 	width: 12rem;
 	height: 0.375rem;
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 	border-radius: 1rem;
 	overflow: hidden;
 }
 
 .progress-fill {
 	height: 100%;
-	background: linear-gradient(90deg, var(--accent), oklch(0.75 0.12 200));
+	background: linear-gradient(90deg, var(--ui-primary), var(--ui-info));
 	border-radius: 1rem;
 	transition: width 0.3s ease;
 }
@@ -119,7 +117,7 @@ defineProps<{
 .progress-label {
 	font-size: 0.875rem;
 	font-weight: 600;
-	color: var(--accent);
+	color: var(--ui-primary);
 	font-variant-numeric: tabular-nums;
 }
 </style>

@@ -175,16 +175,16 @@ const paginationPages = computed(() => {
 	justify-content: center;
 	width: 2rem;
 	height: 2rem;
-	color: var(--color-text-muted);
-	background: var(--color-background);
-	border: 1px solid var(--color-border);
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-border);
 	border-radius: 0.375rem;
 	transition: all 0.15s ease;
 }
 
 .page-button:hover:not(:disabled) {
-	color: var(--color-text);
-	border-color: var(--color-text-muted);
+	color: var(--ui-text);
+	border-color: var(--ui-text-muted);
 }
 
 .page-button:disabled {
@@ -208,28 +208,28 @@ const paginationPages = computed(() => {
 	padding: 0 0.375rem;
 	font-size: var(--font-size-sm);
 	font-weight: 500;
-	color: var(--color-text-muted);
-	background: var(--color-background);
-	border: 1px solid var(--color-border);
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-border);
 	border-radius: 0.375rem;
 	transition: all 0.15s ease;
 	font-variant-numeric: tabular-nums;
 }
 
 .page-number:hover {
-	color: var(--color-text);
-	border-color: var(--color-text-muted);
+	color: var(--ui-text);
+	border-color: var(--ui-text-muted);
 }
 
 .page-number.active {
-	color: var(--color-text);
-	background: var(--color-muted);
-	border-color: var(--color-text-muted);
+	color: var(--ui-text);
+	background: var(--ui-bg-muted);
+	border-color: var(--ui-text-muted);
 }
 
 .page-ellipsis {
 	padding: 0 0.25rem;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	font-size: var(--font-size-sm);
 }
 
@@ -237,7 +237,7 @@ const paginationPages = computed(() => {
 	padding: 0 0.75rem;
 	font-size: var(--font-size-sm);
 	font-weight: 500;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	font-variant-numeric: tabular-nums;
 }
 
@@ -247,12 +247,12 @@ const paginationPages = computed(() => {
 	gap: 0.5rem;
 	margin-left: 0.75rem;
 	padding-left: 0.75rem;
-	border-left: 1px solid var(--color-border);
+	border-left: 1px solid var(--ui-border);
 }
 
 .page-jump span {
 	font-size: var(--font-size-xs);
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .page-input {
@@ -262,9 +262,9 @@ const paginationPages = computed(() => {
 	font-size: var(--font-size-sm);
 	font-weight: 500;
 	text-align: center;
-	color: var(--color-text);
-	background: var(--color-background);
-	border: 1px solid var(--color-border);
+	color: var(--ui-text);
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-border);
 	border-radius: 0.375rem;
 	font-variant-numeric: tabular-nums;
 	-moz-appearance: textfield;
@@ -278,7 +278,7 @@ const paginationPages = computed(() => {
 
 .page-input:focus {
 	outline: none;
-	border-color: var(--color-text-muted);
+	border-color: var(--ui-text-muted);
 }
 
 /* Responsive visibility */

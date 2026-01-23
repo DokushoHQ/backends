@@ -76,15 +76,6 @@ function getIssueColor(issue: string) {
 
 <style scoped>
 .issue-row {
-	--orange: oklch(0.72 0.16 45);
-	--orange-soft: oklch(0.72 0.16 45 / 0.12);
-	--yellow: oklch(0.8 0.14 85);
-	--yellow-soft: oklch(0.8 0.14 85 / 0.12);
-	--red: oklch(0.65 0.2 25);
-	--red-soft: oklch(0.65 0.2 25 / 0.12);
-	--purple: oklch(0.7 0.15 280);
-	--purple-soft: oklch(0.7 0.15 280 / 0.12);
-
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
@@ -92,7 +83,7 @@ function getIssueColor(issue: string) {
 	flex: 1;
 	text-decoration: none;
 	transition: background 0.15s ease;
-	border-bottom: 1px solid var(--color-border);
+	border-bottom: 1px solid var(--ui-border);
 }
 
 .issue-row:last-child {
@@ -100,7 +91,7 @@ function getIssueColor(issue: string) {
 }
 
 .issue-row:hover {
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 }
 
 .serie-cover {
@@ -108,7 +99,7 @@ function getIssueColor(issue: string) {
 	height: 4.25rem;
 	border-radius: 0.375rem;
 	overflow: hidden;
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 	flex-shrink: 0;
 }
 
@@ -124,7 +115,7 @@ function getIssueColor(issue: string) {
 	justify-content: center;
 	width: 100%;
 	height: 100%;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .row-info {
@@ -136,7 +127,7 @@ function getIssueColor(issue: string) {
 	display: block;
 	font-size: var(--font-size-md);
 	font-weight: 500;
-	color: var(--color-text);
+	color: var(--ui-text);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -156,14 +147,14 @@ function getIssueColor(issue: string) {
 	border-radius: 0.25rem;
 }
 
-.issue-badge.color-orange { color: var(--orange); background: var(--orange-soft); }
-.issue-badge.color-yellow { color: var(--yellow); background: var(--yellow-soft); }
-.issue-badge.color-red { color: var(--red); background: var(--red-soft); }
-.issue-badge.color-purple { color: var(--purple); background: var(--purple-soft); }
-.issue-badge.color-gray { color: var(--color-text-muted); background: var(--color-muted); }
+.issue-badge.color-orange { color: var(--ui-warning); background: var(--ui-warning-soft); }
+.issue-badge.color-yellow { color: var(--ui-info); background: var(--ui-info-soft); }
+.issue-badge.color-red { color: var(--ui-error); background: var(--ui-error-soft); }
+.issue-badge.color-purple { color: var(--color-purple); background: var(--color-purple-soft); }
+.issue-badge.color-gray { color: var(--ui-text-muted); background: var(--ui-bg-muted); }
 
 .row-chevron {
 	flex-shrink: 0;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 </style>

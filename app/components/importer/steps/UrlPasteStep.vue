@@ -180,7 +180,7 @@ https://weebcentral.com/series/..."
 						:key="index"
 						class="p-3 rounded-lg border border-border"
 						:class="[
-							item.status === 'valid' ? 'bg-card hover:bg-muted/50 cursor-pointer' : 'bg-muted/30',
+							item.status === 'valid' ? 'bg-elevated hover:bg-muted/50 cursor-pointer' : 'bg-muted/30',
 						]"
 						@click="item.status === 'valid' && toggleUrlSelection(index)"
 					>

@@ -231,19 +231,6 @@ function setPage(newPage: number) {
 </template>
 
 <style scoped>
-.issues-page {
-	--orange: oklch(0.75 0.18 50);
-	--orange-soft: oklch(0.75 0.18 50 / 0.15);
-	--yellow: oklch(0.82 0.14 85);
-	--yellow-soft: oklch(0.82 0.14 85 / 0.15);
-	--red: oklch(0.7 0.2 25);
-	--red-soft: oklch(0.7 0.2 25 / 0.15);
-	--purple: oklch(0.75 0.15 280);
-	--purple-soft: oklch(0.75 0.15 280 / 0.15);
-	--success: oklch(0.75 0.15 160);
-	--success-soft: oklch(0.75 0.15 160 / 0.15);
-}
-
 /* Responsive navbar */
 .navbar-right {
 	display: flex;
@@ -259,8 +246,8 @@ function setPage(newPage: number) {
 	display: flex;
 	justify-content: center;
 	padding: 0.75rem 1rem;
-	border-bottom: 1px solid var(--color-border);
-	background: var(--color-background);
+	border-bottom: 1px solid var(--ui-border);
+	background: var(--ui-bg);
 }
 
 .mobile-filter-bar :deep(.segmented-control) {
@@ -296,30 +283,30 @@ function setPage(newPage: number) {
 	height: 4rem;
 	margin-bottom: 1.5rem;
 	border-radius: 1rem;
-	background: var(--color-muted);
-	color: var(--color-text-muted);
+	background: var(--ui-bg-muted);
+	color: var(--ui-text-muted);
 }
 
 .state-icon-wrapper.success {
-	background: var(--success-soft);
-	color: var(--success);
+	background: var(--ui-success-soft);
+	color: var(--ui-success);
 }
 
 .state-icon-wrapper.error {
-	background: var(--red-soft);
-	color: var(--red);
+	background: var(--ui-error-soft);
+	color: var(--ui-error);
 }
 
 .state-title {
 	font-size: 1.125rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 	margin-bottom: 0.5rem;
 }
 
 .state-description {
 	font-size: 0.875rem;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	max-width: 24rem;
 }
 
@@ -328,14 +315,14 @@ function setPage(newPage: number) {
 	padding: 0.5rem 1rem;
 	font-size: 0.875rem;
 	font-weight: 500;
-	color: var(--color-text);
-	background: var(--color-muted);
+	color: var(--ui-text);
+	background: var(--ui-bg-muted);
 	border-radius: 0.5rem;
 	transition: background 0.15s ease;
 }
 
 .retry-button:hover {
-	background: var(--color-border);
+	background: var(--ui-border);
 }
 
 /* Series list */
@@ -354,16 +341,16 @@ function setPage(newPage: number) {
 	align-items: center;
 	gap: 1rem;
 	padding: 0.875rem;
-	background: var(--color-background);
-	border: 1px solid var(--color-border);
+	background: var(--ui-bg);
+	border: 1px solid var(--ui-border);
 	border-radius: 0.625rem;
 	text-decoration: none;
 	transition: all 0.15s ease;
 }
 
 .series-row:hover {
-	border-color: var(--color-text-muted);
-	background: var(--color-muted);
+	border-color: var(--ui-text-muted);
+	background: var(--ui-bg-muted);
 }
 
 .series-cover {
@@ -372,7 +359,7 @@ function setPage(newPage: number) {
 	height: 4rem;
 	border-radius: 0.375rem;
 	overflow: hidden;
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 	flex-shrink: 0;
 }
 
@@ -388,7 +375,7 @@ function setPage(newPage: number) {
 	justify-content: center;
 	width: 100%;
 	height: 100%;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .series-info {
@@ -399,7 +386,7 @@ function setPage(newPage: number) {
 .series-title {
 	font-size: 0.875rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 	margin-bottom: 0.375rem;
 	display: -webkit-box;
 	-webkit-line-clamp: 1;
@@ -422,28 +409,28 @@ function setPage(newPage: number) {
 }
 
 .issue-badge.color-orange {
-	color: var(--orange);
-	background: var(--orange-soft);
+	color: var(--ui-warning);
+	background: var(--ui-warning-soft);
 }
 
 .issue-badge.color-yellow {
-	color: var(--yellow);
-	background: var(--yellow-soft);
+	color: var(--ui-info);
+	background: var(--ui-info-soft);
 }
 
 .issue-badge.color-red {
-	color: var(--red);
-	background: var(--red-soft);
+	color: var(--ui-error);
+	background: var(--ui-error-soft);
 }
 
 .issue-badge.color-purple {
-	color: var(--purple);
-	background: var(--purple-soft);
+	color: var(--color-purple);
+	background: var(--color-purple-soft);
 }
 
 .issue-badge.color-gray {
-	color: var(--color-text-muted);
-	background: var(--color-muted);
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-muted);
 }
 
 .failed-sources {
@@ -451,15 +438,6 @@ function setPage(newPage: number) {
 	flex-wrap: wrap;
 	gap: 0.5rem;
 	font-size: 0.75rem;
-	color: var(--color-text-muted);
-}
-
-/* Dark mode */
-:root.dark .series-row {
-	background: oklch(0.2 0.01 250);
-}
-
-:root.dark .filter-tab {
-	background: oklch(0.2 0.01 250);
+	color: var(--ui-text-muted);
 }
 </style>

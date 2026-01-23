@@ -26,14 +26,14 @@ defineProps<{
 	padding: 0.375rem;
 	font-size: 0.8125rem;
 	font-weight: 500;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	border-radius: 0.375rem;
 	transition: all 0.15s ease;
 }
 
 .back-button:hover {
-	color: var(--color-text);
-	background: var(--color-muted);
+	color: var(--ui-text);
+	background: var(--ui-bg-muted);
 }
 
 .label {

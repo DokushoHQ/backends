@@ -148,9 +148,6 @@ defineExpose({
 
 <style scoped>
 .merge-modal {
-	--accent: oklch(0.7 0.15 250);
-	--accent-soft: oklch(0.7 0.15 250 / 0.15);
-
 	padding: 1.5rem;
 	max-width: 32rem;
 }
@@ -165,7 +162,7 @@ defineExpose({
 .merge-header h3 {
 	font-size: 1.125rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 }
 
 .close-button {
@@ -174,19 +171,19 @@ defineExpose({
 	justify-content: center;
 	width: 2rem;
 	height: 2rem;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	border-radius: 0.375rem;
 	transition: all 0.15s ease;
 }
 
 .close-button:hover {
-	color: var(--color-text);
-	background: var(--color-muted);
+	color: var(--ui-text);
+	background: var(--ui-bg-muted);
 }
 
 .merge-description {
 	font-size: 0.875rem;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	margin-bottom: 1.25rem;
 }
 
@@ -204,20 +201,20 @@ defineExpose({
 	gap: 0.875rem;
 	padding: 0.875rem;
 	text-align: left;
-	background: var(--color-background);
-	border: 2px solid var(--color-border);
+	background: var(--ui-bg);
+	border: 2px solid var(--ui-border);
 	border-radius: 0.625rem;
 	transition: all 0.15s ease;
 	cursor: pointer;
 }
 
 .merge-option:hover {
-	border-color: var(--color-text-muted);
+	border-color: var(--ui-text-muted);
 }
 
 .merge-option.selected {
-	border-color: var(--accent);
-	background: var(--accent-soft);
+	border-color: var(--ui-primary);
+	background: var(--ui-primary-soft);
 }
 
 .option-cover {
@@ -225,7 +222,7 @@ defineExpose({
 	height: 5rem;
 	border-radius: 0.375rem;
 	overflow: hidden;
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 	flex-shrink: 0;
 }
 
@@ -235,7 +232,7 @@ defineExpose({
 	justify-content: center;
 	width: 100%;
 	height: 100%;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .option-info {
@@ -246,7 +243,7 @@ defineExpose({
 .option-info h4 {
 	font-size: 0.875rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 	margin-bottom: 0.25rem;
 	display: -webkit-box;
 	-webkit-line-clamp: 1;
@@ -256,7 +253,7 @@ defineExpose({
 
 .option-info p {
 	font-size: 0.8125rem;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	margin-bottom: 0.375rem;
 }
 
@@ -270,8 +267,8 @@ defineExpose({
 	padding: 0.125rem 0.375rem;
 	font-size: 0.6875rem;
 	font-weight: 500;
-	color: var(--color-text-muted);
-	background: var(--color-muted);
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-muted);
 	border-radius: 0.25rem;
 }
 
@@ -291,12 +288,12 @@ defineExpose({
 
 .status-label.keep {
 	color: white;
-	background: var(--accent);
+	background: var(--ui-primary);
 }
 
 .status-label.delete {
-	color: var(--color-text-muted);
-	background: var(--color-muted);
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-muted);
 }
 
 .suggested-badge {
@@ -308,8 +305,8 @@ defineExpose({
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
-	color: var(--accent);
-	background: var(--accent-soft);
+	color: var(--ui-primary);
+	background: var(--ui-primary-soft);
 	border-radius: 1rem;
 }
 
@@ -323,14 +320,14 @@ defineExpose({
 	padding: 0.625rem 1rem;
 	font-size: 0.875rem;
 	font-weight: 500;
-	color: var(--color-text-muted);
-	background: var(--color-muted);
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-muted);
 	border-radius: 0.5rem;
 	transition: all 0.15s ease;
 }
 
 .cancel-button:hover {
-	color: var(--color-text);
+	color: var(--ui-text);
 }
 
 .confirm-button {
@@ -341,13 +338,13 @@ defineExpose({
 	font-size: 0.875rem;
 	font-weight: 500;
 	color: white;
-	background: var(--accent);
+	background: var(--ui-primary);
 	border-radius: 0.5rem;
 	transition: all 0.15s ease;
 }
 
 .confirm-button:hover:not(:disabled) {
-	background: oklch(0.6 0.18 250);
+	filter: brightness(1.1);
 }
 
 .confirm-button:disabled {

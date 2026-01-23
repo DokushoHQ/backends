@@ -43,7 +43,7 @@ const statusIcon = computed(() => {
 
 <template>
 	<div
-		class="group rounded-lg bg-card overflow-hidden border transition-all cursor-pointer"
+		class="group rounded-lg bg-elevated overflow-hidden border transition-all cursor-pointer"
 		:class="[
 			selected ? 'ring-2 ring-primary border-primary' : 'border-border hover:border-primary/50',
 		]"

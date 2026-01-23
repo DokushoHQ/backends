@@ -3,6 +3,17 @@ export default defineNuxtConfig({
 	modules: ["@nuxt/ui", "@dokushohq/nuxt-processor", "@vueuse/nuxt", "@nuxt/eslint", "nuxt-nodemailer", "nuxt-email-renderer", "nuxt-charts", "@nuxt/test-utils/module", "@nuxt/image"],
 	devtools: { enabled: true },
 	css: ["~/assets/css/main.css"],
+	app: {
+		head: {
+			script: [
+				{
+					// Prevent theme flash by applying theme class before render
+					// Must match STORAGE_KEY and DEFAULT_THEME in useTheme.ts
+					innerHTML: `(function(){var t=localStorage.getItem('dokusho-theme')||'old-manga';document.documentElement.classList.add('theme-'+t)})()`,
+				},
+			],
+		},
+	},
 	runtimeConfig: {
 		databaseUrl: "",
 		databaseMaxConnections: 10,

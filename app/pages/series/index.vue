@@ -325,7 +325,7 @@ const filterItems = computed(() => {
 								v-for="serie in series"
 								:key="serie.id"
 								:to="`/series/${serie.id}`"
-								class="group block rounded-lg bg-card overflow-hidden hover:ring-1 hover:ring-primary/50 transition-all"
+								class="group block rounded-lg bg-elevated overflow-hidden hover:ring-1 hover:ring-primary/50 transition-all"
 							>
 								<div class="aspect-2/3 relative bg-muted overflow-hidden">
 									<NuxtImg

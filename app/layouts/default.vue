@@ -137,13 +137,10 @@ defineShortcuts({
 						icon="i-lucide-log-out"
 						@click="handleSignOut"
 					/>
+					<UiThemeToggle :collapsed="isCollapsed" />
 					<UButton
 						variant="ghost"
-						:icon="
-							isCollapsed
-								? 'i-lucide-panel-left-open'
-								: 'i-lucide-panel-left-close'
-						"
+						:icon="isCollapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
 						:class="isCollapsed ? '' : 'justify-start w-full'"
 						@click="collapsed = !collapsed"
 					>

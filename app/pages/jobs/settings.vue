@@ -281,7 +281,7 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 .danger-zone {
 	margin-top: 2rem;
 	padding-top: 2rem;
-	border-top: 1px solid var(--color-border);
+	border-top: 1px solid var(--ui-border);
 }
 
 .purge-modal {
@@ -302,14 +302,14 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 	width: 2.5rem;
 	height: 2.5rem;
 	border-radius: 0.625rem;
-	background: oklch(0.65 0.2 25 / 0.12);
-	color: oklch(0.65 0.2 25);
+	background: var(--ui-error-soft);
+	color: var(--ui-error);
 }
 
 .modal-title {
 	font-size: 1.125rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 }
 
 .modal-body {
@@ -318,16 +318,16 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 
 .warning-text {
 	font-size: 0.875rem;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	margin-bottom: 0.75rem;
 }
 
 .warning-text strong {
-	color: var(--color-text);
+	color: var(--ui-text);
 }
 
 .warning-text.danger {
-	color: oklch(0.65 0.2 25);
+	color: var(--ui-error);
 	font-weight: 500;
 }
 
@@ -336,7 +336,7 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 	padding-left: 1.25rem;
 	margin-bottom: 1rem;
 	font-size: 0.8125rem;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .warning-list li {
@@ -346,21 +346,21 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 .confirm-input {
 	margin-top: 1.25rem;
 	padding-top: 1rem;
-	border-top: 1px solid var(--color-border);
+	border-top: 1px solid var(--ui-border);
 }
 
 .confirm-input label {
 	font-size: 0.8125rem;
-	color: var(--color-text);
+	color: var(--ui-text);
 }
 
 .confirm-input code {
 	padding: 0.125rem 0.375rem;
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 	border-radius: 0.25rem;
 	font-size: 0.8125rem;
 	font-weight: 600;
-	color: oklch(0.65 0.2 25);
+	color: var(--ui-error);
 }
 
 .modal-actions {

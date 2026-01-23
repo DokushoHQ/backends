@@ -9,5 +9,14 @@ export default defineAppConfig({
 			error: "red",
 			neutral: "slate",
 		},
+		card: {
+			variants: {
+				variant: {
+					outline: {
+						root: "bg-elevated ring ring-default",
+					},
+				},
+			},
+		},
 	},
 })

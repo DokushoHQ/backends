@@ -178,18 +178,11 @@ const emit = defineEmits<{
 
 <style scoped>
 .pair-card {
-	--accent: oklch(0.7 0.15 250);
-	--accent-soft: oklch(0.7 0.15 250 / 0.15);
-	--success: oklch(0.72 0.15 160);
-	--success-soft: oklch(0.72 0.15 160 / 0.15);
-	--danger: oklch(0.65 0.2 25);
-	--danger-soft: oklch(0.65 0.2 25 / 0.15);
-
 	position: relative;
 	display: flex;
 	flex-direction: column;
-	background: var(--color-background);
-	border: 1px solid var(--color-border);
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-border);
 	border-radius: 0.75rem;
 	overflow: hidden;
 }
@@ -215,8 +208,8 @@ const emit = defineEmits<{
 	align-items: center;
 	gap: 0.25rem;
 	padding: 0.25rem 0.5rem;
-	background: var(--color-background);
-	border: 1px solid var(--color-border);
+	background: var(--ui-bg);
+	border: 1px solid var(--ui-border);
 	border-radius: 0.375rem;
 	z-index: 10;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -225,7 +218,7 @@ const emit = defineEmits<{
 .confidence-value {
 	font-size: 0.75rem;
 	font-weight: 700;
-	color: var(--accent);
+	color: var(--ui-primary);
 	font-variant-numeric: tabular-nums;
 	line-height: 1;
 }
@@ -233,7 +226,7 @@ const emit = defineEmits<{
 .confidence-label {
 	font-size: 0.5625rem;
 	font-weight: 500;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 }
@@ -277,11 +270,11 @@ const emit = defineEmits<{
 }
 
 .series-card:hover {
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 }
 
 .series-card.is-primary {
-	background: var(--accent-soft);
+	background: var(--ui-primary-soft);
 }
 
 .series-card.is-deleted {
@@ -295,7 +288,7 @@ const emit = defineEmits<{
 	flex-shrink: 0;
 	border-radius: 0.375rem;
 	overflow: hidden;
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 }
 
 @media (min-width: 640px) {
@@ -336,7 +329,7 @@ const emit = defineEmits<{
 	justify-content: center;
 	width: 100%;
 	height: 100%;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .primary-indicator {
@@ -350,7 +343,7 @@ const emit = defineEmits<{
 	text-transform: uppercase;
 	letter-spacing: 0.03em;
 	color: white;
-	background: var(--accent);
+	background: var(--ui-primary);
 	border-radius: 1rem;
 	white-space: nowrap;
 }
@@ -372,7 +365,7 @@ const emit = defineEmits<{
 .series-title {
 	font-size: 0.75rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 	line-height: 1.3;
 	display: -webkit-box;
 	-webkit-line-clamp: 2;
@@ -391,7 +384,7 @@ const emit = defineEmits<{
 
 .chapter-count {
 	font-size: 0.6875rem;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	font-variant-numeric: tabular-nums;
 }
 
@@ -405,8 +398,8 @@ const emit = defineEmits<{
 	padding: 0.0625rem 0.25rem;
 	font-size: 0.5625rem;
 	font-weight: 500;
-	color: var(--color-text-muted);
-	background: var(--color-muted);
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-muted);
 	border-radius: 0.25rem;
 }
 
@@ -444,14 +437,14 @@ const emit = defineEmits<{
 .vs-line {
 	height: 1px;
 	flex: 1;
-	background: var(--color-border);
+	background: var(--ui-border);
 }
 
 .vs-text {
 	padding: 0 0.75rem;
 	font-size: 0.625rem;
 	font-weight: 600;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	text-transform: uppercase;
 	letter-spacing: 0.1em;
 }
@@ -479,8 +472,8 @@ const emit = defineEmits<{
 	display: flex;
 	gap: 0.375rem;
 	padding: 0.5rem 0.75rem;
-	border-top: 1px solid var(--color-border);
-	background: var(--color-muted);
+	border-top: 1px solid var(--ui-border);
+	background: var(--ui-bg-muted);
 }
 
 .action-button {
@@ -510,24 +503,24 @@ const emit = defineEmits<{
 }
 
 .action-button.dismiss {
-	color: var(--color-text-muted);
-	background: var(--color-background);
-	border: 1px solid var(--color-border);
+	color: var(--ui-text-muted);
+	background: var(--ui-bg);
+	border: 1px solid var(--ui-border);
 }
 
 .action-button.dismiss:hover {
-	color: var(--danger);
-	border-color: var(--danger);
-	background: var(--danger-soft);
+	color: var(--ui-error);
+	border-color: var(--ui-error);
+	background: var(--ui-error-soft);
 }
 
 .action-button.merge {
 	color: white;
-	background: var(--accent);
+	background: var(--ui-primary);
 }
 
 .action-button.merge:hover {
-	background: oklch(0.6 0.18 250);
+	filter: brightness(1.1);
 }
 
 .status-indicator {
@@ -543,21 +536,12 @@ const emit = defineEmits<{
 }
 
 .status-indicator.merged {
-	color: var(--success);
-	background: var(--success-soft);
+	color: var(--ui-success);
+	background: var(--ui-success-soft);
 }
 
 .status-indicator.dismissed {
-	color: var(--color-text-muted);
-	background: var(--color-background);
-}
-
-/* Dark mode */
-:root.dark .pair-card {
-	background: oklch(0.2 0.01 250);
-}
-
-:root.dark .confidence-badge {
-	background: oklch(0.22 0.01 250);
+	color: var(--ui-text-muted);
+	background: var(--ui-bg);
 }
 </style>

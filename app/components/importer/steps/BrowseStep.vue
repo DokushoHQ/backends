@@ -121,7 +121,7 @@ onUnmounted(() => {
 							<div
 								v-for="result in wizard.searchResults.value"
 								:key="result.id"
-								class="group rounded-lg bg-card overflow-hidden border transition-all cursor-pointer"
+								class="group rounded-lg bg-elevated overflow-hidden border transition-all cursor-pointer"
 								:class="[
 									result.imported ? 'opacity-60 cursor-not-allowed' : 'hover:ring-1 hover:ring-primary/50',
 									selectedResultId === result.id ? 'ring-2 ring-primary' : 'border-border',

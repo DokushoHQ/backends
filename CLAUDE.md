@@ -139,6 +139,45 @@ When working on `.vue` files, always invoke the `frontend-design` skill first. T
 
 ### CSS Theming
 
+**Nuxt UI 4 CSS Variables:**
+
+All custom components use Nuxt UI 4's native CSS variables for consistent theming. These are configured in `app/app.config.ts` and extended in `app/assets/css/main.css`.
+
+| Variable | Purpose |
+|----------|---------|
+| `--ui-primary` | Primary action color (indigo) |
+| `--ui-success` | Success state (emerald) |
+| `--ui-warning` | Warning state (amber) |
+| `--ui-error` | Error/danger state (red) |
+| `--ui-info` | Info state (sky) |
+| `--ui-text` | Default text color |
+| `--ui-text-muted` | Secondary/muted text |
+| `--ui-bg` | Page background |
+| `--ui-bg-elevated` | Card/elevated surfaces (use `bg-elevated` class) |
+| `--ui-bg-muted` | Hover states, muted areas |
+| `--ui-border` | Default border color |
+
+**Custom Extensions (`main.css`):**
+
+Soft color variants for backgrounds (15% opacity):
+- `--ui-primary-soft`, `--ui-success-soft`, `--ui-warning-soft`, `--ui-error-soft`, `--ui-info-soft`
+
+Custom purple color (not in Nuxt UI):
+- `--color-purple`, `--color-purple-soft`
+
+**Background Hierarchy:**
+
+Cards must use `bg-elevated` (not `bg-card`) to be visually distinct from the page background:
+```vue
+<!-- Correct -->
+<div class="bg-elevated rounded-lg">Card content</div>
+
+<!-- Incorrect - will blend with background -->
+<div class="bg-card rounded-lg">Card content</div>
+```
+
+UCard components are configured in `app.config.ts` to use `bg-elevated` by default.
+
 **Global Typography Scale (`app/assets/css/main.css`):**
 ```css
 --font-size-xs: 0.75rem;      /* 12px - badges, small text */
@@ -150,10 +189,10 @@ When working on `.vue` files, always invoke the `frontend-design` skill first. T
 --font-size-2xl: 1.5rem;      /* 24px - stat values, large headings */
 ```
 
-**Color Variables:**
-- Use oklch color format for better perceptual uniformity
-- Define colors and their soft variants (e.g., `--purple` and `--purple-soft` for backgrounds)
-- Scoped component colors can be defined in the component's `<style scoped>` section
+**Color Usage in Components:**
+- Use Nuxt UI CSS variables directly: `color: var(--ui-text-muted)`
+- Use oklch `color-mix()` for custom opacity: `color-mix(in oklch, var(--ui-primary) 20%, transparent)`
+- Never hardcode oklch values - always reference variables for theme consistency
 
 **Scrolling Fix:**
 Pages using `UDashboardPanel` need proper flex classes on the root wrapper:
