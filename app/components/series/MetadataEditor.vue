@@ -227,6 +227,7 @@ const coverButtonText = computed(() => {
 		<UButton
 			variant="outline"
 			size="sm"
+			title="Edit metadata"
 			@click="open = true"
 		>
 			<UIcon

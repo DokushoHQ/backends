@@ -35,6 +35,7 @@ async function handleDelete() {
 			color="error"
 			variant="soft"
 			size="sm"
+			title="Delete series"
 			@click="open = true"
 		>
 			<UIcon

@@ -38,7 +38,6 @@ interface ChapterHealthItem {
 
 const chaptersForHealth = computed<ChapterHealthItem[]>(() =>
 	chapters.value.map((c) => {
-		// Type cast through unknown to handle serialized Prisma types
 		const chapter = c as unknown as {
 			id: string
 			chapter_number: number | null
@@ -86,7 +85,6 @@ const allItems = computed(() => {
 		...missingChapters.value.map((n: number) => ({ type: "missing" as const, chapterNumber: n })),
 	]
 
-	// Sort by chapter_number DESC
 	items.sort((a, b) => {
 		const aNum = a.type === "chapter" ? (a.data.chapter_number ?? 0) : a.chapterNumber
 		const bNum = b.type === "chapter" ? (b.data.chapter_number ?? 0) : b.chapterNumber
@@ -94,6 +92,22 @@ const allItems = computed(() => {
 	})
 
 	return items
+})
+
+// Health percentage for stat card
+const healthPercent = computed(() => {
+	if (!serie.value?.chapterHealthCounts) return 100
+	const counts = serie.value.chapterHealthCounts
+	const total = counts.pending + counts.inProgress + counts.success + counts.partial
+		+ counts.failed + counts.permanentlyFailed + counts.incomplete
+	if (total === 0) return 100
+	return Math.round((counts.success / total) * 100)
+})
+
+const healthColor = computed(() => {
+	if (healthPercent.value >= 90) return "green"
+	if (healthPercent.value >= 50) return "amber"
+	return "red"
 })
 
 // Dialog states
@@ -116,26 +130,98 @@ useHead({
 </script>
 
 <template>
-	<UDashboardPanel>
-		<template #header>
-			<UDashboardNavbar>
-				<template #title>
-					<UBreadcrumb
-						:items="[
-							{ label: 'Series', to: '/series' },
-							{ label: title.length > 30 ? `${title.slice(0, 30)}...` : title },
-						]"
+	<div class="serie-detail-page flex flex-col flex-1 min-h-0">
+		<UDashboardPanel class="flex-1 min-h-0">
+			<template #header>
+				<UDashboardNavbar>
+					<template #title>
+						<UBreadcrumb
+							:items="[
+								{ label: 'Series', to: '/series' },
+								{ label: title.length > 30 ? `${title.slice(0, 30)}...` : title },
+							]"
+						/>
+					</template>
+					<template #right>
+						<UiBackButton
+							to="/series"
+							label="Back to Series"
+						/>
+					</template>
+				</UDashboardNavbar>
+			</template>
+
+			<template #body>
+				<!-- Loading state -->
+				<div
+					v-if="pending"
+					class="loading-state"
+				>
+					<UIcon
+						name="i-lucide-loader-2"
+						class="loading-spinner"
 					/>
-				</template>
-				<template #right>
-					<div class="flex items-center gap-1.5 sm:gap-2">
-						<template v-if="isAdmin && !deletionStatus?.isDeleted">
+				</div>
+
+				<!-- Error state -->
+				<div
+					v-else-if="error"
+					class="error-state"
+				>
+					<div class="error-icon">
+						<UIcon
+							name="i-lucide-alert-circle"
+							class="h-10 w-10"
+						/>
+					</div>
+					<h2>Failed to load series</h2>
+					<p>{{ error.message }}</p>
+					<button
+						class="retry-button"
+						@click="refresh()"
+					>
+						<UIcon
+							name="i-lucide-refresh-cw"
+							class="h-4 w-4"
+						/>
+						Try again
+					</button>
+				</div>
+
+				<!-- Main content -->
+				<div
+					v-else-if="serie"
+					class="serie-content"
+				>
+					<!-- Deletion banner -->
+					<SeriesDeletionBanner
+						v-if="deletionStatus?.isDeleted"
+						:serie-id="serieId"
+						:deleted-at="deletionStatus.deletedAt"
+						:scheduled-delete-at="deletionStatus.scheduledDeleteAt"
+						:is-admin="isAdmin"
+						@restored="handleRefresh"
+					/>
+
+					<!-- Hero Section -->
+					<SeriesHeroCard
+						:title="title"
+						:synopsis="synopsis"
+						:cover="serie.cover"
+						:type="serie.type"
+						:status="serie.status"
+						:authors="serie.authors"
+						:artists="serie.artists"
+					>
+						<template
+							v-if="isAdmin && !deletionStatus?.isDeleted"
+							#actions
+						>
 							<SeriesRefreshMetadataButton
 								:serie-id="serieId"
 								@refreshed="handleRefresh"
 							/>
 							<SeriesMetadataEditor
-								v-if="serie"
 								v-model:open="metadataEditorOpen"
 								:serie="serie"
 								@updated="handleRefresh"
@@ -152,316 +238,180 @@ useHead({
 								@retried="() => refreshChapters()"
 							/>
 						</template>
-						<UiBackButton
-							to="/series"
-							label="Back to Series"
+					</SeriesHeroCard>
+
+					<!-- Health warnings banner (admin only) -->
+					<SeriesHealthBanner
+						v-if="isAdmin"
+						:has-cover="!!serie.cover"
+						:sources="serie.sources"
+						:unacknowledged-removed-count="unacknowledgedRemovedCount"
+						@refresh-cover="handleRefresh"
+					/>
+
+					<!-- Stat Cards -->
+					<UiStatCardGrid :cols="isAdmin ? 4 : 3">
+						<UiStatCard
+							:value="enabledChapters.length.toLocaleString()"
+							label="Chapters"
+							icon="i-lucide-layers"
+							color="blue"
 						/>
-					</div>
-				</template>
-			</UDashboardNavbar>
-		</template>
+						<UiStatCard
+							:value="serie.sources?.length ?? 0"
+							label="Sources"
+							icon="i-lucide-server"
+							color="green"
+						/>
+						<UiStatCard
+							v-if="isAdmin"
+							:value="`${healthPercent}%`"
+							label="Data Health"
+							icon="i-lucide-heart-pulse"
+							:color="healthColor"
+						/>
+						<UiStatCard
+							:value="formatRelativeTime(serie.updated_at)"
+							label="Last Updated"
+							icon="i-lucide-calendar"
+							color="gray"
+						/>
+					</UiStatCardGrid>
 
-		<template #body>
-			<!-- Loading state -->
-			<div
-				v-if="pending"
-				class="flex items-center justify-center py-12"
-			>
-				<UIcon
-					name="i-lucide-loader-2"
-					class="h-8 w-8 animate-spin text-muted-foreground"
-				/>
-			</div>
+					<!-- Chapter health panel (admin only) -->
+					<SeriesChapterHealthPanel
+						v-if="isAdmin && serie.chapterHealthCounts"
+						:serie-id="serieId"
+						:health-counts="serie.chapterHealthCounts"
+						:chapters="chaptersForHealth"
+						@retried="refreshChapters"
+					/>
 
-			<!-- Error state -->
-			<div
-				v-else-if="error"
-				class="flex flex-col items-center justify-center py-12 text-center"
-			>
-				<UIcon
-					name="i-lucide-alert-circle"
-					class="h-12 w-12 text-destructive mb-4"
-				/>
-				<h3 class="text-lg font-semibold">
-					Failed to load series
-				</h3>
-				<p class="text-muted-foreground mt-1">
-					{{ error.message }}
-				</p>
-				<UButton
-					variant="outline"
-					class="mt-4"
-					@click="refresh()"
-				>
-					Try again
-				</UButton>
-			</div>
-
-			<!-- Main content -->
-			<div
-				v-else-if="serie"
-				class="serie-content"
-			>
-				<!-- Deletion banner -->
-				<SeriesDeletionBanner
-					v-if="deletionStatus?.isDeleted"
-					:serie-id="serieId"
-					:deleted-at="deletionStatus.deletedAt"
-					:scheduled-delete-at="deletionStatus.scheduledDeleteAt"
-					:is-admin="isAdmin"
-					class="mb-6"
-					@restored="handleRefresh"
-				/>
-
-				<!-- Health warnings banner (admin only) -->
-				<SeriesHealthBanner
-					v-if="isAdmin"
-					:has-cover="!!serie.cover"
-					:sources="serie.sources"
-					:unacknowledged-removed-count="unacknowledgedRemovedCount"
-					class="mb-6"
-					@refresh-cover="handleRefresh"
-				/>
-
-				<!-- Chapter health panel (admin only) -->
-				<SeriesChapterHealthPanel
-					v-if="isAdmin && serie.chapterHealthCounts"
-					:serie-id="serieId"
-					:health-counts="serie.chapterHealthCounts"
-					:chapters="chaptersForHealth"
-					class="mb-6"
-					@retried="refreshChapters"
-				/>
-
-				<div class="grid gap-6 lg:grid-cols-[300px_1fr] items-start">
-					<!-- Cover and metadata sidebar -->
-					<div class="space-y-4">
-						<UCard class="overflow-hidden p-0 gap-0 border-0">
-							<NuxtImg
-								v-if="serie.cover"
-								:src="serie.cover"
-								:alt="title"
-								class="w-full aspect-2/3 object-cover"
-							/>
-							<div
-								v-else
-								class="w-full aspect-2/3 bg-muted flex items-center justify-center"
-							>
-								<UIcon
-									name="i-lucide-book-open"
-									class="h-16 w-16 text-muted-foreground/50"
-								/>
-							</div>
-						</UCard>
-
-						<UCard>
-							<div class="space-y-4">
-								<div class="flex flex-wrap gap-2">
-									<UBadge>{{ serie.type }}</UBadge>
-									<UBadge
-										v-for="s in serie.status"
-										:key="s"
-										variant="subtle"
-									>
-										{{ s }}
-									</UBadge>
-								</div>
-
-								<USeparator />
-
-								<div class="space-y-3 text-sm">
-									<!-- Sources -->
-									<div
-										v-if="serie.sources?.length > 0"
-										class="flex items-start gap-2"
-									>
-										<UIcon
-											name="i-lucide-external-link"
-											class="h-4 w-4 mt-0.5 text-muted-foreground"
-										/>
-										<div class="flex-1">
-											<p class="text-muted-foreground">
-												{{ serie.sources.length === 1 ? "Source" : "Sources" }}
-											</p>
-											<div class="space-y-1">
-												<a
-													v-for="s in serie.sources"
-													:key="s.id"
-													:href="s.external_url ?? '#'"
-													target="_blank"
-													rel="noopener noreferrer"
-													class="font-medium hover:underline inline-flex items-center gap-1 mr-2"
-												>
-													{{ s.source.name }}
-													<UBadge
-														v-if="s.is_primary"
-														variant="subtle"
-														size="xs"
-														class="px-1 py-0 h-4"
-													>
-														Primary
-													</UBadge>
-													<UIcon
-														name="i-lucide-square-arrow-out-up-right"
-														class="h-3 w-3"
-													/>
-												</a>
-											</div>
-										</div>
-									</div>
-
-									<!-- Authors -->
-									<div
-										v-if="serie.authors?.length > 0"
-										class="flex items-start gap-2"
-									>
-										<UIcon
-											name="i-lucide-user"
-											class="h-4 w-4 mt-0.5 text-muted-foreground"
-										/>
-										<div>
-											<p class="text-muted-foreground">
-												Author
-											</p>
-											<p class="font-medium">
-												{{ serie.authors.map((a: { name: string }) => a.name).join(", ") }}
-											</p>
-										</div>
-									</div>
-
-									<!-- Artists -->
-									<div
-										v-if="serie.artists?.length > 0"
-										class="flex items-start gap-2"
-									>
-										<UIcon
-											name="i-lucide-pen"
-											class="h-4 w-4 mt-0.5 text-muted-foreground"
-										/>
-										<div>
-											<p class="text-muted-foreground">
-												Artist
-											</p>
-											<p class="font-medium">
-												{{ serie.artists.map((a: { name: string }) => a.name).join(", ") }}
-											</p>
-										</div>
-									</div>
-
-									<!-- Updated -->
-									<div class="flex items-start gap-2">
-										<UIcon
-											name="i-lucide-calendar"
-											class="h-4 w-4 mt-0.5 text-muted-foreground"
-										/>
-										<div>
-											<p class="text-muted-foreground">
-												Updated
-											</p>
-											<p class="font-medium">
-												{{ formatRelativeTime(serie.updated_at) }}
-											</p>
-										</div>
-									</div>
-								</div>
-
-								<!-- Genres -->
-								<template v-if="serie.genres?.length > 0">
-									<USeparator />
-									<div>
-										<p class="text-sm text-muted-foreground mb-2">
-											Genres
-										</p>
-										<div class="flex flex-wrap gap-1.5">
-											<UBadge
-												v-for="g in serie.genres"
-												:key="g.id"
-												variant="outline"
-											>
-												{{ g.title }}
-											</UBadge>
-										</div>
-									</div>
-								</template>
-							</div>
-						</UCard>
+					<!-- Info Cards Grid -->
+					<div class="cards-grid">
+						<SeriesDetailsCard
+							:type="serie.type"
+							:status="serie.status"
+							:authors="serie.authors"
+							:artists="serie.artists"
+							:genres="serie.genres"
+							:updated-at="serie.updated_at"
+							:created-at="serie.created_at"
+						/>
+						<SeriesSourcesCard :sources="serie.sources" />
 					</div>
 
-					<!-- Main content -->
-					<div class="space-y-6 min-w-0">
-						<!-- Title and Synopsis -->
-						<UCard>
-							<template #header>
-								<h2 class="text-xl font-semibold">
-									{{ title }}
-								</h2>
-							</template>
-							<div
-								v-if="synopsis"
-								class="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none"
-							>
-								{{ synopsis }}
-							</div>
-						</UCard>
-
-						<!-- Chapters -->
-						<UCard :ui="{ body: 'p-0' }">
-							<template #header>
-								<div class="flex items-center justify-between">
-									<div>
-										<h3 class="text-lg font-semibold">
-											Chapters
-										</h3>
-										<p class="text-sm text-muted-foreground">
-											<template v-if="chaptersStatus === 'pending'">
-												Loading chapters...
-											</template>
-											<template v-else>
-												{{ enabledChapters.length }} chapters available
-												<span
-													v-if="disabledCount > 0"
-													class="text-muted-foreground ml-2"
-												>
-													({{ disabledCount }} disabled)
-												</span>
-												<span
-													v-if="missingChapters.length > 0"
-													class="text-orange-500 ml-2"
-												>
-													({{ missingChapters.length }} missing)
-												</span>
-											</template>
-										</p>
-									</div>
-								</div>
-							</template>
-							<div
-								v-if="chaptersStatus === 'pending'"
-								class="flex items-center justify-center py-12"
-							>
-								<UIcon
-									name="i-lucide-loader-2"
-									class="h-6 w-6 animate-spin text-muted-foreground"
-								/>
-							</div>
-							<SeriesChapterTable
-								v-else
-								:items="allItems"
-								:is-admin="isAdmin"
-								:serie-id="serieId"
-								@chapters-deleted="refreshChapters"
-								@chapters-acknowledged="refreshChapters"
-							/>
-						</UCard>
-					</div>
+					<!-- Chapters Card -->
+					<SeriesChaptersCard
+						:items="allItems"
+						:is-admin="isAdmin"
+						:serie-id="serieId"
+						:enabled-count="enabledChapters.length"
+						:disabled-count="disabledCount"
+						:missing-count="missingChapters.length"
+						:loading="chaptersStatus === 'pending'"
+						@chapters-deleted="refreshChapters"
+						@chapters-acknowledged="refreshChapters"
+					/>
 				</div>
-			</div>
-		</template>
-	</UDashboardPanel>
+			</template>
+		</UDashboardPanel>
+	</div>
 </template>
 
 <style scoped>
+/* Main content layout */
 .serie-content {
-	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+/* Cards Grid */
+.cards-grid {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+	.cards-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+/* Loading state */
+.loading-state {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4rem 2rem;
+}
+
+.loading-spinner {
+	width: 2rem;
+	height: 2rem;
+	color: var(--ui-text-muted);
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+/* Error state */
+.error-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 4rem 2rem;
+	text-align: center;
+}
+
+.error-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 4.5rem;
+	height: 4.5rem;
+	margin-bottom: 1.5rem;
+	border-radius: 50%;
+	background: var(--ui-error-soft);
+	color: var(--ui-error);
+}
+
+.error-state h2 {
+	font-size: var(--font-size-xl);
+	font-weight: 600;
+	color: var(--ui-text);
+	margin: 0 0 0.5rem 0;
+}
+
+.error-state p {
+	font-size: var(--font-size-base);
+	color: var(--ui-text-muted);
+	max-width: 24rem;
+	margin: 0 0 1.5rem 0;
+}
+
+.retry-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.625rem 1rem;
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+	background: var(--ui-bg-muted);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.5rem;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.retry-button:hover {
+	background: var(--ui-border);
 }
 </style>
