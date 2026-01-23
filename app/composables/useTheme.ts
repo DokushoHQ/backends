@@ -5,16 +5,19 @@ export interface Theme {
 }
 
 const STORAGE_KEY = "dokusho-theme"
-const DEFAULT_THEME = "old-manga"
+const DEFAULT_THEME = "default"
 
 const availableThemes: Theme[] = [
+	{
+		id: "default",
+		name: "Default",
+		description: "Clean, classic theme with neutral tones",
+	},
 	{
 		id: "old-manga",
 		name: "Old Manga Paper",
 		description: "Warm cream tones inspired by aged manga pages",
 	},
-	// Future themes can be added here
-	// { id: "default", name: "Default", description: "Clean neutral theme" },
 ]
 
 export function useTheme() {

@@ -2,6 +2,7 @@
 @import "@nuxt/ui";
 
 /* Theme imports */
+@import "./themes/default.css";
 @import "./themes/old-manga.css";
 
 @custom-variant dark (&:is(.dark *));

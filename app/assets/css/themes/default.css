@@ -1,0 +1,57 @@
+/*
+ * Default Theme
+ *
+ * A clean, classic theme with neutral gray tones.
+ * Light variant uses cool whites and soft grays.
+ * Dark variant uses balanced dark grays for comfortable reading.
+ */
+
+/* Light variant - Clean Neutral */
+.theme-default {
+	/* Background surfaces - neutral cool tones */
+	--ui-bg: oklch(0.985 0 0);                /* Pure near-white background */
+	--ui-bg-elevated: oklch(1 0 0);           /* Pure white cards */
+	--ui-bg-muted: oklch(0.955 0.005 260);    /* Soft gray for hover/muted */
+
+	/* Borders - subtle gray */
+	--ui-border: oklch(0.90 0.005 260);       /* Light gray border */
+	--ui-border-muted: oklch(0.93 0.003 260); /* Very subtle border */
+
+	/* Text - neutral grays */
+	--ui-text-muted: oklch(0.55 0.01 260);    /* Muted text */
+	--ui-text-dimmed: oklch(0.65 0.005 260);  /* Dimmed text */
+
+	/* Custom purple for this theme */
+	--color-purple: oklch(0.55 0.2 285);
+
+	/* Soft color variants (15% opacity for backgrounds) */
+	--color-purple-soft: color-mix(in oklch, var(--color-purple) 15%, transparent);
+	--ui-primary-soft: color-mix(in oklch, var(--ui-primary) 15%, transparent);
+	--ui-success-soft: color-mix(in oklch, var(--ui-success) 15%, transparent);
+	--ui-warning-soft: color-mix(in oklch, var(--ui-warning) 15%, transparent);
+	--ui-error-soft: color-mix(in oklch, var(--ui-error) 15%, transparent);
+	--ui-info-soft: color-mix(in oklch, var(--ui-info) 15%, transparent);
+}
+
+/* Dark variant - Balanced Dark */
+.theme-default.dark {
+	/* Background surfaces - balanced dark grays */
+	--ui-bg: oklch(0.145 0.005 260);          /* Dark background */
+	--ui-bg-elevated: oklch(0.195 0.008 260); /* Elevated surfaces */
+	--ui-bg-muted: oklch(0.245 0.01 260);     /* Hover states */
+
+	/* Borders - subtle dark borders */
+	--ui-border: oklch(0.30 0.01 260);        /* Visible border */
+	--ui-border-muted: oklch(0.25 0.008 260); /* Subtle border */
+
+	/* Custom purple - brighter for dark mode visibility */
+	--color-purple: oklch(0.7 0.16 280);
+
+	/* Soft color variants (15% opacity for backgrounds) */
+	--color-purple-soft: color-mix(in oklch, var(--color-purple) 15%, transparent);
+	--ui-primary-soft: color-mix(in oklch, var(--ui-primary) 15%, transparent);
+	--ui-success-soft: color-mix(in oklch, var(--ui-success) 15%, transparent);
+	--ui-warning-soft: color-mix(in oklch, var(--ui-warning) 15%, transparent);
+	--ui-error-soft: color-mix(in oklch, var(--ui-error) 15%, transparent);
+	--ui-info-soft: color-mix(in oklch, var(--ui-info) 15%, transparent);
+}

@@ -9,7 +9,7 @@ export default defineNuxtConfig({
 				{
 					// Prevent theme flash by applying theme class before render
 					// Must match STORAGE_KEY and DEFAULT_THEME in useTheme.ts
-					innerHTML: `(function(){var t=localStorage.getItem('dokusho-theme')||'old-manga';document.documentElement.classList.add('theme-'+t)})()`,
+					innerHTML: `(function(){var t=localStorage.getItem('dokusho-theme')||'default';document.documentElement.classList.add('theme-'+t)})()`,
 				},
 			],
 		},
