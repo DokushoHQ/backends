@@ -8,7 +8,7 @@ const querySchema = z.object({
 	includeDisabled: z
 		.string()
 		.optional()
-		.transform((v) => v === "true"),
+		.transform(v => v === "true"),
 	lang: z.enum(SourceLanguage),
 })
 
