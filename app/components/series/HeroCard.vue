@@ -9,10 +9,6 @@ const props = defineProps<{
 	artists: Array<{ name: string }> | null
 }>()
 
-const authorsDisplay = computed(() => props.authors?.map(a => a.name).join(", ") ?? "")
-
-const artistsDisplay = computed(() => props.artists?.map(a => a.name).join(", ") ?? "")
-
 const showArtists = computed(() => {
 	if (!props.artists?.length) return false
 	return JSON.stringify(props.artists) !== JSON.stringify(props.authors)
@@ -53,14 +49,20 @@ const showArtists = computed(() => {
 			</div>
 
 			<div class="serie-badges">
-				<span class="type-badge">{{ type }}</span>
-				<span
+				<NuxtLink
+					:to="`/series?type=${encodeURIComponent(type)}`"
+					class="type-badge"
+				>
+					{{ type }}
+				</NuxtLink>
+				<NuxtLink
 					v-for="s in status"
 					:key="s"
+					:to="`/series?status=${encodeURIComponent(s)}`"
 					class="status-badge"
 				>
 					{{ s }}
-				</span>
+				</NuxtLink>
 			</div>
 
 			<UiMarkdown
@@ -77,17 +79,33 @@ const showArtists = computed(() => {
 						name="i-lucide-user"
 						class="pill-icon"
 					/>
-					{{ authorsDisplay }}
+					<template
+						v-for="(author, index) in authors"
+						:key="author.name"
+					>
+						<NuxtLink
+							:to="`/series?author=${encodeURIComponent(author.name)}`"
+							class="pill-link"
+						>{{ author.name }}</NuxtLink><span v-if="index < authors.length - 1">, </span>
+					</template>
 				</span>
 				<span
-					v-if="showArtists"
+					v-if="showArtists && artists"
 					class="info-pill"
 				>
 					<UIcon
 						name="i-lucide-pen"
 						class="pill-icon"
 					/>
-					{{ artistsDisplay }}
+					<template
+						v-for="(artist, index) in artists"
+						:key="artist.name"
+					>
+						<NuxtLink
+							:to="`/series?artist=${encodeURIComponent(artist.name)}`"
+							class="pill-link"
+						>{{ artist.name }}</NuxtLink><span v-if="index < artists.length - 1">, </span>
+					</template>
 				</span>
 			</div>
 		</div>
@@ -284,6 +302,8 @@ const showArtists = computed(() => {
 	font-size: var(--font-size-xs);
 	font-weight: 500;
 	border-radius: 2rem;
+	text-decoration: none;
+	transition: all 0.15s ease;
 }
 
 .type-badge {
@@ -294,9 +314,18 @@ const showArtists = computed(() => {
 	letter-spacing: 0.03em;
 }
 
+.type-badge:hover {
+	background: color-mix(in oklch, var(--ui-primary) 25%, transparent);
+}
+
 .status-badge {
 	color: var(--ui-text-muted);
 	background: var(--ui-bg-muted);
+}
+
+.status-badge:hover {
+	color: var(--ui-primary);
+	background: var(--ui-primary-soft);
 }
 
 .synopsis {
@@ -323,5 +352,15 @@ const showArtists = computed(() => {
 	width: 0.875rem;
 	height: 0.875rem;
 	opacity: 0.7;
+}
+
+.pill-link {
+	color: inherit;
+	text-decoration: none;
+	transition: color 0.15s ease;
+}
+
+.pill-link:hover {
+	color: var(--ui-primary);
 }
 </style>

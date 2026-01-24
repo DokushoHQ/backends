@@ -1,6 +1,19 @@
+import { z } from "zod"
 import { serieIndex } from "../../../utils/meilisearch"
 
 const PAGE_SIZE = 24
+
+const querySchema = z.object({
+	page: z.coerce.number().int().min(1).default(1),
+	q: z.string().trim().optional(),
+	filter: z.enum(["failing"]).optional(),
+	source: z.string().uuid().optional(),
+	genre: z.string().optional(),
+	author: z.string().optional(),
+	artist: z.string().optional(),
+	status: z.string().optional(),
+	type: z.string().optional(),
+})
 
 const serieSelect = {
 	id: true,
@@ -16,11 +29,35 @@ const serieSelect = {
 export default defineEventHandler(async (event) => {
 	await requireAuth(event)
 
-	const query = getQuery(event)
-	const page = Math.max(1, Number.parseInt(String(query.page || "1"), 10))
-	const searchQuery = (query.q as string)?.trim()
-	const sourceFilter = query.source as string | undefined
-	const failingFilter = query.filter === "failing"
+	const query = await getValidatedQuery(event, querySchema.parse)
+
+	const {
+		page,
+		q: searchQuery,
+		filter,
+		source: sourceFilter,
+		genre: genreFilter,
+		author: authorFilter,
+		artist: artistFilter,
+		status: statusFilter,
+		type: typeFilter,
+	} = query
+
+	const failingFilter = filter === "failing"
+
+	// Build Meilisearch filter array
+	function buildFilters(): string[] {
+		const filters: string[] = ["soft_deleted = false"]
+		if (sourceFilter) filters.push(`source_ids = "${sourceFilter}"`)
+		if (genreFilter) filters.push(`genres = "${genreFilter}"`)
+		if (authorFilter) filters.push(`authors = "${authorFilter}"`)
+		if (artistFilter) filters.push(`artists = "${artistFilter}"`)
+		if (statusFilter) filters.push(`status = "${statusFilter}"`)
+		if (typeFilter) filters.push(`type = "${typeFilter}"`)
+		return filters
+	}
+
+	const hasMetadataFilters = genreFilter || authorFilter || artistFilter || statusFilter || typeFilter
 
 	// Failing series filter
 	if (failingFilter) {
@@ -65,12 +102,12 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
-	// Source filter using Meilisearch
-	if (sourceFilter) {
+	// Metadata/source filters using Meilisearch (when not searching)
+	if ((sourceFilter || hasMetadataFilters) && !searchQuery) {
 		const searchResult = await serieIndex.search("", {
 			limit: PAGE_SIZE,
 			offset: (page - 1) * PAGE_SIZE,
-			filter: `soft_deleted = false AND source_ids = "${sourceFilter}"`,
+			filter: buildFilters().join(" AND "),
 			sort: ["updated_at:desc"],
 		})
 
@@ -105,11 +142,12 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
-	// Search query
+	// Search query (with optional filters)
 	if (searchQuery) {
 		const searchResult = await serieIndex.search(searchQuery, {
 			limit: PAGE_SIZE,
 			offset: (page - 1) * PAGE_SIZE,
+			filter: buildFilters().join(" AND "),
 		})
 
 		const ids = searchResult.hits.map(hit => hit.id)
@@ -157,7 +195,7 @@ export default defineEventHandler(async (event) => {
 	const searchResult = await serieIndex.search("", {
 		limit: PAGE_SIZE,
 		offset: (page - 1) * PAGE_SIZE,
-		filter: "soft_deleted = false",
+		filter: buildFilters().join(" AND "),
 		sort: ["updated_at:desc"],
 	})
 

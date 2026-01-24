@@ -179,6 +179,7 @@ const paginationPages = computed(() => {
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
 	border-radius: 0.375rem;
+	cursor: pointer;
 	transition: all 0.15s ease;
 }
 
@@ -212,6 +213,7 @@ const paginationPages = computed(() => {
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
 	border-radius: 0.375rem;
+	cursor: pointer;
 	transition: all 0.15s ease;
 	font-variant-numeric: tabular-nums;
 }

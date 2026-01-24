@@ -13,6 +13,13 @@ const searchQuery = computed(() => (route.query.q as string) || "")
 const filterType = computed(() => (route.query.filter as string) || "")
 const sourceFilter = computed(() => (route.query.source as string) || "")
 
+// Metadata filters
+const genreFilter = computed(() => (route.query.genre as string) || "")
+const authorFilter = computed(() => (route.query.author as string) || "")
+const artistFilter = computed(() => (route.query.artist as string) || "")
+const statusFilter = computed(() => (route.query.status as string) || "")
+const typeFilter = computed(() => (route.query.type as string) || "")
+
 // Debounced search
 const searchInput = ref(searchQuery.value)
 const debouncedSearch = useDebounceFn((value: string) => {
@@ -30,6 +37,11 @@ const { data, pending, error, refresh } = await useFetch("/api/v1/serie", {
 		q: searchQuery.value || undefined,
 		filter: filterType.value || undefined,
 		source: sourceFilter.value || undefined,
+		genre: genreFilter.value || undefined,
+		author: authorFilter.value || undefined,
+		artist: artistFilter.value || undefined,
+		status: statusFilter.value || undefined,
+		type: typeFilter.value || undefined,
 	})),
 })
 
@@ -40,7 +52,21 @@ const { data: sources } = await useFetch("/api/v1/sources")
 const series = computed(() => (data.value?.data ?? []).filter((s): s is NonNullable<typeof s> => s !== null))
 const pagination = computed(() => data.value?.pagination ?? { page: 1, pageSize: 24, total: 0, totalPages: 0 })
 const isFailingFilter = computed(() => filterType.value === "failing")
-const hasActiveFilters = computed(() => !!filterType.value || !!sourceFilter.value)
+const hasMetadataFilters = computed(() => !!genreFilter.value || !!authorFilter.value || !!artistFilter.value || !!statusFilter.value || !!typeFilter.value)
+const hasActiveFilters = computed(() => !!filterType.value || !!sourceFilter.value || hasMetadataFilters.value)
+
+// Count active filters for badge
+const activeFilterCount = computed(() => {
+	let count = 0
+	if (isFailingFilter.value) count++
+	if (sourceFilter.value) count++
+	if (genreFilter.value) count++
+	if (authorFilter.value) count++
+	if (artistFilter.value) count++
+	if (statusFilter.value) count++
+	if (typeFilter.value) count++
+	return count
+})
 
 // Get source name if filtering
 const currentSourceName = computed(() => {
@@ -51,11 +77,18 @@ const currentSourceName = computed(() => {
 // Page description
 const pageDescription = computed(() => {
 	const total = pagination.value.total.toLocaleString()
-	if (isFailingFilter.value) {
-		return `${total} series with update failures${currentSourceName.value ? ` from ${currentSourceName.value}` : ""}`
-	}
-	if (currentSourceName.value) {
-		return `${total} series from ${currentSourceName.value}`
+	const filters: string[] = []
+
+	if (isFailingFilter.value) filters.push("failing")
+	if (currentSourceName.value) filters.push(`from ${currentSourceName.value}`)
+	if (typeFilter.value) filters.push(typeFilter.value)
+	if (statusFilter.value) filters.push(statusFilter.value)
+	if (genreFilter.value) filters.push(genreFilter.value)
+	if (authorFilter.value) filters.push(`by ${authorFilter.value}`)
+	if (artistFilter.value) filters.push(`art by ${artistFilter.value}`)
+
+	if (filters.length > 0) {
+		return `${total} ${filters.join(" · ")}`
 	}
 	return `${total} series in your library`
 })
@@ -95,6 +128,18 @@ function updateFilters(updates: Record<string, string | undefined>) {
 function clearFilters() {
 	router.push({ query: {} })
 	searchInput.value = ""
+}
+
+function clearAllFilters() {
+	updateFilters({
+		filter: undefined,
+		source: undefined,
+		genre: undefined,
+		author: undefined,
+		artist: undefined,
+		status: undefined,
+		type: undefined,
+	})
 }
 
 function setPage(newPage: number) {
@@ -148,6 +193,69 @@ function setPage(newPage: number) {
 										class="chip-close"
 									/>
 								</button>
+								<button
+									v-if="typeFilter"
+									class="filter-chip"
+									@click="updateFilters({ type: undefined })"
+								>
+									{{ typeFilter }}
+									<UIcon
+										name="i-lucide-x"
+										class="chip-close"
+									/>
+								</button>
+								<button
+									v-if="statusFilter"
+									class="filter-chip"
+									@click="updateFilters({ status: undefined })"
+								>
+									{{ statusFilter }}
+									<UIcon
+										name="i-lucide-x"
+										class="chip-close"
+									/>
+								</button>
+								<button
+									v-if="genreFilter"
+									class="filter-chip"
+									@click="updateFilters({ genre: undefined })"
+								>
+									{{ genreFilter }}
+									<UIcon
+										name="i-lucide-x"
+										class="chip-close"
+									/>
+								</button>
+								<button
+									v-if="authorFilter"
+									class="filter-chip"
+									@click="updateFilters({ author: undefined })"
+								>
+									<UIcon
+										name="i-lucide-user"
+										class="chip-icon"
+									/>
+									{{ authorFilter }}
+									<UIcon
+										name="i-lucide-x"
+										class="chip-close"
+									/>
+								</button>
+								<button
+									v-if="artistFilter"
+									class="filter-chip"
+									@click="updateFilters({ artist: undefined })"
+								>
+									<UIcon
+										name="i-lucide-pen"
+										class="chip-icon"
+									/>
+									{{ artistFilter }}
+									<UIcon
+										name="i-lucide-x"
+										class="chip-close"
+									/>
+								</button>
 							</div>
 
 							<!-- Search input -->
@@ -186,7 +294,7 @@ function setPage(newPage: number) {
 										v-if="hasActiveFilters"
 										class="filter-count"
 									>
-										{{ (isFailingFilter ? 1 : 0) + (currentSourceName ? 1 : 0) }}
+										{{ activeFilterCount }}
 									</span>
 								</button>
 
@@ -293,7 +401,7 @@ function setPage(newPage: number) {
 										>
 											<button
 												class="filter-clear-button"
-												@click="updateFilters({ filter: undefined, source: undefined })"
+												@click="clearAllFilters"
 											>
 												<UIcon
 													name="i-lucide-x"

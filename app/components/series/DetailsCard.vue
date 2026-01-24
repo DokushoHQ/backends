@@ -27,18 +27,24 @@ defineProps<{
 		<div class="info-grid">
 			<div class="info-item">
 				<span class="info-label">Type</span>
-				<span class="info-value type-value">{{ type }}</span>
+				<NuxtLink
+					:to="`/series?type=${encodeURIComponent(type)}`"
+					class="info-value type-value clickable-value"
+				>
+					{{ type }}
+				</NuxtLink>
 			</div>
 			<div class="info-item">
 				<span class="info-label">Status</span>
 				<div class="info-badges">
-					<span
+					<NuxtLink
 						v-for="s in status"
 						:key="s"
-						class="badge-status"
+						:to="`/series?status=${encodeURIComponent(s)}`"
+						class="badge-status clickable-badge"
 					>
 						{{ s }}
-					</span>
+					</NuxtLink>
 				</div>
 			</div>
 			<div
@@ -46,14 +52,34 @@ defineProps<{
 				class="info-item full-width"
 			>
 				<span class="info-label">Author</span>
-				<span class="info-value">{{ authors.map(a => a.name).join(", ") }}</span>
+				<span class="info-value">
+					<template
+						v-for="(author, index) in authors"
+						:key="author.name"
+					>
+						<NuxtLink
+							:to="`/series?author=${encodeURIComponent(author.name)}`"
+							class="clickable-name"
+						>{{ author.name }}</NuxtLink><span v-if="index < authors.length - 1">, </span>
+					</template>
+				</span>
 			</div>
 			<div
 				v-if="artists?.length"
 				class="info-item full-width"
 			>
 				<span class="info-label">Artist</span>
-				<span class="info-value">{{ artists.map(a => a.name).join(", ") }}</span>
+				<span class="info-value">
+					<template
+						v-for="(artist, index) in artists"
+						:key="artist.name"
+					>
+						<NuxtLink
+							:to="`/series?artist=${encodeURIComponent(artist.name)}`"
+							class="clickable-name"
+						>{{ artist.name }}</NuxtLink><span v-if="index < artists.length - 1">, </span>
+					</template>
+				</span>
 			</div>
 			<div class="info-item">
 				<span class="info-label">Updated</span>
@@ -72,13 +98,14 @@ defineProps<{
 		>
 			<span class="genres-label">Genres</span>
 			<div class="genres-list">
-				<span
+				<NuxtLink
 					v-for="g in genres"
 					:key="g.id"
+					:to="`/series?genre=${encodeURIComponent(g.title)}`"
 					class="genre-tag"
 				>
 					{{ g.title }}
-				</span>
+				</NuxtLink>
 			</div>
 		</div>
 	</div>
@@ -188,6 +215,36 @@ defineProps<{
 	gap: 0.375rem;
 }
 
+/* Clickable elements */
+.clickable-value {
+	text-decoration: none;
+	transition: color 0.15s ease;
+}
+
+.clickable-value:hover {
+	color: var(--ui-primary);
+}
+
+.clickable-name {
+	text-decoration: none;
+	color: inherit;
+	transition: color 0.15s ease;
+}
+
+.clickable-name:hover {
+	color: var(--ui-primary);
+}
+
+.clickable-badge {
+	text-decoration: none;
+	transition: all 0.15s ease;
+}
+
+.clickable-badge:hover {
+	background: var(--ui-primary-soft);
+	color: var(--ui-primary);
+}
+
 .genre-tag {
 	display: inline-flex;
 	padding: 0.25rem 0.5rem;
@@ -197,10 +254,13 @@ defineProps<{
 	background: transparent;
 	border: 1px solid var(--ui-border);
 	border-radius: 0.25rem;
-	transition: border-color 0.15s ease;
+	text-decoration: none;
+	transition: all 0.15s ease;
 }
 
 .genre-tag:hover {
-	border-color: var(--ui-text-muted);
+	border-color: var(--ui-primary);
+	color: var(--ui-primary);
+	background: var(--ui-primary-soft);
 }
 </style>
