@@ -20,9 +20,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 		// If user doesn't have 2FA enabled, check if they have password auth
 		if (!user.twoFactorEnabled) {
 			// Fetch 2FA requirement status
-			const { data } = await useFetch("/api/auth/two-factor-required", {
-				key: "two-factor-required",
-			})
+			const { data } = await useFetch("/api/auth/two-factor-required")
 
 			if (data.value?.required) {
 				return navigateTo("/two-factor")

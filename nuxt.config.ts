@@ -93,4 +93,9 @@ export default defineNuxtConfig({
 			pass: "", // Set via NUXT_NODEMAILER_AUTH_PASS env var
 		},
 	},
+	nitro: {
+		rollupConfig: {
+			external: ["node:sqlite"],
+		},
+	},
 })

@@ -9,7 +9,7 @@ const querySchema = z.object({
 		.string()
 		.optional()
 		.transform(v => v === "true"),
-	lang: z.enum(SourceLanguage),
+	lang: z.enum(SourceLanguage).optional(),
 })
 
 export default defineEventHandler(async (event) => {

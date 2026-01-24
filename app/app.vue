@@ -12,6 +12,7 @@ onMounted(() => {
 </script>
 
 <template>
+	<NuxtLoadingIndicator />
 	<Transition>
 		<KeepAlive>
 			<Suspense>
