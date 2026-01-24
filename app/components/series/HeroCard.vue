@@ -63,12 +63,10 @@ const showArtists = computed(() => {
 				</span>
 			</div>
 
-			<div
-				v-if="synopsis"
+			<UiMarkdown
+				:content="synopsis"
 				class="synopsis"
-			>
-				{{ synopsis }}
-			</div>
+			/>
 
 			<div class="quick-info">
 				<span
@@ -117,9 +115,9 @@ const showArtists = computed(() => {
 /* Cover */
 .hero-cover {
 	flex-shrink: 0;
+	align-self: flex-start;
 	width: 100%;
 	max-width: 200px;
-	aspect-ratio: 2 / 3;
 	margin: 0 auto;
 	border-radius: 0.5rem;
 	overflow: hidden;
@@ -143,9 +141,9 @@ const showArtists = computed(() => {
 }
 
 .cover-image {
+	display: block;
 	width: 100%;
-	height: 100%;
-	object-fit: cover;
+	height: auto;
 }
 
 .cover-placeholder {
@@ -192,30 +190,58 @@ const showArtists = computed(() => {
 	flex-shrink: 0;
 }
 
-/* Style buttons inside the pill as icon-only circles */
-.actions-pill :deep(button) {
-	width: 1.75rem;
-	height: 1.75rem;
-	padding: 0;
-	border-radius: 50%;
-	border: none;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+/* Style buttons and links inside the pill as icon-only circles */
+.actions-pill :deep(button),
+.actions-pill :deep(a) {
+	width: 1.75rem !important;
+	height: 1.75rem !important;
+	min-width: 1.75rem !important;
+	padding: 0 !important;
+	border-radius: 50% !important;
+	border: none !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
 	cursor: pointer;
+	transition: background-color 0.15s ease;
 }
 
-/* Hide text labels inside buttons, but keep icons visible */
-.actions-pill :deep(button > span:not([class*="i-"])) {
-	display: none;
+.actions-pill :deep(button:hover),
+.actions-pill :deep(a:hover) {
+	background: var(--ui-bg) !important;
 }
 
-/* Ensure icons are visible */
-.actions-pill :deep(button [class*="i-"]) {
+/* Hide text labels inside buttons/links, but keep icons visible */
+.actions-pill :deep(button > span:not([class*="i-"])),
+.actions-pill :deep(a > span:not([class*="i-"])) {
+	display: none !important;
+}
+
+/* Ensure icons are visible with proper styling */
+.actions-pill :deep(button [class*="i-"]),
+.actions-pill :deep(a [class*="i-"]) {
 	display: block !important;
-	width: 1rem;
-	height: 1rem;
+	width: 1rem !important;
+	height: 1rem !important;
 	flex-shrink: 0;
+}
+
+/* Default icon color - muted for most actions */
+.actions-pill :deep([class*="i-"]) {
+	color: var(--ui-text-muted);
+}
+
+/* Primary color for primary variant buttons */
+.actions-pill :deep(button[data-variant="soft"][data-color="primary"] [class*="i-"]) {
+	color: var(--ui-primary);
+}
+
+/* Error/delete button icon stays red */
+.actions-pill :deep(button[data-color="error"] [class*="i-"]),
+.actions-pill :deep(button[class*="error"] [class*="i-"]) {
+	color: var(--ui-error);
 }
 
 /* Wrapper divs inside pill should not add extra space */
@@ -274,9 +300,6 @@ const showArtists = computed(() => {
 }
 
 .synopsis {
-	font-size: var(--font-size-base);
-	line-height: 1.7;
-	color: var(--ui-text-muted);
 	max-width: 65ch;
 }
 

@@ -111,7 +111,6 @@ const healthColor = computed(() => {
 })
 
 // Dialog states
-const metadataEditorOpen = ref(false)
 const deleteDialogOpen = ref(false)
 
 // Handle successful actions
@@ -221,11 +220,17 @@ useHead({
 								:serie-id="serieId"
 								@refreshed="handleRefresh"
 							/>
-							<SeriesMetadataEditor
-								v-model:open="metadataEditorOpen"
-								:serie="serie"
-								@updated="handleRefresh"
-							/>
+							<UButton
+								variant="outline"
+								size="sm"
+								title="Edit metadata"
+								:to="`/series/${serieId}/edit`"
+							>
+								<UIcon
+									name="i-lucide-edit-2"
+									class="h-4 w-4"
+								/>
+							</UButton>
 							<SeriesDeleteButton
 								v-model:open="deleteDialogOpen"
 								:serie-id="serieId"
