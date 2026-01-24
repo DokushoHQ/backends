@@ -18,6 +18,8 @@ export type SerieIndex = {
 	poster: string
 	updated_at: number // Unix timestamp for sorting
 	soft_deleted: boolean
+	chapter_count: number // Number of enabled chapters
+	languages_available: Language[] // Languages with available chapters
 	// Resolved display values (includes custom locked values)
 	title: string
 	synopsis?: string
@@ -81,7 +83,7 @@ export async function configureSerieIndex() {
 
 	const settings: Parameters<typeof index.updateSettings>[0] = {
 		sortableAttributes: ["updated_at"],
-		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists"],
+		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists", "chapter_count", "languages_available"],
 	}
 
 	let needsReindex = false

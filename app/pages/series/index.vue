@@ -19,6 +19,19 @@ const authorFilter = computed(() => (route.query.author as string) || "")
 const artistFilter = computed(() => (route.query.artist as string) || "")
 const statusFilter = computed(() => (route.query.status as string) || "")
 const typeFilter = computed(() => (route.query.type as string) || "")
+const languageFilter = computed(() => (route.query.language as string) || "")
+
+// Language options for filter
+const languageOptions = [
+	{ value: "En", label: "English" },
+	{ value: "Fr", label: "French" },
+	{ value: "Jp", label: "Japanese" },
+	{ value: "JpRo", label: "Japanese (Romaji)" },
+	{ value: "Ko", label: "Korean" },
+	{ value: "KoRo", label: "Korean (Romaji)" },
+	{ value: "Zh", label: "Chinese" },
+	{ value: "ZhHk", label: "Chinese (HK)" },
+]
 
 // Debounced search
 const searchInput = ref(searchQuery.value)
@@ -42,6 +55,7 @@ const { data, pending, error, refresh } = await useFetch("/api/v1/serie", {
 		artist: artistFilter.value || undefined,
 		status: statusFilter.value || undefined,
 		type: typeFilter.value || undefined,
+		language: languageFilter.value || undefined,
 	})),
 })
 
@@ -52,19 +66,22 @@ const { data: sources } = await useFetch("/api/v1/sources")
 const series = computed(() => (data.value?.data ?? []).filter((s): s is NonNullable<typeof s> => s !== null))
 const pagination = computed(() => data.value?.pagination ?? { page: 1, pageSize: 24, total: 0, totalPages: 0 })
 const isFailingFilter = computed(() => filterType.value === "failing")
-const hasMetadataFilters = computed(() => !!genreFilter.value || !!authorFilter.value || !!artistFilter.value || !!statusFilter.value || !!typeFilter.value)
+const isNoChaptersFilter = computed(() => filterType.value === "no-chapters")
+const hasMetadataFilters = computed(() => !!genreFilter.value || !!authorFilter.value || !!artistFilter.value || !!statusFilter.value || !!typeFilter.value || !!languageFilter.value)
 const hasActiveFilters = computed(() => !!filterType.value || !!sourceFilter.value || hasMetadataFilters.value)
 
 // Count active filters for badge
 const activeFilterCount = computed(() => {
 	let count = 0
 	if (isFailingFilter.value) count++
+	if (isNoChaptersFilter.value) count++
 	if (sourceFilter.value) count++
 	if (genreFilter.value) count++
 	if (authorFilter.value) count++
 	if (artistFilter.value) count++
 	if (statusFilter.value) count++
 	if (typeFilter.value) count++
+	if (languageFilter.value) count++
 	return count
 })
 
@@ -74,13 +91,21 @@ const currentSourceName = computed(() => {
 	return sources.value.find(s => s.id === sourceFilter.value)?.name ?? null
 })
 
+// Get current language label
+const currentLanguageLabel = computed(() => {
+	if (!languageFilter.value) return null
+	return languageOptions.find(l => l.value === languageFilter.value)?.label ?? languageFilter.value
+})
+
 // Page description
 const pageDescription = computed(() => {
 	const total = pagination.value.total.toLocaleString()
 	const filters: string[] = []
 
 	if (isFailingFilter.value) filters.push("failing")
+	if (isNoChaptersFilter.value) filters.push("no chapters")
 	if (currentSourceName.value) filters.push(`from ${currentSourceName.value}`)
+	if (currentLanguageLabel.value) filters.push(`in ${currentLanguageLabel.value}`)
 	if (typeFilter.value) filters.push(typeFilter.value)
 	if (statusFilter.value) filters.push(statusFilter.value)
 	if (genreFilter.value) filters.push(genreFilter.value)
@@ -96,6 +121,7 @@ const pageDescription = computed(() => {
 // Empty state type
 const emptyStateType = computed(() => {
 	if (isFailingFilter.value) return "no-failures" as const
+	if (isNoChaptersFilter.value) return "no-results" as const
 	if (searchQuery.value || hasActiveFilters.value) return "no-results" as const
 	return "empty" as const
 })
@@ -139,6 +165,7 @@ function clearAllFilters() {
 		artist: undefined,
 		status: undefined,
 		type: undefined,
+		language: undefined,
 	})
 }
 
@@ -183,11 +210,41 @@ function setPage(newPage: number) {
 									/>
 								</button>
 								<button
+									v-if="isNoChaptersFilter"
+									class="filter-chip filter-chip-warning"
+									@click="updateFilters({ filter: undefined })"
+								>
+									<UIcon
+										name="i-lucide-book-x"
+										class="chip-icon"
+									/>
+									No chapters
+									<UIcon
+										name="i-lucide-x"
+										class="chip-close"
+									/>
+								</button>
+								<button
 									v-if="currentSourceName"
 									class="filter-chip"
 									@click="updateFilters({ source: undefined })"
 								>
 									{{ currentSourceName }}
+									<UIcon
+										name="i-lucide-x"
+										class="chip-close"
+									/>
+								</button>
+								<button
+									v-if="currentLanguageLabel"
+									class="filter-chip"
+									@click="updateFilters({ language: undefined })"
+								>
+									<UIcon
+										name="i-lucide-languages"
+										class="chip-icon"
+									/>
+									{{ currentLanguageLabel }}
 									<UIcon
 										name="i-lucide-x"
 										class="chip-close"
@@ -300,7 +357,7 @@ function setPage(newPage: number) {
 
 								<template #content>
 									<div class="filter-panel">
-										<!-- Status section -->
+										<!-- Status section - Primary filters as full-width buttons -->
 										<div class="filter-section">
 											<div class="filter-section-header">
 												Status
@@ -338,59 +395,84 @@ function setPage(newPage: number) {
 														class="filter-option-check"
 													/>
 												</button>
+												<button
+													class="filter-option"
+													:class="{ active: isNoChaptersFilter }"
+													@click="updateFilters({ filter: 'no-chapters' })"
+												>
+													<UIcon
+														name="i-lucide-book-x"
+														class="filter-option-icon filter-option-icon-warning"
+													/>
+													<span class="filter-option-label">No chapters</span>
+													<UIcon
+														v-if="isNoChaptersFilter"
+														name="i-lucide-check"
+														class="filter-option-check"
+													/>
+												</button>
 											</div>
 										</div>
 
-										<!-- Sources section -->
-										<div
-											v-if="sources?.length"
-											class="filter-section"
-										>
-											<div class="filter-section-header">
-												Source
+										<!-- Two-column grid for Source and Language -->
+										<div class="filter-grid">
+											<!-- Sources section - Compact pills -->
+											<div
+												v-if="sources?.length"
+												class="filter-section filter-section-compact"
+											>
+												<div class="filter-section-header">
+													Source
+												</div>
+												<div class="filter-pills">
+													<button
+														class="filter-pill"
+														:class="{ active: !sourceFilter }"
+														@click="updateFilters({ source: undefined })"
+													>
+														All
+													</button>
+													<button
+														v-for="source in sources"
+														:key="source.id"
+														class="filter-pill"
+														:class="{ active: sourceFilter === source.id }"
+														@click="updateFilters({ source: source.id })"
+													>
+														<NuxtImg
+															v-if="source.icon"
+															:src="source.icon"
+															:alt="source.name"
+															class="filter-pill-img"
+														/>
+														{{ source.name.replace(/\s*\([^)]*\)/g, '') }}
+													</button>
+												</div>
 											</div>
-											<div class="filter-options">
-												<button
-													class="filter-option"
-													:class="{ active: !sourceFilter }"
-													@click="updateFilters({ source: undefined })"
-												>
-													<UIcon
-														name="i-lucide-database"
-														class="filter-option-icon"
-													/>
-													<span class="filter-option-label">All sources</span>
-													<UIcon
-														v-if="!sourceFilter"
-														name="i-lucide-check"
-														class="filter-option-check"
-													/>
-												</button>
-												<button
-													v-for="source in sources"
-													:key="source.id"
-													class="filter-option"
-													:class="{ active: sourceFilter === source.id }"
-													@click="updateFilters({ source: source.id })"
-												>
-													<NuxtImg
-														v-if="source.icon"
-														:src="source.icon"
-														:alt="source.name"
-														class="filter-option-img"
-													/>
-													<UIcon
-														v-else
-														name="i-lucide-globe"
-														class="filter-option-icon"
-													/>
-													<span class="filter-option-label">{{ source.name }}</span>
-													<UIcon
-														v-if="sourceFilter === source.id"
-														name="i-lucide-check"
-														class="filter-option-check"
-													/>
-												</button>
+
+											<!-- Language section - Compact pills -->
+											<div class="filter-section filter-section-compact">
+												<div class="filter-section-header">
+													Language
+												</div>
+												<div class="filter-pills">
+													<button
+														class="filter-pill"
+														:class="{ active: !languageFilter }"
+														@click="updateFilters({ language: undefined })"
+													>
+														All
+													</button>
+													<button
+														v-for="lang in languageOptions"
+														:key="lang.value"
+														class="filter-pill"
+														:class="{ active: languageFilter === lang.value }"
+														@click="updateFilters({ language: lang.value })"
+													>
+														{{ lang.label }}
+													</button>
+												</div>
 											</div>
 										</div>
 
@@ -546,6 +628,16 @@ function setPage(newPage: number) {
 
 .filter-chip-error:hover {
 	background: color-mix(in oklch, var(--ui-error) 20%, transparent);
+}
+
+.filter-chip-warning {
+	background: var(--ui-warning-soft);
+	border-color: color-mix(in oklch, var(--ui-warning) 30%, transparent);
+	color: var(--ui-warning);
+}
+
+.filter-chip-warning:hover {
+	background: color-mix(in oklch, var(--ui-warning) 20%, transparent);
 }
 
 .chip-icon {
@@ -708,7 +800,9 @@ function setPage(newPage: number) {
 
 /* Filter panel */
 .filter-panel {
-	width: 14rem;
+	width: 20rem;
+	max-height: calc(100vh - 8rem);
+	overflow-y: auto;
 	padding: 0.5rem;
 }
 
@@ -789,6 +883,14 @@ function setPage(newPage: number) {
 	color: var(--ui-error);
 }
 
+.filter-option-icon-warning {
+	color: var(--ui-warning);
+}
+
+.filter-option.active .filter-option-icon-warning {
+	color: var(--ui-warning);
+}
+
 .filter-option-label {
 	flex: 1;
 	min-width: 0;
@@ -801,6 +903,75 @@ function setPage(newPage: number) {
 	width: 1rem;
 	height: 1rem;
 	color: var(--ui-primary);
+	flex-shrink: 0;
+}
+
+/* Two-column grid for compact sections */
+.filter-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.75rem;
+	padding: 0.5rem 0;
+	border-bottom: 1px solid var(--ui-border);
+	margin-bottom: 0.25rem;
+}
+
+.filter-section-compact {
+	padding: 0;
+	border-bottom: none;
+	margin-bottom: 0;
+}
+
+.filter-section-compact:not(:last-child) {
+	border-bottom: none;
+	padding-bottom: 0;
+	margin-bottom: 0;
+}
+
+.filter-section-compact .filter-section-header {
+	padding: 0 0 0.375rem 0;
+}
+
+/* Compact pill buttons */
+.filter-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+}
+
+.filter-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.25rem 0.5rem;
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-muted);
+	border: 1px solid transparent;
+	border-radius: 1rem;
+	cursor: pointer;
+	transition: all 0.15s ease;
+	white-space: nowrap;
+}
+
+.filter-pill:hover {
+	color: var(--ui-text);
+	background: var(--ui-bg-elevated);
+	border-color: var(--ui-border);
+}
+
+.filter-pill.active {
+	color: var(--ui-primary);
+	background: var(--ui-primary-soft);
+	border-color: color-mix(in oklch, var(--ui-primary) 30%, transparent);
+}
+
+.filter-pill-img {
+	width: 0.875rem;
+	height: 0.875rem;
+	border-radius: 0.1875rem;
+	object-fit: cover;
 	flex-shrink: 0;
 }
 
