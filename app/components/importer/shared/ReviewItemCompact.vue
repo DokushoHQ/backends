@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SelectedSerie } from "~/composables/useImportWizard"
+import type { SelectedSerie } from "~/composables/useImportCart"
 
 const props = defineProps<{
 	serie: SelectedSerie
@@ -13,8 +13,6 @@ defineEmits<{
 const hasMatches = computed(() => (props.serie.similarMatches?.length || 0) > 0)
 const hasCartDuplicates = computed(() => (props.serie.cartDuplicates?.length || 0) > 0)
 
-// Status: configured, needs-attention, pending
-// "configured" only if action is complete (import, or link with linkToSerieId, or linkToCartKey set for cart duplicates)
 const isConfigured = computed(() => {
 	if (props.serie.action === "import") return true
 	if (props.serie.action === "link" && props.serie.linkToSerieId) return true
@@ -29,78 +27,201 @@ const status = computed(() => {
 	if (hasMatches.value) return "needs-attention"
 	return "pending"
 })
-
-const statusIcon = computed(() => {
-	switch (status.value) {
-		case "loading": return "i-lucide-loader-2"
-		case "configured": return "i-lucide-check-circle"
-		case "cart-duplicate": return "i-lucide-copy"
-		case "needs-attention": return "i-lucide-alert-triangle"
-		default: return "i-lucide-circle"
-	}
-})
 </script>
 
 <template>
 	<div
-		class="group rounded-lg bg-card overflow-hidden border transition-all cursor-pointer"
-		:class="[
-			selected ? 'ring-2 ring-primary border-primary' : 'border-border hover:border-primary/50',
-		]"
+		role="button"
+		tabindex="0"
+		class="review-compact-card"
+		:class="{
+			'is-selected': selected,
+			'is-configured': status === 'configured',
+			'needs-attention': status === 'needs-attention' || status === 'cart-duplicate',
+		}"
 		@click="$emit('click')"
+		@keydown.enter="$emit('click')"
+		@keydown.space.prevent="$emit('click')"
 	>
-		<div class="aspect-[2/3] relative bg-muted overflow-hidden">
-			<NuxtImg
-				v-if="serie.cover"
-				:src="serie.cover"
-				:alt="serie.title"
-				class="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-			/>
-			<div
-				v-else
-				class="absolute inset-0 flex items-center justify-center"
-			>
-				<UIcon
-					name="i-lucide-book-open"
-					class="h-8 w-8 text-muted-foreground/50"
-				/>
-			</div>
-			<!-- Status indicator -->
-			<div class="absolute top-1.5 right-1.5 flex items-center gap-1">
-				<!-- Primary badge for cart duplicates -->
+		<SeriesCardBase
+			:title="serie.title"
+			:cover="serie.cover"
+			:accent-color="status === 'needs-attention' || status === 'cart-duplicate' ? 'error' : 'primary'"
+			:show-accent="selected || status === 'configured'"
+		>
+			<template #badge>
+				<!-- Status badge -->
 				<div
-					v-if="serie.isPrimaryInGroup"
-					class="px-1.5 py-0.5 bg-primary rounded text-[9px] font-semibold text-primary-foreground"
-				>
-					PRIMARY
-				</div>
-				<div
-					class="w-5 h-5 rounded-full flex items-center justify-center"
+					class="status-badge"
 					:class="{
-						'bg-success': status === 'configured',
-						'bg-warning': status === 'needs-attention' || status === 'cart-duplicate',
-						'bg-muted': status !== 'configured' && status !== 'needs-attention' && status !== 'cart-duplicate',
+						'status-badge--configured': status === 'configured',
+						'status-badge--warning': status === 'needs-attention' || status === 'cart-duplicate',
+						'status-badge--loading': status === 'loading',
+						'status-badge--pending': status === 'pending',
 					}"
 				>
 					<UIcon
-						:name="statusIcon"
-						class="w-3 h-3"
-						:class="[
-							status === 'loading' ? 'animate-spin text-muted-foreground' : '',
-							status === 'configured' ? 'text-success-foreground' : '',
-							status === 'needs-attention' || status === 'cart-duplicate' ? 'text-warning-foreground' : 'text-muted-foreground',
-						]"
+						v-if="status === 'loading'"
+						name="i-lucide-loader-2"
+						class="badge-icon badge-icon--spin"
+					/>
+					<UIcon
+						v-else-if="status === 'configured'"
+						name="i-lucide-check"
+						class="badge-icon"
+					/>
+					<UIcon
+						v-else-if="status === 'cart-duplicate'"
+						name="i-lucide-copy"
+						class="badge-icon"
+					/>
+					<UIcon
+						v-else-if="status === 'needs-attention'"
+						name="i-lucide-alert-triangle"
+						class="badge-icon"
+					/>
+					<UIcon
+						v-else
+						name="i-lucide-circle-dashed"
+						class="badge-icon"
 					/>
 				</div>
-			</div>
-			<div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent p-2 pt-6">
-				<p class="font-medium text-white text-xs leading-tight truncate">
-					{{ serie.title }}
-				</p>
-				<p class="text-white/70 text-[10px] truncate">
+				<!-- Primary badge for cart duplicates -->
+				<div
+					v-if="serie.isPrimaryInGroup"
+					class="primary-badge"
+				>
+					Primary
+				</div>
+			</template>
+
+			<template #badge-bottom>
+				<!-- Source badge -->
+				<div class="source-badge">
 					{{ serie.sourceName }}
-				</p>
-			</div>
-		</div>
+				</div>
+			</template>
+		</SeriesCardBase>
 	</div>
 </template>
+
+<style scoped>
+.review-compact-card {
+	display: block;
+	cursor: pointer;
+}
+
+.review-compact-card:hover :deep(.series-card-base) {
+	transform: translateY(-6px) scale(1.02);
+	box-shadow:
+		0 12px 28px -8px color-mix(in oklch, var(--ui-text) 15%, transparent),
+		0 4px 12px -4px color-mix(in oklch, var(--ui-text) 8%, transparent);
+}
+
+.review-compact-card:active :deep(.series-card-base) {
+	transform: translateY(-2px) scale(1.01);
+	transition-duration: 0.1s;
+}
+
+.review-compact-card:hover :deep(.cover-image) {
+	transform: scale(1.08);
+}
+
+.review-compact-card:hover :deep(.spine-accent) {
+	height: 100%;
+}
+
+.review-compact-card.is-selected :deep(.series-card-base) {
+	border-color: var(--ui-primary);
+	box-shadow: 0 0 0 2px var(--ui-primary-soft);
+}
+
+.review-compact-card.needs-attention.is-selected :deep(.series-card-base) {
+	border-color: var(--ui-warning);
+	box-shadow: 0 0 0 2px color-mix(in oklch, var(--ui-warning) 20%, transparent);
+}
+
+/* Focus state for accessibility */
+.review-compact-card:focus-visible {
+	outline: 2px solid var(--ui-primary);
+	outline-offset: 2px;
+}
+
+/* Status badge */
+.status-badge {
+	position: absolute;
+	top: 0.5rem;
+	right: calc(0.75rem + 0.25rem);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 50%;
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--ui-text) 20%, transparent);
+}
+
+.badge-icon {
+	width: 0.875rem;
+	height: 0.875rem;
+}
+
+.badge-icon--spin {
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+.status-badge--configured {
+	background: var(--ui-success);
+	color: white;
+}
+
+.status-badge--warning {
+	background: var(--ui-warning);
+	color: white;
+}
+
+.status-badge--loading {
+	background: var(--ui-bg-muted);
+	color: var(--ui-text-muted);
+}
+
+.status-badge--pending {
+	background: var(--ui-bg-muted);
+	color: var(--ui-text-dimmed);
+}
+
+/* Primary badge */
+.primary-badge {
+	position: absolute;
+	top: 0.5rem;
+	left: 0.5rem;
+	padding: 0.125rem 0.375rem;
+	font-size: 0.5625rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: white;
+	background: var(--ui-primary);
+	border-radius: 0.25rem;
+	box-shadow: 0 2px 4px color-mix(in oklch, var(--ui-text) 20%, transparent);
+}
+
+/* Source badge */
+.source-badge {
+	position: absolute;
+	bottom: 0.5rem;
+	left: 0.5rem;
+	padding: 0.25rem 0.5rem;
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+	color: white;
+	background: color-mix(in oklch, black 60%, transparent);
+	backdrop-filter: blur(4px);
+	border-radius: 0.25rem;
+}
+</style>

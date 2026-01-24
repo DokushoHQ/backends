@@ -1,6 +1,20 @@
+import { z } from "zod"
 import { serieIndex } from "../../../utils/meilisearch"
 
 const PAGE_SIZE = 24
+
+const querySchema = z.object({
+	page: z.coerce.number().int().min(1).default(1),
+	q: z.string().trim().optional(),
+	filter: z.enum(["failing", "no-chapters"]).optional(),
+	source: z.string().uuid().optional(),
+	genre: z.string().optional(),
+	author: z.string().optional(),
+	artist: z.string().optional(),
+	status: z.string().optional(),
+	type: z.string().optional(),
+	language: z.string().optional(),
+})
 
 const serieSelect = {
 	id: true,
@@ -16,13 +30,39 @@ const serieSelect = {
 export default defineEventHandler(async (event) => {
 	await requireAuth(event)
 
-	const query = getQuery(event)
-	const page = Math.max(1, Number.parseInt(String(query.page || "1"), 10))
-	const searchQuery = (query.q as string)?.trim()
-	const sourceFilter = query.source as string | undefined
-	const failingFilter = query.filter === "failing"
+	const query = await getValidatedQuery(event, querySchema.parse)
 
-	// Failing series filter
+	const {
+		page,
+		q: searchQuery,
+		filter,
+		source: sourceFilter,
+		genre: genreFilter,
+		author: authorFilter,
+		artist: artistFilter,
+		status: statusFilter,
+		type: typeFilter,
+		language: languageFilter,
+	} = query
+
+	const failingFilter = filter === "failing"
+	const noChaptersFilter = filter === "no-chapters"
+
+	// Build Meilisearch filter array
+	function buildFilters(): string[] {
+		const filters: string[] = ["soft_deleted = false"]
+		if (noChaptersFilter) filters.push("chapter_count = 0")
+		if (languageFilter) filters.push(`languages_available = "${languageFilter}"`)
+		if (sourceFilter) filters.push(`source_ids = "${sourceFilter}"`)
+		if (genreFilter) filters.push(`genres = "${genreFilter}"`)
+		if (authorFilter) filters.push(`authors = "${authorFilter}"`)
+		if (artistFilter) filters.push(`artists = "${artistFilter}"`)
+		if (statusFilter) filters.push(`status = "${statusFilter}"`)
+		if (typeFilter) filters.push(`type = "${typeFilter}"`)
+		return filters
+	}
+
+	// Failing series filter - uses PostgreSQL for failure counting
 	if (failingFilter) {
 		const failingSeries = await db.serieSource.groupBy({
 			by: ["serie_id"],
@@ -65,100 +105,14 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
-	// Source filter using Meilisearch
-	if (sourceFilter) {
-		const searchResult = await serieIndex.search("", {
-			limit: PAGE_SIZE,
-			offset: (page - 1) * PAGE_SIZE,
-			filter: `soft_deleted = false AND source_ids = "${sourceFilter}"`,
-			sort: ["updated_at:desc"],
-		})
-
-		const ids = searchResult.hits.map(hit => hit.id)
-		if (ids.length === 0) {
-			return {
-				data: [],
-				pagination: { page, pageSize: PAGE_SIZE, total: 0, totalPages: 0 },
-			}
-		}
-
-		const seriesMap = new Map(
-			(
-				await db.serie.findMany({
-					where: { id: { in: ids } },
-					select: serieSelect,
-				})
-			).map(s => [s.id, s]),
-		)
-
-		const series = ids.map(id => seriesMap.get(id)).filter(Boolean)
-		const total = searchResult.estimatedTotalHits ?? series.length
-
-		return {
-			data: series,
-			pagination: {
-				page,
-				pageSize: PAGE_SIZE,
-				total,
-				totalPages: Math.ceil(total / PAGE_SIZE),
-			},
-		}
-	}
-
-	// Search query
-	if (searchQuery) {
-		const searchResult = await serieIndex.search(searchQuery, {
-			limit: PAGE_SIZE,
-			offset: (page - 1) * PAGE_SIZE,
-		})
-
-		const ids = searchResult.hits.map(hit => hit.id)
-		if (ids.length === 0) {
-			return {
-				data: [],
-				pagination: { page, pageSize: PAGE_SIZE, total: 0, totalPages: 0 },
-			}
-		}
-
-		// Create a map of hit data for merging sources
-		const hitsMap = new Map(searchResult.hits.map(hit => [hit.id, hit]))
-
-		// Get series by IDs, maintaining search order
-		const seriesMap = new Map(
-			(
-				await db.serie.findMany({
-					where: { id: { in: ids }, soft_deleted_at: null },
-					select: serieSelect,
-				})
-			).map(s => [s.id, s]),
-		)
-
-		// Merge DB data with sources from Meilisearch hits
-		const series = ids.map((id) => {
-			const dbData = seriesMap.get(id)
-			if (!dbData) return null
-			const hit = hitsMap.get(id)
-			return { ...dbData, sources: hit?.sources ?? [] }
-		}).filter(Boolean)
-		const total = searchResult.estimatedTotalHits ?? series.length
-
-		return {
-			data: series,
-			pagination: {
-				page,
-				pageSize: PAGE_SIZE,
-				total,
-				totalPages: Math.ceil(total / PAGE_SIZE),
-			},
-		}
-	}
-
-	// Default: paginated series using Meilisearch for fast sorting/filtering
-	const searchResult = await serieIndex.search("", {
+	// Default: Meilisearch search with optional filters
+	// - With search query: relevance sorting
+	// - Without search query: sort by updated_at desc
+	const searchResult = await serieIndex.search(searchQuery ?? "", {
 		limit: PAGE_SIZE,
 		offset: (page - 1) * PAGE_SIZE,
-		filter: "soft_deleted = false",
-		sort: ["updated_at:desc"],
+		filter: buildFilters().join(" AND "),
+		...(!searchQuery && { sort: ["updated_at:desc"] }),
 	})
 
 	const ids = searchResult.hits.map(hit => hit.id)
@@ -169,7 +123,8 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
-	// Fetch full data from PostgreSQL, maintaining Meilisearch order
+	const hitsMap = new Map(searchResult.hits.map(hit => [hit.id, hit]))
+
 	const seriesMap = new Map(
 		(
 			await db.serie.findMany({
@@ -179,7 +134,12 @@ export default defineEventHandler(async (event) => {
 		).map(s => [s.id, s]),
 	)
 
-	const series = ids.map(id => seriesMap.get(id)).filter(Boolean)
+	const series = ids.map((id) => {
+		const dbData = seriesMap.get(id)
+		if (!dbData) return null
+		const hit = hitsMap.get(id)
+		return { ...dbData, sources: hit?.sources ?? [] }
+	}).filter(Boolean)
 	const total = searchResult.estimatedTotalHits ?? series.length
 
 	return {

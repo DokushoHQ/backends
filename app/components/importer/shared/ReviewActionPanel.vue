@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SelectedSerie } from "~/composables/useImportWizard"
+import type { SelectedSerie } from "~/composables/useImportCart"
 
 const props = defineProps<{
 	serie: SelectedSerie | null
@@ -284,12 +284,14 @@ watch(() => props.serie?.externalId, () => {
 							@change="handleActionChange(`link:${topMatch.serieId}`)"
 						>
 						<div class="flex-1 min-w-0">
-							<span class="text-sm font-medium">
-								Link to existing
-							</span>
+							<div class="flex items-center justify-between gap-2">
+								<span class="text-sm font-medium">Link to existing</span>
+								<span class="flex-shrink-0 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+									{{ Math.round(topMatch.similarity * 100) }}%
+								</span>
+							</div>
 							<p class="text-xs text-muted-foreground truncate">
 								{{ topMatch.title }}
-								<span class="text-primary ml-1">{{ Math.round(topMatch.similarity * 100) }}% match</span>
 							</p>
 						</div>
 					</label>
@@ -319,12 +321,14 @@ watch(() => props.serie?.externalId, () => {
 								@change="handleActionChange(`link:${match.serieId}`)"
 							>
 							<div class="flex-1 min-w-0">
-								<span class="text-sm font-medium">
-									Link to existing
-								</span>
+								<div class="flex items-center justify-between gap-2">
+									<span class="text-sm font-medium">Link to existing</span>
+									<span class="flex-shrink-0 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+										{{ Math.round(match.similarity * 100) }}%
+									</span>
+								</div>
 								<p class="text-xs text-muted-foreground truncate">
 									{{ match.title }}
-									<span class="text-primary ml-1">{{ Math.round(match.similarity * 100) }}% match</span>
 								</p>
 							</div>
 						</label>

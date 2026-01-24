@@ -22,6 +22,11 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 			genres: { select: { title: true } },
 			authors: { select: { name: true } },
 			artists: { select: { name: true } },
+			chapters: {
+				where: { enabled: true },
+				select: { language: true },
+				distinct: ["language"],
+			},
 			_count: { select: { chapters: { where: { enabled: true } } } },
 		},
 	})
@@ -150,6 +155,8 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 				// Sorting and filtering
 				updated_at: updated.updated_at.getTime(),
 				soft_deleted: serie.soft_deleted_at !== null,
+				chapter_count: serie._count.chapters,
+				languages_available: serie.chapters.map(c => c.language),
 			},
 		],
 		{ primaryKey: "id" },

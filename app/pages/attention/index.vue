@@ -201,15 +201,6 @@ const hasChapterIssues = computed(() =>
 </template>
 
 <style scoped>
-.attention-page {
-	--purple: oklch(0.7 0.15 280);
-	--purple-soft: oklch(0.7 0.15 280 / 0.12);
-	--amber: oklch(0.75 0.15 70);
-	--amber-soft: oklch(0.75 0.15 70 / 0.12);
-	--success: oklch(0.72 0.15 160);
-	--success-soft: oklch(0.72 0.15 160 / 0.12);
-}
-
 .attention-content {
 	padding: 1rem;
 }
@@ -222,14 +213,14 @@ const hasChapterIssues = computed(() =>
 	padding: 0.25rem 0.75rem;
 	font-size: 0.8125rem;
 	font-weight: 500;
-	color: var(--amber);
-	background: var(--amber-soft);
+	color: var(--ui-warning);
+	background: var(--ui-warning-soft);
 	border-radius: 2rem;
 }
 
 .status-pill.all-clear {
-	color: var(--success);
-	background: var(--success-soft);
+	color: var(--ui-success);
+	background: var(--ui-success-soft);
 }
 
 .status-dot {
@@ -267,20 +258,20 @@ const hasChapterIssues = computed(() =>
 	height: 4.5rem;
 	margin-bottom: 1.5rem;
 	border-radius: 50%;
-	background: var(--success-soft);
-	color: var(--success);
+	background: var(--ui-success-soft);
+	color: var(--ui-success);
 }
 
 .all-clear-state h2 {
 	font-size: 1.25rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 	margin-bottom: 0.5rem;
 }
 
 .all-clear-state p {
 	font-size: 0.875rem;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	max-width: 24rem;
 	margin-bottom: 1.5rem;
 }
@@ -292,14 +283,14 @@ const hasChapterIssues = computed(() =>
 	padding: 0.625rem 1.25rem;
 	font-size: 0.875rem;
 	font-weight: 500;
-	color: var(--purple);
-	background: var(--purple-soft);
+	color: var(--color-purple);
+	background: var(--color-purple-soft);
 	border-radius: 0.5rem;
 	transition: all 0.15s ease;
 }
 
 .scan-link:hover {
-	background: oklch(0.7 0.15 280 / 0.2);
+	background: color-mix(in oklch, var(--color-purple) 20%, transparent);
 }
 
 /* Stats section */
@@ -340,6 +331,6 @@ const hasChapterIssues = computed(() =>
 
 .empty-preview p {
 	font-size: var(--font-size-md);
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 </style>

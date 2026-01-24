@@ -1,0 +1,141 @@
+<script setup lang="ts">
+interface Props {
+	serie: {
+		id: string
+		title: string
+		cover: string | null
+		_count?: { chapters: number }
+		failureCount?: number
+	}
+}
+
+defineProps<Props>()
+</script>
+
+<template>
+	<NuxtLink
+		:to="`/series/${serie.id}`"
+		class="series-card"
+	>
+		<SeriesCardBase
+			:title="serie.title"
+			:cover="serie.cover"
+			:accent-color="(serie.failureCount ?? 0) > 0 ? 'error' : 'primary'"
+		>
+			<template #badge>
+				<!-- Issue/failure stamp -->
+				<div
+					v-if="(serie.failureCount ?? 0) > 0"
+					class="status-stamp"
+				>
+					<UIcon
+						name="i-lucide-alert-triangle"
+						class="stamp-icon"
+					/>
+					<span class="stamp-count">{{ serie.failureCount }}</span>
+				</div>
+			</template>
+
+			<template #badge-bottom>
+				<!-- Chapter count - magazine style -->
+				<div class="chapter-badge">
+					<span class="chapter-number">{{ serie._count?.chapters ?? 0 }}</span>
+					<span class="chapter-label">Ch</span>
+				</div>
+			</template>
+		</SeriesCardBase>
+	</NuxtLink>
+</template>
+
+<style scoped>
+.series-card {
+	display: block;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.series-card:hover :deep(.series-card-base) {
+	transform: translateY(-6px) scale(1.02);
+	box-shadow:
+		0 12px 28px -8px color-mix(in oklch, var(--ui-text) 15%, transparent),
+		0 4px 12px -4px color-mix(in oklch, var(--ui-text) 8%, transparent);
+}
+
+.series-card:active :deep(.series-card-base) {
+	transform: translateY(-2px) scale(1.01);
+	transition-duration: 0.1s;
+}
+
+.series-card:hover :deep(.cover-image) {
+	transform: scale(1.08);
+}
+
+.series-card:hover :deep(.spine-accent) {
+	height: 100%;
+}
+
+/* Focus state for accessibility */
+.series-card:focus-visible {
+	outline: 2px solid var(--ui-primary);
+	outline-offset: 2px;
+}
+
+/* Status stamp - ink seal style */
+.status-stamp {
+	position: absolute;
+	top: 0.5rem;
+	right: calc(0.75rem + 0.25rem);
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.25rem 0.5rem;
+	background: var(--ui-error);
+	color: white;
+	font-size: var(--font-size-xs);
+	font-weight: 700;
+	border-radius: 0.25rem;
+	box-shadow:
+		0 2px 4px color-mix(in oklch, var(--ui-error) 40%, transparent),
+		inset 0 1px 0 color-mix(in oklch, white 20%, transparent);
+	transform: rotate(-2deg);
+}
+
+.stamp-icon {
+	width: 0.75rem;
+	height: 0.75rem;
+}
+
+.stamp-count {
+	font-variant-numeric: tabular-nums;
+}
+
+/* Chapter badge - magazine issue number style */
+.chapter-badge {
+	position: absolute;
+	bottom: 0.625rem;
+	left: 0.625rem;
+	display: flex;
+	align-items: baseline;
+	gap: 0.125rem;
+	padding: 0.25rem 0.5rem;
+	background: color-mix(in oklch, var(--ui-bg-elevated) 95%, transparent);
+	backdrop-filter: blur(8px);
+	border-radius: 0.25rem;
+	border: 1px solid var(--ui-border-muted);
+}
+
+.chapter-label {
+	font-size: 0.625rem;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--ui-text-muted);
+}
+
+.chapter-number {
+	font-size: var(--font-size-sm);
+	font-weight: 700;
+	color: var(--ui-text);
+	font-variant-numeric: tabular-nums;
+}
+</style>

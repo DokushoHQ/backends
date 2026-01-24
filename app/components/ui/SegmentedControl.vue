@@ -36,7 +36,7 @@ const modelValue = defineModel<string>({ required: true })
 	align-items: center;
 	gap: 0.375rem;
 	padding: 0.25rem;
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 	border-radius: 0.5rem;
 	overflow-x: auto;
 	-webkit-overflow-scrolling: touch;
@@ -53,10 +53,10 @@ const modelValue = defineModel<string>({ required: true })
 	align-items: center;
 	justify-content: center;
 	gap: 0.375rem;
-	padding: 0.5rem 0.625rem;
+	padding: 0.625rem 0.75rem;
 	font-size: var(--font-size-sm);
 	font-weight: 500;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	border-radius: 0.375rem;
 	transition: all 0.15s ease;
 	cursor: pointer;
@@ -65,13 +65,13 @@ const modelValue = defineModel<string>({ required: true })
 }
 
 .segment:hover {
-	color: var(--color-text);
-	background: var(--color-background);
+	color: var(--ui-text);
+	background: var(--ui-bg-elevated);
 }
 
 .segment.active {
-	background: var(--color-background);
-	color: var(--color-text);
+	background: var(--ui-bg-elevated);
+	color: var(--ui-text);
 	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
@@ -79,19 +79,19 @@ const modelValue = defineModel<string>({ required: true })
 	padding: 0.125rem 0.375rem;
 	font-size: calc(var(--font-size-xs) - 0.125rem);
 	font-weight: 600;
-	background: var(--color-border);
+	background: var(--ui-border);
 	border-radius: 0.25rem;
 	font-variant-numeric: tabular-nums;
 }
 
 .segment.active .count {
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 }
 
 @media (min-width: 640px) {
 	.segment {
 		flex: 0 0 auto;
-		padding: 0.375rem 0.75rem;
+		padding: 0.5rem 1rem;
 	}
 
 	.segment .count {

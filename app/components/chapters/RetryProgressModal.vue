@@ -305,14 +305,14 @@ onUnmounted(() => {
 	width: 2.5rem;
 	height: 2.5rem;
 	border-radius: 0.625rem;
-	background: oklch(0.65 0.2 250 / 0.12);
-	color: oklch(0.65 0.2 250);
+	background: var(--ui-primary-soft);
+	color: var(--ui-primary);
 }
 
 .modal-title {
 	font-size: var(--font-size-lg);
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 }
 
 /* Stats grid */
@@ -328,28 +328,28 @@ onUnmounted(() => {
 	flex-direction: column;
 	align-items: center;
 	padding: 0.875rem;
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 	border-radius: 0.5rem;
 }
 
 .stat-item.highlight {
-	background: oklch(0.65 0.2 250 / 0.08);
+	background: var(--ui-primary-soft);
 }
 
 .stat-value {
 	font-size: var(--font-size-xl);
 	font-weight: 700;
-	color: var(--color-text);
+	color: var(--ui-text);
 	font-variant-numeric: tabular-nums;
 }
 
 .stat-item.highlight .stat-value {
-	color: oklch(0.65 0.2 250);
+	color: var(--ui-primary);
 }
 
 .stat-label {
 	font-size: var(--font-size-xs);
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	text-align: center;
 }
 
@@ -359,8 +359,8 @@ onUnmounted(() => {
 	gap: 0.5rem;
 	padding: 0.75rem;
 	font-size: var(--font-size-sm);
-	color: var(--color-text-muted);
-	background: var(--color-muted);
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-muted);
 	border-radius: 0.5rem;
 	margin-bottom: 1.5rem;
 }
@@ -372,14 +372,14 @@ onUnmounted(() => {
 
 .progress-bar-container {
 	height: 0.5rem;
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 	border-radius: 0.25rem;
 	overflow: hidden;
 }
 
 .progress-bar {
 	height: 100%;
-	background: oklch(0.65 0.2 250);
+	background: var(--ui-primary);
 	border-radius: 0.25rem;
 	transition: width 0.3s ease;
 }
@@ -389,12 +389,12 @@ onUnmounted(() => {
 	justify-content: space-between;
 	margin-top: 0.5rem;
 	font-size: var(--font-size-sm);
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .progress-percent {
 	font-weight: 600;
-	color: oklch(0.65 0.2 250);
+	color: var(--ui-primary);
 }
 
 /* Queue stats */
@@ -403,7 +403,7 @@ onUnmounted(() => {
 	flex-wrap: wrap;
 	gap: 0.75rem 1.25rem;
 	padding: 0.875rem;
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 	border-radius: 0.5rem;
 	margin-bottom: 1rem;
 }
@@ -413,7 +413,7 @@ onUnmounted(() => {
 	align-items: center;
 	gap: 0.375rem;
 	font-size: var(--font-size-sm);
-	color: var(--color-text);
+	color: var(--ui-text);
 }
 
 .queue-dot {
@@ -423,20 +423,20 @@ onUnmounted(() => {
 }
 
 .queue-dot.waiting {
-	background: oklch(0.75 0.15 70);
+	background: var(--ui-warning);
 }
 
 .queue-dot.active {
-	background: oklch(0.65 0.2 250);
+	background: var(--ui-primary);
 	animation: pulse 1.5s ease-in-out infinite;
 }
 
 .queue-dot.completed {
-	background: oklch(0.72 0.17 142);
+	background: var(--ui-success);
 }
 
 .queue-dot.failed {
-	background: oklch(0.65 0.25 25);
+	background: var(--ui-error);
 }
 
 @keyframes pulse {
@@ -446,7 +446,7 @@ onUnmounted(() => {
 
 .running-hint {
 	font-size: var(--font-size-sm);
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	margin-bottom: 1.5rem;
 }
 
@@ -459,18 +459,18 @@ onUnmounted(() => {
 }
 
 .complete-icon {
-	color: oklch(0.72 0.17 142);
+	color: var(--ui-success);
 	margin-bottom: 0.75rem;
 }
 
 .complete-text {
 	font-size: var(--font-size-md);
-	color: var(--color-text);
+	color: var(--ui-text);
 	text-align: center;
 }
 
 .failed-text {
-	color: oklch(0.65 0.25 25);
+	color: var(--ui-error);
 }
 
 /* Actions */

@@ -19,6 +19,11 @@ const otherSessionsCount = computed(() => {
 	return sessions.value?.filter(s => !s.isCurrent).length ?? 0
 })
 
+const sessionCountDescription = computed(() => {
+	const count = sessions.value?.length ?? 0
+	return `${count} active session${count === 1 ? "" : "s"}`
+})
+
 function parseUserAgent(ua: string | null): { browser: string, os: string } {
 	if (!ua) return { browser: "Unknown", os: "Unknown" }
 
@@ -50,6 +55,12 @@ function formatDate(dateStr: string): string {
 		hour: "2-digit",
 		minute: "2-digit",
 	})
+}
+
+function getDeviceIcon(ua: string | null): string {
+	const { os } = parseUserAgent(ua)
+	if (os === "iOS" || os === "Android") return "i-lucide-smartphone"
+	return "i-lucide-monitor"
 }
 
 async function handleRevoke(token: string) {
@@ -96,99 +107,234 @@ async function handleRevokeAllOthers() {
 </script>
 
 <template>
-	<UCard>
-		<template #header>
-			<div class="flex items-center justify-between">
-				<div>
-					<h3 class="text-lg font-semibold flex items-center gap-2">
-						<UIcon
-							name="i-lucide-monitor-smartphone"
-							class="size-4"
-						/>
-						Active Sessions
-					</h3>
-					<p class="text-sm text-muted-foreground">
-						{{ sessions?.length ?? 0 }} active session{{ sessions?.length === 1 ? '' : 's' }}
-					</p>
-				</div>
-				<UButton
-					v-if="otherSessionsCount > 0"
-					variant="outline"
-					size="sm"
-					:loading="revokingAll"
-					@click="handleRevokeAllOthers"
-				>
-					Revoke All Others
-				</UButton>
-			</div>
+	<UiContentCard
+		title="Active Sessions"
+		:description="sessionCountDescription"
+		icon="i-lucide-monitor-smartphone"
+		color="blue"
+	>
+		<template #header-actions>
+			<UButton
+				v-if="otherSessionsCount > 0"
+				variant="outline"
+				size="sm"
+				:loading="revokingAll"
+				@click="handleRevokeAllOthers"
+			>
+				Revoke All Others
+			</UButton>
 		</template>
 
-		<div
-			v-if="error"
-			class="rounded-md bg-destructive/10 p-3 text-sm text-destructive mb-4"
-		>
-			{{ error }}
-		</div>
-
-		<div
-			v-if="!sessions || sessions.length === 0"
-			class="text-center py-8 text-muted-foreground"
-		>
-			No active sessions
-		</div>
-
-		<div
-			v-else
-			class="space-y-3"
-		>
+		<div class="card-body">
 			<div
-				v-for="session in sessions"
-				:key="session.id"
-				class="flex items-center justify-between p-4 rounded-lg bg-muted/50"
+				v-if="error"
+				class="error-box"
 			>
-				<div class="flex items-center gap-4">
-					<UIcon
-						:name="parseUserAgent(session.userAgent).os === 'iOS' || parseUserAgent(session.userAgent).os === 'Android'
-							? 'i-lucide-smartphone'
-							: 'i-lucide-monitor'"
-						class="size-8 text-muted-foreground"
-					/>
-					<div>
-						<div class="flex items-center gap-2">
-							<span class="font-medium">
-								{{ parseUserAgent(session.userAgent).browser }} on {{ parseUserAgent(session.userAgent).os }}
-							</span>
-							<UBadge
-								v-if="session.isCurrent"
-								color="success"
-								variant="subtle"
-								size="sm"
-							>
-								Current
-							</UBadge>
+				{{ error }}
+			</div>
+
+			<div
+				v-if="!sessions || sessions.length === 0"
+				class="empty-state"
+			>
+				<UIcon
+					name="i-lucide-monitor-off"
+					class="empty-icon"
+				/>
+				<span>No active sessions</span>
+			</div>
+
+			<div
+				v-else
+				class="sessions-list"
+			>
+				<div
+					v-for="session in sessions"
+					:key="session.id"
+					class="session-item"
+					:class="{ current: session.isCurrent }"
+				>
+					<div class="session-info">
+						<div class="device-icon">
+							<UIcon
+								:name="getDeviceIcon(session.userAgent)"
+								class="h-5 w-5"
+							/>
 						</div>
-						<div class="text-sm text-muted-foreground space-x-3">
-							<span v-if="session.ipAddress">{{ session.ipAddress }}</span>
-							<span>{{ formatDate(session.createdAt) }}</span>
+						<div class="session-details">
+							<div class="session-title">
+								<span class="device-name">
+									{{ parseUserAgent(session.userAgent).browser }} on {{ parseUserAgent(session.userAgent).os }}
+								</span>
+								<span
+									v-if="session.isCurrent"
+									class="current-badge"
+								>
+									Current
+								</span>
+							</div>
+							<div class="session-meta">
+								<span
+									v-if="session.ipAddress"
+									class="ip-address"
+								>
+									{{ session.ipAddress }}
+								</span>
+								<span class="session-date">{{ formatDate(session.createdAt) }}</span>
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<UButton
-					v-if="!session.isCurrent"
-					variant="ghost"
-					color="error"
-					size="sm"
-					:loading="revokingToken === session.token"
-					@click="handleRevoke(session.token)"
-				>
-					<UIcon
-						name="i-lucide-log-out"
-						class="size-4"
-					/>
-					Revoke
-				</UButton>
+					<UButton
+						v-if="!session.isCurrent"
+						variant="ghost"
+						color="error"
+						size="sm"
+						:loading="revokingToken === session.token"
+						@click="handleRevoke(session.token)"
+					>
+						<UIcon
+							name="i-lucide-log-out"
+							class="h-4 w-4"
+						/>
+						Revoke
+					</UButton>
+				</div>
 			</div>
 		</div>
-	</UCard>
+	</UiContentCard>
 </template>
+
+<style scoped>
+.card-body {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1rem;
+}
+
+/* Error box */
+.error-box {
+	padding: 0.75rem;
+	background: var(--ui-error-soft);
+	color: var(--ui-error);
+	border-radius: 0.5rem;
+	font-size: var(--font-size-sm);
+}
+
+/* Empty state */
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 2rem;
+	color: var(--ui-text-muted);
+	font-size: var(--font-size-sm);
+}
+
+.empty-icon {
+	width: 2rem;
+	height: 2rem;
+	opacity: 0.5;
+}
+
+/* Sessions list */
+.sessions-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+/* Session item */
+.session-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1rem;
+	background: var(--ui-bg-muted);
+	border-radius: 0.5rem;
+	transition: background 0.15s ease;
+}
+
+.session-item:hover {
+	background: color-mix(in oklch, var(--ui-bg-muted) 80%, var(--ui-border) 20%);
+}
+
+.session-item.current {
+	background: var(--ui-success-soft);
+	border: 1px solid color-mix(in oklch, var(--ui-success) 20%, transparent);
+}
+
+.session-item.current:hover {
+	background: color-mix(in oklch, var(--ui-success-soft) 90%, var(--ui-success) 10%);
+}
+
+.session-info {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.device-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 0.5rem;
+	background: var(--ui-bg-elevated);
+	color: var(--ui-text-muted);
+	flex-shrink: 0;
+}
+
+.session-item.current .device-icon {
+	background: color-mix(in oklch, var(--ui-success) 15%, var(--ui-bg-elevated));
+	color: var(--ui-success);
+}
+
+.session-details {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.session-title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.device-name {
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.current-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.125rem 0.5rem;
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+	border-radius: 2rem;
+	background: var(--ui-success);
+	color: white;
+}
+
+.session-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-muted);
+}
+
+.ip-address {
+	font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.session-date {
+	opacity: 0.8;
+}
+</style>

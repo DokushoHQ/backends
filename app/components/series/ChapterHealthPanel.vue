@@ -348,40 +348,14 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 
 <style scoped>
 .health-panel {
-	--accent: oklch(0.7 0.18 250);
-	--accent-soft: oklch(0.7 0.18 250 / 0.15);
-	--success: oklch(0.72 0.17 152);
-	--success-soft: oklch(0.72 0.17 152 / 0.15);
-	--warning: oklch(0.78 0.16 70);
-	--warning-soft: oklch(0.78 0.16 70 / 0.15);
-	--danger: oklch(0.65 0.22 25);
-	--danger-soft: oklch(0.65 0.22 25 / 0.15);
-	--pending: oklch(0.75 0.14 85);
-	--pending-soft: oklch(0.75 0.14 85 / 0.15);
-	--muted: oklch(0.5 0.02 250);
-
 	position: relative;
 	width: 100%;
 	max-width: 100%;
 	box-sizing: border-box;
-	background: linear-gradient(
-		135deg,
-		oklch(0.18 0.02 250) 0%,
-		oklch(0.14 0.015 250) 100%
-	);
-	border: 1px solid oklch(0.3 0.02 250);
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-border);
 	border-radius: 1rem;
 	overflow: hidden;
-}
-
-.health-panel::before {
-	content: "";
-	position: absolute;
-	inset: 0;
-	background:
-		radial-gradient(ellipse at 0% 0%, oklch(0.7 0.18 250 / 0.08) 0%, transparent 50%),
-		radial-gradient(ellipse at 100% 100%, oklch(0.65 0.22 25 / 0.05) 0%, transparent 50%);
-	pointer-events: none;
 }
 
 /* Diagnostic Header */
@@ -408,13 +382,13 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 }
 
 .ring-track {
-	stroke: oklch(0.25 0.02 250);
+	stroke: var(--ui-border);
 }
 
 .ring-progress {
-	stroke: var(--success);
+	stroke: var(--ui-success);
 	transition: stroke-dasharray 0.6s ease;
-	filter: drop-shadow(0 0 6px oklch(0.72 0.17 152 / 0.5));
+	filter: drop-shadow(0 0 6px color-mix(in oklch, var(--ui-success) 50%, transparent));
 }
 
 .ring-center {
@@ -429,7 +403,7 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 .ring-value {
 	font-size: 1.5rem;
 	font-weight: 700;
-	color: var(--color-text);
+	color: var(--ui-text);
 	font-variant-numeric: tabular-nums;
 	letter-spacing: -0.02em;
 }
@@ -437,7 +411,7 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 .ring-unit {
 	font-size: 0.75rem;
 	font-weight: 500;
-	color: var(--muted);
+	color: var(--ui-text-muted);
 	margin-top: 0.25rem;
 }
 
@@ -459,7 +433,7 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 .status-title {
 	font-size: 1.125rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 	letter-spacing: -0.01em;
 }
 
@@ -472,19 +446,19 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
-	color: var(--success);
-	background: var(--success-soft);
+	color: var(--ui-success);
+	background: var(--ui-success-soft);
 	border-radius: 2rem;
 }
 
 .status-indicator.warning {
-	color: var(--warning);
-	background: var(--warning-soft);
+	color: var(--ui-warning);
+	background: var(--ui-warning-soft);
 }
 
 .status-indicator.critical {
-	color: var(--danger);
-	background: var(--danger-soft);
+	color: var(--ui-error);
+	background: var(--ui-error-soft);
 }
 
 .indicator-dot {
@@ -502,11 +476,11 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 
 .status-summary {
 	font-size: 0.8125rem;
-	color: var(--muted);
+	color: var(--ui-text-muted);
 }
 
 .status-summary strong {
-	color: var(--color-text);
+	color: var(--ui-text);
 	font-weight: 600;
 }
 
@@ -523,15 +497,14 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 	align-items: center;
 	gap: 0.375rem;
 	padding: 0.3125rem 0.625rem;
-	background: oklch(0.22 0.02 250);
-	border: 1px solid oklch(0.3 0.02 250);
+	background: var(--ui-bg-muted);
+	border: 1px solid var(--ui-border);
 	border-radius: 0.5rem;
 	transition: all 0.15s ease;
 }
 
 .chip:hover {
-	background: oklch(0.25 0.02 250);
-	border-color: oklch(0.35 0.02 250);
+	background: var(--ui-bg-accented);
 }
 
 .chip-icon {
@@ -542,25 +515,25 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 .chip-count {
 	font-size: 0.8125rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 	font-variant-numeric: tabular-nums;
 }
 
 .chip-label {
 	font-size: 0.6875rem;
-	color: var(--muted);
+	color: var(--ui-text-muted);
 	text-transform: uppercase;
 	letter-spacing: 0.03em;
 }
 
 /* Chip color variants */
-.chip.success { color: var(--success); border-color: oklch(0.72 0.17 152 / 0.3); }
-.chip.pending { color: var(--pending); border-color: oklch(0.75 0.14 85 / 0.3); }
-.chip.inProgress { color: var(--accent); border-color: oklch(0.7 0.18 250 / 0.3); }
-.chip.partial { color: var(--warning); border-color: oklch(0.78 0.16 70 / 0.3); }
-.chip.failed { color: var(--danger); border-color: oklch(0.65 0.22 25 / 0.3); }
-.chip.incomplete { color: var(--warning); border-color: oklch(0.78 0.16 70 / 0.3); }
-.chip.permanentlyFailed { color: oklch(0.55 0.15 25); border-color: oklch(0.55 0.15 25 / 0.3); }
+.chip.success { color: var(--ui-success); border-color: color-mix(in oklch, var(--ui-success) 30%, transparent); }
+.chip.pending { color: var(--ui-info); border-color: color-mix(in oklch, var(--ui-info) 30%, transparent); }
+.chip.inProgress { color: var(--ui-primary); border-color: color-mix(in oklch, var(--ui-primary) 30%, transparent); }
+.chip.partial { color: var(--ui-warning); border-color: color-mix(in oklch, var(--ui-warning) 30%, transparent); }
+.chip.failed { color: var(--ui-error); border-color: color-mix(in oklch, var(--ui-error) 30%, transparent); }
+.chip.incomplete { color: var(--ui-warning); border-color: color-mix(in oklch, var(--ui-warning) 30%, transparent); }
+.chip.permanentlyFailed { color: var(--ui-error); border-color: color-mix(in oklch, var(--ui-error) 30%, transparent); opacity: 0.7; }
 
 /* Header Actions */
 .header-actions {
@@ -576,18 +549,18 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 	padding: 0.5rem 1rem;
 	font-size: 0.8125rem;
 	font-weight: 600;
-	color: var(--accent);
-	background: var(--accent-soft);
-	border: 1px solid oklch(0.7 0.18 250 / 0.3);
+	color: var(--ui-primary);
+	background: var(--ui-primary-soft);
+	border: 1px solid color-mix(in oklch, var(--ui-primary) 30%, transparent);
 	border-radius: 0.5rem;
 	cursor: pointer;
 	transition: all 0.15s ease;
 }
 
 .retry-btn:hover:not(:disabled) {
-	background: oklch(0.7 0.18 250 / 0.25);
-	border-color: oklch(0.7 0.18 250 / 0.5);
-	box-shadow: 0 0 16px oklch(0.7 0.18 250 / 0.2);
+	background: color-mix(in oklch, var(--ui-primary) 25%, transparent);
+	border-color: color-mix(in oklch, var(--ui-primary) 50%, transparent);
+	box-shadow: 0 0 16px color-mix(in oklch, var(--ui-primary) 20%, transparent);
 }
 
 .retry-btn:disabled {
@@ -615,39 +588,38 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 	justify-content: center;
 	width: 2.25rem;
 	height: 2.25rem;
-	background: oklch(0.22 0.02 250);
-	border: 1px solid oklch(0.3 0.02 250);
+	background: var(--ui-bg-muted);
+	border: 1px solid var(--ui-border);
 	border-radius: 0.5rem;
 	cursor: pointer;
 	transition: all 0.15s ease;
 }
 
 .expand-btn:hover {
-	background: oklch(0.25 0.02 250);
-	border-color: oklch(0.35 0.02 250);
+	background: var(--ui-bg-accented);
 }
 
 .expand-btn.active {
-	background: var(--accent-soft);
-	border-color: oklch(0.7 0.18 250 / 0.3);
-	color: var(--accent);
+	background: var(--ui-primary-soft);
+	border-color: color-mix(in oklch, var(--ui-primary) 30%, transparent);
+	color: var(--ui-primary);
 }
 
 .expand-icon {
 	width: 1rem;
 	height: 1rem;
-	color: var(--muted);
+	color: var(--ui-text-muted);
 	transition: transform 0.2s ease;
 }
 
 .expand-btn.active .expand-icon {
-	color: var(--accent);
+	color: var(--ui-primary);
 }
 
 /* Chapter List */
 .chapter-list {
-	border-top: 1px solid oklch(0.25 0.02 250);
-	background: oklch(0.12 0.01 250);
+	border-top: 1px solid var(--ui-border);
+	background: var(--ui-bg-muted);
 }
 
 .list-header {
@@ -655,7 +627,7 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 	align-items: center;
 	justify-content: space-between;
 	padding: 0.75rem 1.5rem;
-	border-bottom: 1px solid oklch(0.2 0.02 250);
+	border-bottom: 1px solid var(--ui-border);
 }
 
 .list-title {
@@ -663,12 +635,12 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
-	color: var(--muted);
+	color: var(--ui-text-muted);
 }
 
 .list-count {
 	font-size: 0.6875rem;
-	color: oklch(0.45 0.02 250);
+	color: var(--ui-text-muted);
 }
 
 .list-items {
@@ -699,7 +671,7 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 }
 
 .chapter-row:hover {
-	background: oklch(0.18 0.02 250);
+	background: var(--ui-bg-elevated);
 }
 
 .row-status {
@@ -713,28 +685,29 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 }
 
 .row-status.pending {
-	background: var(--pending-soft);
-	color: var(--pending);
+	background: var(--ui-info-soft);
+	color: var(--ui-info);
 }
 
 .row-status.partial {
-	background: var(--warning-soft);
-	color: var(--warning);
+	background: var(--ui-warning-soft);
+	color: var(--ui-warning);
 }
 
 .row-status.failed {
-	background: var(--danger-soft);
-	color: var(--danger);
+	background: var(--ui-error-soft);
+	color: var(--ui-error);
 }
 
 .row-status.incomplete {
-	background: var(--warning-soft);
-	color: var(--warning);
+	background: var(--ui-warning-soft);
+	color: var(--ui-warning);
 }
 
 .row-status.permanentlyfailed {
-	background: oklch(0.55 0.15 25 / 0.15);
-	color: oklch(0.55 0.15 25);
+	background: var(--ui-error-soft);
+	color: var(--ui-error);
+	opacity: 0.7;
 }
 
 .status-icon {
@@ -753,13 +726,13 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 .row-number {
 	font-size: 0.8125rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 	white-space: nowrap;
 }
 
 .row-title {
 	font-size: 0.8125rem;
-	color: var(--muted);
+	color: var(--ui-text-muted);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -768,9 +741,9 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 .row-source {
 	font-size: 0.6875rem;
 	font-weight: 500;
-	color: oklch(0.5 0.02 250);
+	color: var(--ui-text-muted);
 	padding: 0.1875rem 0.5rem;
-	background: oklch(0.2 0.02 250);
+	background: var(--ui-bg-muted);
 	border-radius: 0.25rem;
 	white-space: nowrap;
 	flex-shrink: 0;
@@ -785,16 +758,16 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 	background: transparent;
 	border: 1px solid transparent;
 	border-radius: 0.375rem;
-	color: var(--muted);
+	color: var(--ui-text-muted);
 	cursor: pointer;
 	transition: all 0.15s ease;
 	flex-shrink: 0;
 }
 
 .row-action:hover:not(:disabled) {
-	background: var(--accent-soft);
-	border-color: oklch(0.7 0.18 250 / 0.3);
-	color: var(--accent);
+	background: var(--ui-primary-soft);
+	border-color: color-mix(in oklch, var(--ui-primary) 30%, transparent);
+	color: var(--ui-primary);
 }
 
 .row-action:disabled {
@@ -814,10 +787,10 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 .list-footer {
 	padding: 0.75rem 1.5rem;
 	font-size: 0.75rem;
-	color: oklch(0.45 0.02 250);
+	color: var(--ui-text-muted);
 	text-align: center;
-	border-top: 1px solid oklch(0.2 0.02 250);
-	background: oklch(0.1 0.01 250);
+	border-top: 1px solid var(--ui-border);
+	background: var(--ui-bg);
 }
 
 /* Slide transition */

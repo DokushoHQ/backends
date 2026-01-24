@@ -300,15 +300,6 @@ const selectedStatus = computed({
 </template>
 
 <style scoped>
-.duplicates-page {
-	--accent: oklch(0.7 0.15 250);
-	--accent-soft: oklch(0.7 0.15 250 / 0.15);
-	--success: oklch(0.72 0.15 160);
-	--success-soft: oklch(0.72 0.15 160 / 0.15);
-	--danger: oklch(0.65 0.2 25);
-	--danger-soft: oklch(0.65 0.2 25 / 0.15);
-}
-
 /* Responsive navbar */
 .navbar-right {
 	display: flex;
@@ -324,8 +315,8 @@ const selectedStatus = computed({
 	display: flex;
 	justify-content: center;
 	padding: 0.75rem 1rem;
-	border-bottom: 1px solid var(--color-border);
-	background: var(--color-background);
+	border-bottom: 1px solid var(--ui-border);
+	background: var(--ui-bg);
 }
 
 .mobile-filter-bar :deep(.segmented-control) {
@@ -352,10 +343,10 @@ const selectedStatus = computed({
 	font-size: 0.8125rem;
 	font-weight: 500;
 	color: white;
-	background: linear-gradient(135deg, var(--accent), oklch(0.6 0.18 250));
+	background: linear-gradient(135deg, var(--ui-primary), color-mix(in oklch, var(--ui-primary) 80%, black));
 	border-radius: 0.375rem;
 	transition: all 0.2s ease;
-	box-shadow: 0 2px 8px oklch(0.7 0.15 250 / 0.3);
+	box-shadow: 0 2px 8px color-mix(in oklch, var(--ui-primary) 30%, transparent);
 }
 
 .scan-label {
@@ -376,7 +367,7 @@ const selectedStatus = computed({
 
 .scan-button:hover:not(:disabled) {
 	transform: translateY(-1px);
-	box-shadow: 0 4px 12px oklch(0.7 0.15 250 / 0.4);
+	box-shadow: 0 4px 12px color-mix(in oklch, var(--ui-primary) 40%, transparent);
 }
 
 .scan-button:disabled {
@@ -385,8 +376,8 @@ const selectedStatus = computed({
 }
 
 .scan-button.scanning {
-	background: var(--color-muted);
-	color: var(--color-text-muted);
+	background: var(--ui-bg-muted);
+	color: var(--ui-text-muted);
 	box-shadow: none;
 }
 
@@ -412,30 +403,30 @@ const selectedStatus = computed({
 	height: 4rem;
 	margin-bottom: 1.5rem;
 	border-radius: 1rem;
-	background: var(--color-muted);
-	color: var(--color-text-muted);
+	background: var(--ui-bg-muted);
+	color: var(--ui-text-muted);
 }
 
 .state-icon-wrapper.success {
-	background: var(--success-soft);
-	color: var(--success);
+	background: var(--ui-success-soft);
+	color: var(--ui-success);
 }
 
 .state-icon-wrapper.error {
-	background: var(--danger-soft);
-	color: var(--danger);
+	background: var(--ui-error-soft);
+	color: var(--ui-error);
 }
 
 .state-title {
 	font-size: 1.125rem;
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 	margin-bottom: 0.5rem;
 }
 
 .state-description {
 	font-size: 0.875rem;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 	max-width: 24rem;
 }
 
@@ -444,14 +435,14 @@ const selectedStatus = computed({
 	padding: 0.5rem 1rem;
 	font-size: 0.875rem;
 	font-weight: 500;
-	color: var(--color-text);
-	background: var(--color-muted);
+	color: var(--ui-text);
+	background: var(--ui-bg-muted);
 	border-radius: 0.5rem;
 	transition: background 0.15s ease;
 }
 
 .retry-button:hover {
-	background: var(--color-border);
+	background: var(--ui-border);
 }
 
 /* Pairs grid */
@@ -475,10 +466,5 @@ const selectedStatus = computed({
 		grid-auto-rows: 1fr;
 		gap: 1rem;
 	}
-}
-
-/* Dark mode */
-:root.dark .scan-button {
-	box-shadow: 0 2px 8px oklch(0.7 0.15 250 / 0.2);
 }
 </style>

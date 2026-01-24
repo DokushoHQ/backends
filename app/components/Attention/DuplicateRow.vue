@@ -58,8 +58,6 @@ defineProps<{
 
 <style scoped>
 .duplicate-row {
-	--purple: oklch(0.7 0.15 280);
-
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
@@ -67,7 +65,7 @@ defineProps<{
 	flex: 1;
 	text-decoration: none;
 	transition: background 0.15s ease;
-	border-bottom: 1px solid var(--color-border);
+	border-bottom: 1px solid var(--ui-border);
 }
 
 .duplicate-row:last-child {
@@ -75,7 +73,7 @@ defineProps<{
 }
 
 .duplicate-row:hover {
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 }
 
 .cover-stack {
@@ -91,8 +89,8 @@ defineProps<{
 	height: 3.5rem;
 	border-radius: 0.375rem;
 	overflow: hidden;
-	background: var(--color-muted);
-	border: 2px solid var(--color-background);
+	background: var(--ui-bg-muted);
+	border: 2px solid var(--ui-bg);
 	transition: transform 0.15s ease;
 }
 
@@ -124,7 +122,7 @@ defineProps<{
 	justify-content: center;
 	width: 100%;
 	height: 100%;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .row-info {
@@ -136,7 +134,7 @@ defineProps<{
 	display: block;
 	font-size: var(--font-size-md);
 	font-weight: 500;
-	color: var(--color-text);
+	color: var(--ui-text);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -145,16 +143,16 @@ defineProps<{
 
 .row-meta {
 	font-size: var(--font-size-sm);
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .confidence {
-	color: var(--purple);
+	color: var(--color-purple);
 	font-weight: 500;
 }
 
 .row-chevron {
 	flex-shrink: 0;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 </style>

@@ -74,17 +74,14 @@ if (error.value) {
 	console.error("Queue fetch error:", error.value)
 }
 
-const statusTabs = [
-	{ key: "latest", label: "Latest" },
-	{ key: "active", label: "Active" },
-	{ key: "waiting", label: "Waiting" },
-	{ key: "completed", label: "Completed" },
-	{ key: "failed", label: "Failed" },
-	{ key: "delayed", label: "Delayed" },
-]
+// Two-way binding for segmented control
+const selectedStatus = computed({
+	get: () => currentStatus.value,
+	set: (value: string) => router.push({ query: { ...route.query, status: value, page: undefined } }),
+})
 
-function getTabCount(key: string): number | null | undefined {
-	if (!data.value?.stats || key === "latest") return null
+function getTabCount(key: string): number | undefined {
+	if (!data.value?.stats || key === "latest") return undefined
 	if (key === "waiting") {
 		const stats = data.value.stats
 		return stats.waiting + stats.prioritized + stats.waitingChildren
@@ -92,47 +89,18 @@ function getTabCount(key: string): number | null | undefined {
 	return data.value.stats[key as keyof QueueStats] as number | undefined
 }
 
-function setStatus(status: string) {
-	router.push({ query: { ...route.query, status, page: undefined } })
-}
+const statusOptions = computed(() => [
+	{ label: "Latest", value: "latest" },
+	{ label: "Active", value: "active", count: getTabCount("active") },
+	{ label: "Waiting", value: "waiting", count: getTabCount("waiting") },
+	{ label: "Completed", value: "completed", count: getTabCount("completed") },
+	{ label: "Failed", value: "failed", count: getTabCount("failed") },
+	{ label: "Delayed", value: "delayed", count: getTabCount("delayed") },
+])
 
 function setPage(page: number) {
 	router.push({ query: { ...route.query, page: page > 1 ? page : undefined } })
 }
-
-// Pagination range with sliding window
-const paginationRange = computed(() => {
-	const total = data.value?.pagination.totalPages ?? 1
-	const current = currentPage.value
-	const delta = 2 // Pages to show on each side of current
-
-	if (total <= 1) return [1]
-
-	const range: (number | "ellipsis")[] = []
-
-	// Always show first page
-	range.push(1)
-
-	// Calculate window start/end
-	const windowStart = Math.max(2, current - delta)
-	const windowEnd = Math.min(total - 1, current + delta)
-
-	// Add ellipsis before window if needed
-	if (windowStart > 2) range.push("ellipsis")
-
-	// Add window pages
-	for (let i = windowStart; i <= windowEnd; i++) {
-		range.push(i)
-	}
-
-	// Add ellipsis after window if needed
-	if (windowEnd < total - 1) range.push("ellipsis")
-
-	// Always show last page (if more than 1 page)
-	if (total > 1) range.push(total)
-
-	return range
-})
 
 // Auto-refresh every 5 seconds
 let refreshInterval: ReturnType<typeof setInterval> | null = null
@@ -236,99 +204,10 @@ async function handleDuplicate(input: { name: string, data: unknown, opts?: unkn
 		console.error("Failed to duplicate job:", err)
 	}
 }
-
-// Utility functions
-function getJobStatus(job: Job): { status: string, color: string } {
-	// Use state from API if available
-	if (job.state) {
-		switch (job.state) {
-			case "failed":
-				return { status: "failed", color: "text-red-600 border-red-600/50" }
-			case "completed":
-				return { status: "completed", color: "text-green-600 border-green-600/50" }
-			case "active":
-				return { status: "active", color: "text-blue-600 border-blue-600/50" }
-			case "delayed":
-				return { status: "delayed", color: "text-cyan-600 border-cyan-600/50" }
-			case "waiting-children":
-				return { status: "waiting-children", color: "text-purple-600 border-purple-600/50" }
-			case "prioritized":
-				return { status: "prioritized", color: "text-orange-600 border-orange-600/50" }
-			case "waiting":
-			case "wait":
-				return { status: "waiting", color: "text-yellow-600 border-yellow-600/50" }
-		}
-	}
-	// Fallback to inferring from job properties
-	if (job.failedReason) return { status: "failed", color: "text-red-600 border-red-600/50" }
-	if (job.finishedOn) return { status: "completed", color: "text-green-600 border-green-600/50" }
-	if (job.processedOn) return { status: "active", color: "text-blue-600 border-blue-600/50" }
-	if (job.scheduledAt && !job.processedOn) return { status: "delayed", color: "text-cyan-600 border-cyan-600/50" }
-	return { status: "waiting", color: "text-yellow-600 border-yellow-600/50" }
-}
-
-function formatTimestamp(ts: number | undefined): string {
-	if (!ts) return "-"
-	return new Date(ts).toLocaleString()
-}
-
-function formatDelay(ms: number): string {
-	if (ms < 1000) return `${ms}ms`
-	if (ms < 60000) return `${(ms / 1000).toFixed(0)}s`
-	if (ms < 3600000) return `${(ms / 60000).toFixed(0)}m`
-	if (ms < 86400000) return `${(ms / 3600000).toFixed(1)}h`
-	return `${(ms / 86400000).toFixed(1)}d`
-}
-
-function formatDuration(start?: number, end?: number): string {
-	if (!start || !end) return ""
-	const ms = end - start
-	if (ms < 1000) return `${ms}ms`
-	if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
-	return `${(ms / 60000).toFixed(1)}m`
-}
-
-function getProgressValue(progress: number | string | object): number {
-	if (typeof progress === "number") return progress
-	if (typeof progress === "string") return Number.parseInt(progress, 10) || 0
-	return 0
-}
-
-// Get tab items for a job
-function getJobTabItems(job: Job) {
-	const items = [
-		{ label: "Data", slot: "data" },
-		{ label: "Options", slot: "options" },
-		{ label: job.logs?.length ? `Logs (${job.logs.length})` : "Logs", slot: "logs" },
-	]
-
-	if (job.failedReason || (job.stacktrace && job.stacktrace.length > 0)) {
-		const errorLabel = job.failedReason ? "Error" : "Errors"
-		const stackLength = job.stacktrace?.length ?? 0
-		const count = stackLength > 1 ? ` (${stackLength})` : ""
-		items.push({ label: `${errorLabel}${count}`, slot: "error" })
-	}
-
-	if (job.returnvalue !== undefined && job.returnvalue !== null) {
-		items.push({ label: "Result", slot: "result" })
-	}
-
-	return items
-}
-
-// Get default tab index for a job
-function getJobDefaultTabIndex(job: Job): number {
-	if (job.failedReason || (job.stacktrace && job.stacktrace.length > 0)) {
-		// Find the error tab index
-		const items = getJobTabItems(job)
-		return items.findIndex(item => item.slot === "error")
-	}
-	return 0 // Default to Data tab
-}
 </script>
 
 <template>
-	<UDashboardPanel>
+	<UDashboardPanel class="queue-page">
 		<template #header>
 			<UDashboardNavbar>
 				<template #title>
@@ -353,7 +232,7 @@ function getJobDefaultTabIndex(job: Job): number {
 								:name="data?.stats?.paused ? 'i-lucide-play' : 'i-lucide-pause'"
 								class="h-4 w-4 sm:mr-2"
 							/>
-							<span class="hidden sm:inline">{{ data?.stats?.paused ? 'Resume Queue' : 'Pause Queue' }}</span>
+							<span class="hidden sm:inline">{{ data?.stats?.paused ? "Resume Queue" : "Pause Queue" }}</span>
 						</UButton>
 						<UiBackButton
 							to="/jobs"
@@ -368,76 +247,59 @@ function getJobDefaultTabIndex(job: Job): number {
 			<!-- Loading state (only on initial load, not refreshes) -->
 			<div
 				v-if="status === 'pending' && !data"
-				class="flex items-center justify-center py-12"
+				class="loading-state"
 			>
 				<UIcon
 					name="i-lucide-loader-2"
-					class="h-8 w-8 animate-spin text-muted-foreground"
+					class="loading-icon"
 				/>
 			</div>
 
 			<!-- Error state -->
 			<div
 				v-else-if="error"
-				class="py-12 text-center"
+				class="error-state"
 			>
-				<div class="size-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+				<div class="error-icon-wrapper">
 					<UIcon
 						name="i-lucide-alert-circle"
-						class="size-8 text-destructive"
+						class="error-icon"
 					/>
 				</div>
-				<h3 class="text-lg font-semibold">
+				<h3 class="error-title">
 					Failed to load queue
 				</h3>
-				<p class="text-sm text-muted-foreground">
+				<p class="error-message">
 					{{ error.message }}
 				</p>
 			</div>
 
 			<div
 				v-else-if="data"
-				class="space-y-6"
+				class="page-content"
 			>
 				<!-- Status tabs -->
-				<div class="border-b">
-					<nav class="flex gap-1 -mb-px overflow-x-auto">
-						<button
-							v-for="tab in statusTabs"
-							:key="tab.key"
-							class="px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2"
-							:class="currentStatus === tab.key
-								? 'border-primary text-primary'
-								: 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'"
-							@click="setStatus(tab.key)"
-						>
-							{{ tab.label }}
-							<UBadge
-								v-if="getTabCount(tab.key) !== null && getTabCount(tab.key)! > 0"
-								:variant="currentStatus === tab.key ? 'solid' : 'subtle'"
-								size="xs"
-							>
-								{{ getTabCount(tab.key) }}
-							</UBadge>
-						</button>
-					</nav>
-				</div>
+				<UiSegmentedControl
+					v-model="selectedStatus"
+					:options="statusOptions"
+					class="w-full"
+				/>
 
 				<!-- Empty state -->
 				<div
 					v-if="data.jobs.length === 0"
-					class="py-12 text-center"
+					class="empty-state"
 				>
-					<div class="size-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+					<div class="empty-icon-wrapper">
 						<UIcon
 							name="i-lucide-briefcase"
-							class="size-8 text-muted-foreground"
+							class="empty-icon"
 						/>
 					</div>
-					<h3 class="text-lg font-semibold">
+					<h3 class="empty-title">
 						No {{ currentStatus }} jobs
 					</h3>
-					<p class="text-sm text-muted-foreground">
+					<p class="empty-message">
 						There are no {{ currentStatus }} jobs in this queue.
 					</p>
 				</div>
@@ -445,309 +307,36 @@ function getJobDefaultTabIndex(job: Job): number {
 				<!-- Jobs list -->
 				<div
 					v-else
-					class="space-y-4"
+					class="jobs-list"
 				>
-					<UCard
+					<JobsJobCard
 						v-for="job in data.jobs"
 						:key="job.id"
-					>
-						<div class="flex">
-							<!-- Timeline sidebar (hidden on mobile) -->
-							<div class="w-44 border-r py-4 px-2 space-y-4 text-right text-xs shrink-0 hidden sm:block">
-								<div>
-									<p class="text-muted-foreground">
-										Added at
-									</p>
-									<p class="font-medium">
-										{{ formatTimestamp(job.timestamp) }}
-									</p>
-								</div>
-								<div v-if="job.scheduledAt && !job.processedOn">
-									<p class="text-muted-foreground">
-										Scheduled for
-									</p>
-									<p class="font-medium text-cyan-600">
-										{{ formatTimestamp(job.scheduledAt) }}
-									</p>
-									<p
-										v-if="job.delay"
-										class="text-muted-foreground mt-1"
-									>
-										Delay: {{ formatDelay(job.delay) }}
-									</p>
-								</div>
-								<div v-if="job.processedOn">
-									<p class="text-muted-foreground">
-										Started at
-									</p>
-									<p class="font-medium">
-										{{ formatTimestamp(job.processedOn) }}
-									</p>
-								</div>
-								<div v-if="job.finishedOn">
-									<p class="text-muted-foreground">
-										Finished at
-									</p>
-									<p class="font-medium">
-										{{ formatTimestamp(job.finishedOn) }}
-									</p>
-									<p
-										v-if="job.processedOn"
-										class="text-muted-foreground mt-1"
-									>
-										Duration: {{ formatDuration(job.processedOn, job.finishedOn) }}
-									</p>
-								</div>
-								<div v-if="job.attemptsMade > 0">
-									<p class="text-muted-foreground">
-										Attempts
-									</p>
-									<p :class="['font-medium', job.failedReason ? 'text-red-600' : '']">
-										{{ job.attemptsMade }}
-									</p>
-								</div>
-								<div v-if="job.opts?.priority !== undefined">
-									<p class="text-muted-foreground">
-										Priority
-									</p>
-									<p :class="['font-medium', job.opts.priority === 1 ? 'text-green-600' : job.opts.priority >= 10 ? 'text-orange-600' : '']">
-										{{ job.opts.priority }}
-									</p>
-								</div>
-							</div>
-
-							<!-- Main content -->
-							<div class="flex-1 py-4 px-3 min-w-0 overflow-hidden">
-								<div class="flex items-start justify-between gap-2 sm:gap-4">
-									<div class="flex-1 min-w-0">
-										<div class="flex items-center justify-between gap-2 mb-2">
-											<div class="flex items-center gap-2 min-w-0">
-												<span class="text-muted-foreground text-sm shrink-0">#{{ job.id }}</span>
-												<UBadge
-													variant="outline"
-													:class="getJobStatus(job).color"
-													class="shrink-0"
-												>
-													{{ getJobStatus(job).status }}
-												</UBadge>
-											</div>
-
-											<!-- Actions -->
-											<div class="flex items-center gap-0.5 sm:gap-1 shrink-0">
-												<UButton
-													v-if="getJobStatus(job).status === 'failed'"
-													variant="ghost"
-													size="xs"
-													:loading="actionPending"
-													@click="retryJob(job.id)"
-												>
-													<UIcon
-														name="i-lucide-rotate-ccw"
-														class="size-3.5 sm:mr-1"
-													/>
-													<span class="hidden sm:inline">Retry</span>
-												</UButton>
-												<UButton
-													v-if="getJobStatus(job).status === 'delayed'"
-													variant="ghost"
-													size="xs"
-													:loading="actionPending"
-													@click="promoteJob(job.id)"
-												>
-													<UIcon
-														name="i-lucide-fast-forward"
-														class="size-3.5 sm:mr-1"
-													/>
-													<span class="hidden sm:inline">Run Now</span>
-												</UButton>
-												<UButton
-													variant="ghost"
-													size="xs"
-													:loading="actionPending"
-													@click="openDuplicateDialog(job)"
-												>
-													<UIcon
-														name="i-lucide-copy"
-														class="size-3.5 sm:mr-1"
-													/>
-													<span class="hidden sm:inline">Duplicate</span>
-												</UButton>
-												<UButton
-													variant="ghost"
-													size="xs"
-													class="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
-													:loading="actionPending"
-													@click="deleteJob(job.id)"
-												>
-													<UIcon
-														name="i-lucide-trash-2"
-														class="size-3.5 sm:mr-1"
-													/>
-													<span class="hidden sm:inline">Delete</span>
-												</UButton>
-											</div>
-										</div>
-
-										<!-- Job data tabs -->
-										<UTabs
-											:items="getJobTabItems(job)"
-											:default-index="getJobDefaultTabIndex(job)"
-											class="w-full mt-3"
-										>
-											<template #data>
-												<pre class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-40 mt-2">{{ JSON.stringify(job.data, null, 2) }}</pre>
-											</template>
-											<template #options>
-												<pre class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-40 mt-2">{{ JSON.stringify(job.opts, null, 2) }}</pre>
-											</template>
-											<template #logs>
-												<div
-													v-if="job.logs && job.logs.length > 0"
-													class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-60 font-mono space-y-1 mt-2"
-												>
-													<div
-														v-for="(log, index) in job.logs"
-														:key="index"
-														class="text-muted-foreground"
-													>
-														{{ log }}
-													</div>
-												</div>
-												<p
-													v-else
-													class="text-xs text-muted-foreground p-3 mt-2"
-												>
-													No logs available for this job.
-												</p>
-											</template>
-											<template #error>
-												<div :class="['text-xs p-3 rounded-md overflow-x-auto max-h-80 mt-2', job.failedReason ? 'bg-red-50 dark:bg-red-950/30' : 'bg-orange-50 dark:bg-orange-950/30']">
-													<p
-														v-if="job.failedReason"
-														class="mb-2"
-													>
-														<span class="text-red-600 font-semibold">Error: </span>
-														<span class="text-red-500">{{ job.failedReason }}</span>
-													</p>
-													<p
-														v-else
-														class="mb-2 text-orange-600"
-													>
-														Job succeeded after {{ job.attemptsMade }} attempts. Previous errors:
-													</p>
-													<div
-														v-if="job.stacktrace && job.stacktrace.length > 0"
-														class="space-y-3"
-													>
-														<div
-															v-for="(trace, index) in job.stacktrace"
-															:key="index"
-															class="border-l-2 border-red-300 dark:border-red-700 pl-3"
-														>
-															<p class="text-red-600/80 text-[10px] mb-1">
-																Attempt {{ index + 1 }}
-															</p>
-															<pre class="text-red-600/70 whitespace-pre-wrap font-mono text-[11px] leading-relaxed">{{ trace }}</pre>
-														</div>
-													</div>
-												</div>
-											</template>
-											<template #result>
-												<pre class="text-xs bg-muted/50 p-3 rounded-md overflow-x-auto max-h-40 mt-2">{{ JSON.stringify(job.returnvalue, null, 2) }}</pre>
-											</template>
-										</UTabs>
-
-										<!-- Mobile timeline -->
-										<div class="mt-3 text-xs text-muted-foreground sm:hidden">
-											Added: {{ formatTimestamp(job.timestamp) }}
-											<span v-if="job.scheduledAt && !job.processedOn">
-												&bull; Scheduled: <span class="text-cyan-600">{{ formatTimestamp(job.scheduledAt) }}</span>
-											</span>
-											<span v-if="job.finishedOn">
-												&bull; Finished: {{ formatTimestamp(job.finishedOn) }}
-											</span>
-											<span v-if="job.attemptsMade > 0">
-												&bull; {{ job.attemptsMade }} attempt{{ job.attemptsMade > 1 ? "s" : "" }}
-											</span>
-											<span v-if="job.opts?.priority !== undefined">
-												&bull; Priority: <span :class="job.opts.priority === 1 ? 'text-green-600' : job.opts.priority >= 10 ? 'text-orange-600' : ''">{{ job.opts.priority }}</span>
-											</span>
-										</div>
-									</div>
-
-									<!-- Progress circle (hidden on mobile) -->
-									<JobsProgressCircle
-										:progress="getProgressValue(job.progress)"
-										class="hidden sm:block"
-									/>
-								</div>
-							</div>
-						</div>
-					</UCard>
+						:job="job"
+						:action-pending="actionPending"
+						@retry="retryJob"
+						@delete="deleteJob"
+						@promote="promoteJob"
+						@duplicate="openDuplicateDialog"
+					/>
 				</div>
 
 				<!-- Pagination -->
-				<div
-					v-if="data.pagination.totalPages > 1"
-					class="flex items-center justify-center gap-2"
-				>
-					<UButton
-						variant="outline"
-						size="sm"
-						:disabled="currentPage <= 1"
-						@click="setPage(currentPage - 1)"
-					>
-						<UIcon
-							name="i-lucide-chevron-left"
-							class="size-4 mr-1"
-						/>
-						Previous
-					</UButton>
-
-					<div class="flex items-center gap-1">
-						<template
-							v-for="(item, idx) in paginationRange"
-							:key="idx"
-						>
-							<span
-								v-if="item === 'ellipsis'"
-								class="px-2 text-gray-400"
-							>...</span>
-							<UButton
-								v-else
-								:variant="item === currentPage ? 'solid' : 'outline'"
-								size="sm"
-								class="min-w-9"
-								@click="setPage(item)"
-							>
-								{{ item }}
-							</UButton>
-						</template>
-					</div>
-
-					<UButton
-						variant="outline"
-						size="sm"
-						:disabled="currentPage >= data.pagination.totalPages"
-						@click="setPage(currentPage + 1)"
-					>
-						Next
-						<UIcon
-							name="i-lucide-chevron-right"
-							class="size-4 ml-1"
-						/>
-					</UButton>
-				</div>
+				<UiPagination
+					:page="currentPage"
+					:total-pages="data.pagination.totalPages"
+					@update:page="setPage"
+				/>
 			</div>
 
 			<!-- Loading state -->
 			<div
 				v-else
-				class="flex items-center justify-center py-8"
+				class="loading-state"
 			>
 				<UIcon
 					name="i-lucide-loader-2"
-					class="size-6 animate-spin text-muted-foreground"
+					class="loading-icon"
 				/>
 			</div>
 
@@ -760,3 +349,116 @@ function getJobDefaultTabIndex(job: Job): number {
 		</template>
 	</UDashboardPanel>
 </template>
+
+<style scoped>
+.queue-page {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+
+/* Loading state */
+.loading-state {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 3rem;
+}
+
+.loading-icon {
+	width: 2rem;
+	height: 2rem;
+	animation: spin 1s linear infinite;
+	color: var(--ui-text-muted);
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+/* Error state */
+.error-state {
+	padding: 3rem;
+	text-align: center;
+}
+
+.error-icon-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 4rem;
+	height: 4rem;
+	margin: 0 auto 1rem;
+	border-radius: 50%;
+	background: var(--ui-error-soft);
+}
+
+.error-icon {
+	width: 2rem;
+	height: 2rem;
+	color: var(--ui-error);
+}
+
+.error-title {
+	font-size: var(--font-size-lg);
+	font-weight: 600;
+	color: var(--ui-text);
+}
+
+.error-message {
+	font-size: var(--font-size-sm);
+	color: var(--ui-text-muted);
+	margin-top: 0.25rem;
+}
+
+/* Page content */
+.page-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+/* Empty state */
+.empty-state {
+	padding: 3rem;
+	text-align: center;
+}
+
+.empty-icon-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 4rem;
+	height: 4rem;
+	margin: 0 auto 1rem;
+	border-radius: 50%;
+	background: var(--ui-bg-muted);
+}
+
+.empty-icon {
+	width: 2rem;
+	height: 2rem;
+	color: var(--ui-text-muted);
+}
+
+.empty-title {
+	font-size: var(--font-size-lg);
+	font-weight: 600;
+	color: var(--ui-text);
+}
+
+.empty-message {
+	font-size: var(--font-size-sm);
+	color: var(--ui-text-muted);
+	margin-top: 0.25rem;
+}
+
+/* Jobs list */
+.jobs-list {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+</style>

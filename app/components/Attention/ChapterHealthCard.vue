@@ -120,8 +120,6 @@ const totalChaptersNeedingData = computed(() =>
 }
 
 .chapter-row {
-	--blue: oklch(0.65 0.2 250);
-
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
@@ -129,7 +127,7 @@ const totalChaptersNeedingData = computed(() =>
 	flex: 1;
 	text-decoration: none;
 	transition: background 0.15s ease;
-	border-bottom: 1px solid var(--color-border);
+	border-bottom: 1px solid var(--ui-border);
 }
 
 .chapter-row:last-child {
@@ -137,7 +135,7 @@ const totalChaptersNeedingData = computed(() =>
 }
 
 .chapter-row:hover {
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 }
 
 .serie-cover {
@@ -145,7 +143,7 @@ const totalChaptersNeedingData = computed(() =>
 	height: 4.25rem;
 	border-radius: 0.375rem;
 	overflow: hidden;
-	background: var(--color-muted);
+	background: var(--ui-bg-muted);
 	flex-shrink: 0;
 }
 
@@ -161,7 +159,7 @@ const totalChaptersNeedingData = computed(() =>
 	justify-content: center;
 	width: 100%;
 	height: 100%;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .row-info {
@@ -173,7 +171,7 @@ const totalChaptersNeedingData = computed(() =>
 	display: block;
 	font-size: var(--font-size-md);
 	font-weight: 500;
-	color: var(--color-text);
+	color: var(--ui-text);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -185,12 +183,12 @@ const totalChaptersNeedingData = computed(() =>
 	align-items: center;
 	gap: 0.25rem;
 	font-size: var(--font-size-sm);
-	color: var(--blue);
+	color: var(--ui-primary);
 }
 
 .row-chevron {
 	flex-shrink: 0;
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .empty-preview {
@@ -204,7 +202,7 @@ const totalChaptersNeedingData = computed(() =>
 
 .empty-preview p {
 	font-size: var(--font-size-md);
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 /* Stats bar - stays at bottom, doesn't shrink */
@@ -215,8 +213,8 @@ const totalChaptersNeedingData = computed(() =>
 	gap: 1rem;
 	padding: 0.75rem 1rem;
 	flex-shrink: 0;
-	background: var(--color-muted);
-	border-top: 1px solid var(--color-border);
+	background: var(--ui-bg-muted);
+	border-top: 1px solid var(--ui-border);
 }
 
 .stat-item {
@@ -228,22 +226,22 @@ const totalChaptersNeedingData = computed(() =>
 .stat-value {
 	font-size: var(--font-size-md);
 	font-weight: 600;
-	color: var(--color-text);
+	color: var(--ui-text);
 	font-variant-numeric: tabular-nums;
 }
 
 .stat-item.highlight .stat-value {
-	color: oklch(0.65 0.2 250);
+	color: var(--ui-primary);
 }
 
 .stat-label {
 	font-size: var(--font-size-xs);
-	color: var(--color-text-muted);
+	color: var(--ui-text-muted);
 }
 
 .stat-divider {
 	width: 1px;
 	height: 1.25rem;
-	background: var(--color-border);
+	background: var(--ui-border);
 }
 </style>

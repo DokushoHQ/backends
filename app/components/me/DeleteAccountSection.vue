@@ -59,137 +59,180 @@ async function handleDelete() {
 </script>
 
 <template>
-	<UCard>
-		<template #header>
-			<div>
-				<h3 class="text-lg font-semibold flex items-center gap-2 text-destructive">
-					<UIcon
-						name="i-lucide-triangle-alert"
-						class="size-4"
-					/>
-					Danger Zone
-				</h3>
-				<p class="text-sm text-muted-foreground">
-					Irreversible actions for your account
-				</p>
-			</div>
-		</template>
-
-		<div class="flex items-center justify-between p-4 rounded-lg border border-destructive/50 bg-destructive/5">
-			<div class="flex items-center gap-3">
-				<UIcon
-					name="i-lucide-trash-2"
-					class="size-5 text-destructive"
-				/>
-				<div>
-					<p class="text-sm font-medium">
-						Delete Account
-					</p>
-					<p class="text-xs text-muted-foreground">
-						Permanently delete your account and all associated data
-					</p>
+	<UiContentCard
+		title="Danger Zone"
+		description="Irreversible actions for your account"
+		icon="i-lucide-triangle-alert"
+		color="red"
+		danger
+	>
+		<div class="card-body">
+			<div class="danger-row">
+				<div class="danger-info">
+					<div class="danger-icon">
+						<UIcon
+							name="i-lucide-trash-2"
+							class="h-5 w-5"
+						/>
+					</div>
+					<div class="danger-content">
+						<span class="danger-title">Delete Account</span>
+						<span class="danger-description">Permanently delete your account and all associated data</span>
+					</div>
 				</div>
-			</div>
 
-			<UModal
-				v-model:open="isOpen"
-				@update:open="handleDialogClose"
-			>
-				<UButton
-					variant="outline"
-					color="error"
-					@click="isOpen = true"
+				<UModal
+					v-model:open="isOpen"
+					@update:open="handleDialogClose"
 				>
-					Delete Account
-				</UButton>
+					<UButton
+						variant="outline"
+						color="error"
+						@click="isOpen = true"
+					>
+						Delete Account
+					</UButton>
 
-				<template #content>
-					<UCard>
-						<template #header>
-							<div>
-								<h3 class="text-lg font-semibold text-destructive">
-									Delete Account
-								</h3>
-								<p class="text-sm text-muted-foreground">
-									This action cannot be undone
-								</p>
-							</div>
-						</template>
+					<template #content>
+						<UCard>
+							<template #header>
+								<div>
+									<h3 class="text-lg font-semibold text-destructive">
+										Delete Account
+									</h3>
+									<p class="text-sm text-muted-foreground">
+										This action cannot be undone
+									</p>
+								</div>
+							</template>
 
-						<div class="space-y-4">
-							<div
-								v-if="error"
-								class="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
-							>
-								{{ error }}
-							</div>
+							<div class="space-y-4">
+								<div
+									v-if="error"
+									class="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+								>
+									{{ error }}
+								</div>
 
-							<div class="rounded-md bg-destructive/10 p-4 text-sm">
-								<p class="font-medium text-destructive mb-2">
-									Warning: This will permanently delete:
-								</p>
-								<ul class="list-disc list-inside text-muted-foreground space-y-1">
-									<li>Your user account</li>
-									<li>All active sessions</li>
-									<li>All API keys</li>
-								</ul>
-							</div>
+								<div class="rounded-md bg-destructive/10 p-4 text-sm">
+									<p class="font-medium text-destructive mb-2">
+										Warning: This will permanently delete:
+									</p>
+									<ul class="list-disc list-inside text-muted-foreground space-y-1">
+										<li>Your user account</li>
+										<li>All active sessions</li>
+										<li>All API keys</li>
+									</ul>
+								</div>
 
-							<div
-								v-if="hasPassword"
-								class="space-y-4"
-							>
-								<UFormField label="Current Password">
+								<div
+									v-if="hasPassword"
+									class="space-y-4"
+								>
+									<UFormField label="Current Password">
+										<UInput
+											v-model="password"
+											type="password"
+											placeholder="Enter your password to confirm"
+											class="w-full"
+										/>
+									</UFormField>
+								</div>
+
+								<div
+									v-else
+									class="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground"
+								>
+									<p>
+										Your account will be deleted using your current session.
+										For security, this requires a recent sign-in.
+									</p>
+								</div>
+
+								<UFormField label="Type DELETE to confirm">
 									<UInput
-										v-model="password"
-										type="password"
-										placeholder="Enter your password to confirm"
+										v-model="confirmText"
+										type="text"
+										placeholder="DELETE"
 										class="w-full"
 									/>
 								</UFormField>
 							</div>
 
-							<div
-								v-else
-								class="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground"
-							>
-								<p>
-									Your account will be deleted using your current session.
-									For security, this requires a recent sign-in.
-								</p>
-							</div>
-
-							<UFormField label="Type DELETE to confirm">
-								<UInput
-									v-model="confirmText"
-									type="text"
-									placeholder="DELETE"
-									class="w-full"
-								/>
-							</UFormField>
-						</div>
-
-						<template #footer>
-							<div class="flex justify-end gap-2">
-								<UButton
-									variant="outline"
-									@click="isOpen = false"
-								>
-									Cancel
-								</UButton>
-								<UButton
-									color="error"
-									:loading="loading"
-									:disabled="!isValid"
-									@click="handleDelete"
-								>
-									Delete Account
-								</UButton>
-							</div>
-						</template>
-					</UCard>
-				</template>
-			</UModal>
+							<template #footer>
+								<div class="flex justify-end gap-2">
+									<UButton
+										variant="outline"
+										@click="isOpen = false"
+									>
+										Cancel
+									</UButton>
+									<UButton
+										color="error"
+										:loading="loading"
+										:disabled="!isValid"
+										@click="handleDelete"
+									>
+										Delete Account
+									</UButton>
+								</div>
+							</template>
+						</UCard>
+					</template>
+				</UModal>
+			</div>
 		</div>
-	</UCard>
+	</UiContentCard>
 </template>
+
+<style scoped>
+.card-body {
+	padding: 1rem;
+}
+
+/* Danger row */
+.danger-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1rem;
+	background: var(--ui-error-soft);
+	border: 1px solid color-mix(in oklch, var(--ui-error) 25%, transparent);
+	border-radius: 0.5rem;
+}
+
+.danger-info {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.danger-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 0.5rem;
+	background: color-mix(in oklch, var(--ui-error) 15%, var(--ui-bg-elevated));
+	color: var(--ui-error);
+	flex-shrink: 0;
+}
+
+.danger-content {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+}
+
+.danger-title {
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.danger-description {
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-muted);
+}
+</style>

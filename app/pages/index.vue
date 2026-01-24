@@ -12,8 +12,8 @@ const activityRange = ref("today")
 const activityRangeOptions = [
 	{ label: "Today", value: "today" },
 	{ label: "Yesterday", value: "yesterday" },
-	{ label: "Last Week", value: "week" },
-	{ label: "Last Month", value: "month" },
+	{ label: "Week", value: "week" },
+	{ label: "Month", value: "month" },
 ]
 
 const { data, error } = await useFetch("/api/dashboard/stats")
@@ -33,480 +33,651 @@ const { data: jobsData, status: jobsStatus } = await useLazyFetch("/api/jobs", {
 	immediate: isAdmin.value,
 })
 
+const { data: metricsData } = await useLazyFetch("/api/queue-metrics-daily", {
+	query: { days: 7 },
+	immediate: isAdmin.value,
+})
+
 if (error.value) {
 	console.error("Dashboard stats error:", error.value)
 }
 
-// Issue badge info
-function getIssueBadge(issue: string) {
+// Issue type to CSS class mapping
+function getIssueType(issue: string): string {
 	switch (issue) {
 		case "pending_deletion":
-			return { label: "Pending Deletion", color: "text-orange-600 bg-orange-100" }
+			return "type-deletion"
 		case "missing_cover":
-			return { label: "Missing Cover", color: "text-yellow-600 bg-yellow-100" }
+			return "type-cover"
 		case "scrape_failures":
-			return { label: "Scrape Failed", color: "text-red-600 bg-red-100" }
+			return "type-scrape"
 		case "chapter_data_missing":
-			return { label: "Chapter Data Missing", color: "text-purple-600 bg-purple-100" }
+			return "type-chapter"
 		default:
-			return { label: issue, color: "text-gray-600 bg-gray-100" }
+			return "type-default"
+	}
+}
+
+function getIssueLabel(issue: string): string {
+	switch (issue) {
+		case "pending_deletion":
+			return "Pending Deletion"
+		case "missing_cover":
+			return "Missing Cover"
+		case "scrape_failures":
+			return "Scrape Failed"
+		case "chapter_data_missing":
+			return "Chapter Data Missing"
+		default:
+			return issue
 	}
 }
 </script>
 
 <template>
-	<UDashboardPanel>
-		<template #header>
-			<UDashboardNavbar
-				title="Overview"
-				description="Monitor your manga library at a glance"
-			/>
-		</template>
+	<div class="overview-page flex flex-col flex-1 min-h-0">
+		<UDashboardPanel class="flex-1 min-h-0">
+			<template #header>
+				<UDashboardNavbar
+					title="Overview"
+					description="Monitor your manga library at a glance"
+				/>
+			</template>
 
-		<template #body>
-			<div class="space-y-8">
-				<!-- Stats Cards -->
-				<div
-					class="grid gap-4 md:grid-cols-2"
-					:class="isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'"
-				>
-					<UCard>
-						<div class="flex items-center justify-between">
-							<div class="space-y-1">
-								<p class="text-sm font-medium text-muted-foreground">
-									Total Series
-								</p>
-								<p class="text-2xl font-bold">
-									{{ data?.stats.seriesCount?.toLocaleString() ?? 0 }}
-								</p>
-								<p class="text-xs text-muted-foreground">
-									In your library
-								</p>
-							</div>
-							<div class="size-11 rounded-full bg-primary/10 flex items-center justify-center">
-								<UIcon
-									name="i-lucide-book-open"
-									class="size-5 text-primary"
-								/>
-							</div>
-						</div>
-					</UCard>
+			<template #body>
+				<div class="overview-content">
+					<!-- Stats Cards -->
+					<UiStatCardGrid :cols="isAdmin ? 4 : 3">
+						<UiStatCard
+							:value="data?.stats.seriesCount?.toLocaleString() ?? 0"
+							label="Total Series"
+							icon="i-lucide-book-open"
+							color="blue"
+						/>
+						<UiStatCard
+							:value="data?.stats.chaptersCount?.toLocaleString() ?? 0"
+							label="Total Chapters"
+							icon="i-lucide-file-text"
+							color="blue"
+						/>
+						<UiStatCard
+							:value="data?.stats.sourcesCount?.toLocaleString() ?? 0"
+							label="Active Sources"
+							icon="i-lucide-server"
+							color="green"
+						/>
+						<UiStatCard
+							v-if="isAdmin"
+							:value="data?.stats.usersCount?.toLocaleString() ?? 0"
+							label="Registered Users"
+							icon="i-lucide-users"
+							color="purple"
+						/>
+					</UiStatCardGrid>
 
-					<UCard>
-						<div class="flex items-center justify-between">
-							<div class="space-y-1">
-								<p class="text-sm font-medium text-muted-foreground">
-									Total Chapters
-								</p>
-								<p class="text-2xl font-bold">
-									{{ data?.stats.chaptersCount?.toLocaleString() ?? 0 }}
-								</p>
-								<p class="text-xs text-muted-foreground">
-									Across all series
-								</p>
+					<!-- Jobs Summary (Admin only) -->
+					<UiContentCard
+						v-if="isAdmin"
+						title="Job Queues"
+						:description="jobsStatus === 'pending' ? 'Loading...' : `${jobsData?.totalJobs?.toLocaleString() ?? 0} total jobs`"
+						icon="i-lucide-briefcase"
+						color="blue"
+						link-to="/jobs"
+					>
+						<div class="jobs-content">
+							<!-- Daily Summary Chart -->
+							<div class="chart-section">
+								<JobsDailySummaryChart :data="metricsData?.aggregated.daily ?? []" />
 							</div>
-							<div class="size-11 rounded-full bg-primary/10 flex items-center justify-center">
-								<UIcon
-									name="i-lucide-file-text"
-									class="size-5 text-primary"
-								/>
-							</div>
-						</div>
-					</UCard>
 
-					<UCard>
-						<div class="flex items-center justify-between">
-							<div class="space-y-1">
-								<p class="text-sm font-medium text-muted-foreground">
-									Sources
-								</p>
-								<p class="text-2xl font-bold">
-									{{ data?.stats.sourcesCount?.toLocaleString() ?? 0 }}
-								</p>
-								<p class="text-xs text-muted-foreground">
-									Active scrapers
-								</p>
-							</div>
-							<div class="size-11 rounded-full bg-primary/10 flex items-center justify-center">
-								<UIcon
-									name="i-lucide-server"
-									class="size-5 text-primary"
-								/>
-							</div>
-						</div>
-					</UCard>
-
-					<UCard v-if="isAdmin">
-						<div class="flex items-center justify-between">
-							<div class="space-y-1">
-								<p class="text-sm font-medium text-muted-foreground">
-									Users
-								</p>
-								<p class="text-2xl font-bold">
-									{{ data?.stats.usersCount?.toLocaleString() ?? 0 }}
-								</p>
-								<p class="text-xs text-muted-foreground">
-									Registered accounts
-								</p>
-							</div>
-							<div class="size-11 rounded-full bg-primary/10 flex items-center justify-center">
-								<UIcon
-									name="i-lucide-users"
-									class="size-5 text-primary"
-								/>
-							</div>
-						</div>
-					</UCard>
-				</div>
-
-				<!-- Jobs Summary (Admin only) -->
-				<UCard v-if="isAdmin">
-					<template #header>
-						<div class="flex items-center justify-between">
-							<div>
-								<h3 class="text-lg font-semibold">
-									Job Queues
-								</h3>
-								<p class="text-sm text-muted-foreground">
-									<template v-if="jobsStatus === 'pending'">
-										Loading...
-									</template>
-									<template v-else>
-										{{ jobsData?.totalJobs?.toLocaleString() ?? 0 }} total jobs
-										<span
-											v-if="jobsData?.totalFailed"
-											class="text-red-500"
-										>
-											({{ jobsData.totalFailed }} failed)
-										</span>
-									</template>
-								</p>
-							</div>
-							<NuxtLink
-								to="/jobs"
-								class="text-sm text-primary hover:underline"
+							<!-- Loading state -->
+							<div
+								v-if="jobsStatus === 'pending'"
+								class="loading-state"
 							>
-								View all
-							</NuxtLink>
+								<UIcon
+									name="i-lucide-loader-2"
+									class="loading-spinner"
+								/>
+							</div>
+
+							<!-- Per-queue breakdown -->
+							<div
+								v-else
+								class="queue-pills"
+							>
+								<NuxtLink
+									v-for="queue in jobsData?.stats"
+									:key="queue.name"
+									:to="`/jobs/${queue.name}`"
+									class="queue-pill"
+								>
+									<span class="queue-name">{{ queue.displayName }}</span>
+									<span class="queue-count">{{ queue.total ?? 0 }}</span>
+									<span
+										v-if="(queue.failed ?? 0) > 0"
+										class="queue-failed"
+									>{{ queue.failed }} failed</span>
+								</NuxtLink>
+							</div>
 						</div>
-					</template>
+					</UiContentCard>
 
-					<div class="space-y-4">
-						<!-- Mini Line Chart -->
-						<JobsActivityChart :height="120" />
-
+					<!-- Series Needing Attention (Admin only) -->
+					<UiContentCard
+						v-if="isAdmin"
+						title="Series Needing Attention"
+						:description="attentionStatus === 'pending' ? 'Loading...' : 'Series with issues'"
+						:icon="attentionStatus !== 'pending' && attentionData?.length ? 'i-lucide-alert-triangle' : 'i-lucide-check-circle'"
+						:color="attentionStatus !== 'pending' && attentionData?.length ? 'orange' : 'green'"
+						link-to="/attention"
+					>
 						<!-- Loading state -->
 						<div
-							v-if="jobsStatus === 'pending'"
-							class="flex items-center justify-center py-4"
+							v-if="attentionStatus === 'pending'"
+							class="loading-state"
 						>
 							<UIcon
 								name="i-lucide-loader-2"
-								class="size-5 animate-spin text-muted-foreground"
+								class="loading-spinner"
 							/>
 						</div>
 
-						<!-- Per-queue breakdown -->
+						<!-- Empty state -->
 						<div
-							v-else
-							class="flex flex-wrap gap-2 pt-4"
+							v-else-if="!attentionData?.length"
+							class="empty-state success"
 						>
-							<NuxtLink
-								v-for="queue in jobsData?.stats"
-								:key="queue.name"
-								:to="`/jobs/${queue.name}`"
-								class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors text-sm"
-							>
-								<span class="font-medium">{{ queue.displayName }}</span>
-								<span class="text-muted-foreground">{{ queue.total ?? 0 }}</span>
-								<span
-									v-if="(queue.failed ?? 0) > 0"
-									class="text-red-500 text-xs"
-								>{{ queue.failed }} failed</span>
-							</NuxtLink>
-						</div>
-					</div>
-				</UCard>
-
-				<!-- Series Needing Attention (Admin only) -->
-				<UCard v-if="isAdmin">
-					<template #header>
-						<div class="flex items-center justify-between">
-							<div>
-								<h3 class="text-lg font-semibold flex items-center gap-2">
-									<UIcon
-										v-if="attentionStatus !== 'pending'"
-										:name="attentionData?.length ? 'i-lucide-alert-triangle' : 'i-lucide-check-circle'"
-										class="size-5"
-										:class="attentionData?.length ? 'text-orange-500' : 'text-green-500'"
-									/>
-									Series Needing Attention
-								</h3>
-								<p class="text-sm text-muted-foreground">
-									<template v-if="attentionStatus === 'pending'">
-										Loading...
-									</template>
-									<template v-else>
-										Series with issues
-									</template>
-								</p>
-							</div>
-							<NuxtLink
-								to="/attention"
-								class="text-sm text-primary hover:underline"
-							>
-								View all
-							</NuxtLink>
-						</div>
-					</template>
-
-					<!-- Loading state -->
-					<div
-						v-if="attentionStatus === 'pending'"
-						class="flex items-center justify-center py-8"
-					>
-						<UIcon
-							name="i-lucide-loader-2"
-							class="size-6 animate-spin text-muted-foreground"
-						/>
-					</div>
-
-					<!-- Empty state -->
-					<div
-						v-else-if="!attentionData?.length"
-						class="flex items-center justify-center py-8 text-center"
-					>
-						<div>
-							<div class="size-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-3">
+							<div class="empty-icon success-icon">
 								<UIcon
 									name="i-lucide-check"
-									class="size-6 text-green-600"
+									class="h-6 w-6"
 								/>
 							</div>
-							<p class="font-medium text-green-600">
-								All good!
-							</p>
-							<p class="text-sm text-muted-foreground">
-								No series need attention right now
-							</p>
+							<span class="empty-title success-text">All good!</span>
+							<span class="empty-description">No series need attention right now</span>
 						</div>
-					</div>
 
-					<!-- Series list -->
-					<div
-						v-else
-						class="-mx-4 divide-y"
-					>
-						<NuxtLink
-							v-for="serie in attentionData"
-							:key="serie.id"
-							:to="`/series/${serie.id}`"
-							class="flex items-center gap-4 py-3 px-4 hover:bg-muted/50 transition-colors"
+						<!-- Series list -->
+						<div
+							v-else
+							class="series-list"
 						>
-							<div class="relative h-14 w-10 shrink-0 rounded overflow-hidden bg-muted">
-								<div class="absolute inset-0 flex items-center justify-center">
-									<UIcon
-										name="i-lucide-book-open"
-										class="size-5 text-muted-foreground"
-									/>
-								</div>
-								<NuxtImg
-									v-if="serie.cover"
-									:src="serie.cover"
-									:alt="serie.title"
-									class="absolute inset-0 h-full w-full object-cover"
-								/>
-							</div>
-							<div class="flex-1 min-w-0">
-								<p class="truncate font-medium">{{ serie.title }}</p>
-								<div class="flex items-center gap-2 mt-1 flex-wrap">
-									<span
-										v-for="issue in serie.issues"
-										:key="issue"
-										class="text-xs px-2 py-0.5 rounded-full"
-										:class="getIssueBadge(issue).color"
-									>
-										{{ getIssueBadge(issue).label }}
-										<template v-if="issue === 'chapter_data_missing' && serie.chaptersNeedingData">
-											({{ serie.chaptersNeedingData }})
-										</template>
-									</span>
-									<span
-										v-for="source in serie.failedSources"
-										:key="source.name"
-										class="text-xs text-muted-foreground"
-									>
-										{{ source.name }}: {{ source.failures }} failures
-									</span>
-								</div>
-							</div>
-						</NuxtLink>
-					</div>
-				</UCard>
-
-				<!-- Two Column Grid -->
-				<div class="grid gap-6 lg:grid-cols-2">
-					<!-- Recently Added Series -->
-					<UCard>
-						<template #header>
-							<div class="flex items-center justify-between">
-								<div>
-									<h3 class="text-lg font-semibold">
-										Recently Added
-									</h3>
-									<p class="text-sm text-muted-foreground">
-										New series in your library
-									</p>
-								</div>
-								<NuxtLink
-									to="/series"
-									class="text-sm text-primary hover:underline"
-								>
-									View all
-								</NuxtLink>
-							</div>
-						</template>
-
-						<div class="space-y-4">
 							<NuxtLink
-								v-for="serie in data?.recentlyAddedSeries"
+								v-for="serie in attentionData"
 								:key="serie.id"
 								:to="`/series/${serie.id}`"
-								class="flex items-center gap-4 rounded-lg p-2 -mx-2 hover:bg-muted/50 transition-colors"
+								class="series-row"
 							>
-								<div class="relative h-14 w-10 shrink-0 rounded overflow-hidden bg-muted">
-									<div class="absolute inset-0 flex items-center justify-center">
+								<div class="series-cover">
+									<div class="cover-placeholder">
 										<UIcon
 											name="i-lucide-book-open"
-											class="size-5 text-muted-foreground"
+											class="h-5 w-5"
 										/>
 									</div>
 									<NuxtImg
 										v-if="serie.cover"
 										:src="serie.cover"
 										:alt="serie.title"
-										class="absolute inset-0 h-full w-full object-cover"
+										class="cover-image"
 									/>
 								</div>
-								<div class="flex-1 min-w-0">
-									<p class="truncate font-medium">{{ serie.title }}</p>
-									<div class="flex items-center gap-2 mt-1">
-										<UBadge variant="subtle">
-											{{ serie._count.chapters }} ch
-										</UBadge>
-										<span class="text-xs text-muted-foreground">
-											{{ formatRelativeTime(serie.created_at) }}
+								<div class="series-info">
+									<span class="series-title">{{ serie.title }}</span>
+									<div class="series-badges">
+										<span
+											v-for="issue in serie.issues"
+											:key="issue"
+											class="issue-badge"
+											:class="getIssueType(issue)"
+										>
+											{{ getIssueLabel(issue) }}
+											<template v-if="issue === 'chapter_data_missing' && serie.chaptersNeedingData">
+												({{ serie.chaptersNeedingData }})
+											</template>
+										</span>
+										<span
+											v-for="source in serie.failedSources"
+											:key="source.name"
+											class="failure-info"
+										>
+											{{ source.name }}: {{ source.failures }} failures
 										</span>
 									</div>
 								</div>
 							</NuxtLink>
-							<p
-								v-if="!data?.recentlyAddedSeries?.length"
-								class="text-sm text-muted-foreground text-center py-4"
-							>
-								No series added yet
-							</p>
 						</div>
-					</UCard>
+					</UiContentCard>
 
-					<!-- Recent Activity -->
-					<UCard>
-						<template #header>
-							<div class="flex items-center justify-between">
-								<div>
-									<h3 class="text-lg font-semibold">
-										Recent Activity
-									</h3>
-									<p class="text-sm text-muted-foreground">
-										Series with new chapters
-									</p>
-								</div>
-								<USelect
-									v-model="activityRange"
-									:items="activityRangeOptions"
-									size="sm"
-									class="w-32"
-								/>
-							</div>
-						</template>
-
-						<div class="space-y-4">
-							<!-- Loading state -->
+					<!-- Two Column Grid -->
+					<div class="two-column-grid">
+						<!-- Recently Added Series -->
+						<UiContentCard
+							title="Recently Added"
+							description="New series in your library"
+							icon="i-lucide-plus-circle"
+							color="green"
+							link-to="/series"
+						>
 							<div
-								v-if="activityStatus === 'pending'"
-								class="flex items-center justify-center py-8"
+								v-if="data?.recentlyAddedSeries?.length"
+								class="series-list compact"
 							>
-								<UIcon
-									name="i-lucide-loader-2"
-									class="size-6 animate-spin text-muted-foreground"
-								/>
-							</div>
-							<!-- Activity list -->
-							<template v-else>
 								<NuxtLink
-									v-for="activity in activityData"
-									:key="activity.serie.id"
-									:to="`/series/${activity.serie.id}`"
-									class="flex items-center gap-3 rounded-lg p-2 -mx-2 hover:bg-muted/50 transition-colors"
+									v-for="serie in data.recentlyAddedSeries"
+									:key="serie.id"
+									:to="`/series/${serie.id}`"
+									class="series-row"
 								>
-									<div class="relative h-12 w-9 shrink-0 rounded overflow-hidden bg-muted">
-										<div class="absolute inset-0 flex items-center justify-center">
+									<div class="series-cover">
+										<div class="cover-placeholder">
 											<UIcon
 												name="i-lucide-book-open"
-												class="size-4 text-muted-foreground"
+												class="h-5 w-5"
 											/>
 										</div>
 										<NuxtImg
-											v-if="activity.serie.cover"
-											:src="activity.serie.cover"
-											:alt="activity.serie.title"
-											class="absolute inset-0 h-full w-full object-cover"
+											v-if="serie.cover"
+											:src="serie.cover"
+											:alt="serie.title"
+											class="cover-image"
 										/>
 									</div>
-									<div class="flex-1 min-w-0">
-										<p class="text-sm font-medium truncate">{{ activity.serie.title }}</p>
-										<p class="text-xs text-muted-foreground flex items-center gap-2">
-											<span class="flex items-center gap-1">
-												<UIcon
-													name="i-lucide-plus"
-													class="size-3"
-												/>
-												{{ activity.chapterCount }} {{ activity.chapterCount === 1 ? 'chapter' : 'chapters' }}
-											</span>
-											<span class="flex items-center gap-1">
-												<UIcon
-													name="i-lucide-clock"
-													class="size-3"
-												/>
-												{{ formatRelativeTime(activity.latestUpdate) }}
-											</span>
-										</p>
+									<div class="series-info">
+										<span class="series-title">{{ serie.title }}</span>
+										<div class="series-meta">
+											<span class="chapter-count">{{ serie._count.chapters }} chapters</span>
+											<span class="time-info">{{ formatRelativeTime(serie.created_at) }}</span>
+										</div>
 									</div>
 								</NuxtLink>
+							</div>
+							<div
+								v-else
+								class="empty-state"
+							>
+								<span class="empty-description">No series added yet</span>
+							</div>
+						</UiContentCard>
+
+						<!-- Recent Activity -->
+						<UiContentCard
+							title="Recent Activity"
+							description="Series with new chapters"
+							icon="i-lucide-activity"
+							color="purple"
+						>
+							<template #header-actions>
+								<UiSegmentedControl
+									v-model="activityRange"
+									:options="activityRangeOptions"
+								/>
+							</template>
+
+							<!-- Loading state -->
+							<div
+								v-if="activityStatus === 'pending'"
+								class="loading-state"
+							>
+								<UIcon
+									name="i-lucide-loader-2"
+									class="loading-spinner"
+								/>
+							</div>
+
+							<!-- Activity list -->
+							<template v-else>
 								<div
-									v-if="!activityData?.length"
-									class="flex items-center justify-center py-8 text-center"
+									v-if="activityData?.length"
+									class="series-list compact"
 								>
-									<div>
-										<div class="size-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-											<UIcon
-												name="i-lucide-calendar-off"
-												class="size-6 text-muted-foreground"
+									<NuxtLink
+										v-for="activity in activityData"
+										:key="activity.serie.id"
+										:to="`/series/${activity.serie.id}`"
+										class="series-row"
+									>
+										<div class="series-cover small">
+											<div class="cover-placeholder">
+												<UIcon
+													name="i-lucide-book-open"
+													class="h-4 w-4"
+												/>
+											</div>
+											<NuxtImg
+												v-if="activity.serie.cover"
+												:src="activity.serie.cover"
+												:alt="activity.serie.title"
+												class="cover-image"
 											/>
 										</div>
-										<p class="font-medium">
-											No activity
-										</p>
-										<p class="text-sm text-muted-foreground">
-											No chapters added in this period
-										</p>
+										<div class="series-info">
+											<span class="series-title">{{ activity.serie.title }}</span>
+											<div class="series-meta">
+												<span class="chapter-update">
+													<UIcon
+														name="i-lucide-plus"
+														class="h-3 w-3"
+													/>
+													{{ activity.chapterCount }} {{ activity.chapterCount === 1 ? 'chapter' : 'chapters' }}
+												</span>
+												<span class="time-info">
+													<UIcon
+														name="i-lucide-clock"
+														class="h-3 w-3"
+													/>
+													{{ formatRelativeTime(activity.latestUpdate) }}
+												</span>
+											</div>
+										</div>
+									</NuxtLink>
+								</div>
+								<div
+									v-else
+									class="empty-state"
+								>
+									<div class="empty-icon">
+										<UIcon
+											name="i-lucide-calendar-off"
+											class="h-6 w-6"
+										/>
 									</div>
+									<span class="empty-title">No activity</span>
+									<span class="empty-description">No chapters added in this period</span>
 								</div>
 							</template>
-						</div>
-					</UCard>
+						</UiContentCard>
+					</div>
 				</div>
-			</div>
-		</template>
-	</UDashboardPanel>
+			</template>
+		</UDashboardPanel>
+	</div>
 </template>
+
+<style scoped>
+/* Overview content */
+.overview-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+/* Two column grid */
+.two-column-grid {
+	display: grid;
+	gap: 1.5rem;
+	grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+	.two-column-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+/* Jobs content */
+.jobs-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1rem;
+}
+
+.chart-section {
+	/*padding-bottom: 1rem;*/
+	border-bottom: 1px solid var(--ui-border-muted);
+}
+
+/* Queue pills */
+.queue-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.queue-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background: var(--ui-bg-muted);
+	border-radius: 2rem;
+	font-size: var(--font-size-sm);
+	transition: all 0.15s ease;
+	text-decoration: none;
+}
+
+.queue-pill:hover {
+	background: var(--ui-border);
+}
+
+.queue-name {
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.queue-count {
+	color: var(--ui-text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.queue-failed {
+	font-size: var(--font-size-xs);
+	color: var(--ui-error);
+}
+
+/* Series list */
+.series-list {
+	display: flex;
+	flex-direction: column;
+}
+
+.series-list.compact {
+	padding: 0.5rem 1rem;
+}
+
+/* Series row */
+.series-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.75rem 1rem;
+	transition: background 0.15s ease;
+	text-decoration: none;
+	border-bottom: 1px solid var(--ui-border-muted);
+}
+
+.series-list.compact .series-row {
+	padding: 0.5rem 0;
+	border-bottom: none;
+}
+
+.series-row:last-child {
+	border-bottom: none;
+}
+
+.series-row:hover {
+	background: var(--ui-bg-muted);
+}
+
+/* Series cover */
+.series-cover {
+	position: relative;
+	width: 2.5rem;
+	height: 3.5rem;
+	border-radius: 0.375rem;
+	overflow: hidden;
+	flex-shrink: 0;
+	background: var(--ui-bg-muted);
+}
+
+.series-cover.small {
+	width: 2.25rem;
+	height: 3rem;
+}
+
+.cover-placeholder {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ui-text-muted);
+}
+
+.cover-image {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+/* Series info */
+.series-info {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.series-title {
+	font-size: var(--font-size-base);
+	font-weight: 500;
+	color: var(--ui-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.series-badges {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+.series-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	font-size: var(--font-size-sm);
+	color: var(--ui-text-muted);
+}
+
+.chapter-count {
+	font-weight: 500;
+	color: var(--ui-text);
+	background: var(--ui-bg-muted);
+	padding: 0.125rem 0.5rem;
+	border-radius: 0.25rem;
+}
+
+.chapter-update,
+.time-info {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+/* Issue badges */
+.issue-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.125rem 0.5rem;
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+	border-radius: 2rem;
+	background: var(--ui-bg-muted);
+	color: var(--ui-text-muted);
+}
+
+.issue-badge.type-deletion {
+	background: var(--ui-warning-soft);
+	color: var(--ui-warning);
+}
+
+.issue-badge.type-cover {
+	background: var(--ui-warning-soft);
+	color: var(--ui-warning);
+}
+
+.issue-badge.type-scrape {
+	background: var(--ui-error-soft);
+	color: var(--ui-error);
+}
+
+.issue-badge.type-chapter {
+	background: var(--color-purple-soft);
+	color: var(--color-purple);
+}
+
+.failure-info {
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-muted);
+}
+
+/* Loading state */
+.loading-state {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2rem;
+}
+
+.loading-spinner {
+	width: 1.5rem;
+	height: 1.5rem;
+	color: var(--ui-text-muted);
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 2rem 1rem;
+	text-align: center;
+}
+
+.empty-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 3rem;
+	height: 3rem;
+	margin-bottom: 0.75rem;
+	border-radius: 50%;
+	background: var(--ui-bg-muted);
+	color: var(--ui-text-muted);
+}
+
+.empty-icon.success-icon {
+	background: var(--ui-success-soft);
+	color: var(--ui-success);
+}
+
+.empty-title {
+	font-size: var(--font-size-base);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.empty-title.success-text {
+	color: var(--ui-success);
+}
+
+.empty-description {
+	font-size: var(--font-size-sm);
+	color: var(--ui-text-muted);
+}
+</style>

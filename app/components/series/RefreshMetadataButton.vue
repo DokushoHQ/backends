@@ -30,6 +30,7 @@ async function handleRefresh() {
 	<UButton
 		variant="outline"
 		size="sm"
+		title="Refresh metadata"
 		:disabled="loading"
 		@click="handleRefresh"
 	>

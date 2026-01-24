@@ -1,18 +1,29 @@
+import { z } from "zod"
+
+const paramsSchema = z.object({
+	id: z.string().min(1, "Serie ID required"),
+})
+
+const querySchema = z.object({
+	includeDisabled: z
+		.string()
+		.optional()
+		.transform(v => v === "true"),
+	lang: z.enum(SourceLanguage),
+})
+
 export default defineEventHandler(async (event) => {
 	await requireAuth(event)
 
-	const id = getRouterParam(event, "id")
-	if (!id) {
-		throw createError({ statusCode: 400, message: "Serie ID required" })
-	}
-
-	const query = getQuery(event)
-	const includeDisabled = query.includeDisabled === "true"
+	const { id } = await getValidatedRouterParams(event, paramsSchema.parse)
+	const { includeDisabled, lang } = await getValidatedQuery(event, querySchema.parse)
 
 	const chapters = await db.chapter.findMany({
 		where: {
 			serie_id: id,
+
 			...(includeDisabled ? {} : { enabled: true }),
+			...(lang ? { language: lang } : {}),
 		},
 		include: {
 			groups: {

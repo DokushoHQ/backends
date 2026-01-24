@@ -147,12 +147,22 @@ export async function getJobs(
 			return queue.getDelayed(start, end)
 		case "paused":
 			return queue.getJobs(["waiting", "prioritized", "paused"], start, end)
-		case "latest":
-			return queue.getJobs(
-				["active", "failed", "completed", "waiting", "prioritized", "delayed", "waiting-children"],
-				start,
-				end,
+		case "latest": {
+			// BullMQ's getJobs with multiple types applies start/end to each type independently,
+			// not to the combined result. For proper pagination, we need to:
+			// 1. Fetch enough jobs from each type to cover the requested range
+			// 2. Combine and sort by timestamp (most recent first)
+			// 3. Slice to the requested range
+			const types = ["active", "failed", "completed", "waiting", "prioritized", "delayed", "waiting-children"] as const
+			const jobsPerType = await Promise.all(
+				types.map(type => queue.getJobs([type], 0, end)),
 			)
+			const allJobs = jobsPerType.flat()
+			// Sort by timestamp descending (most recent first)
+			allJobs.sort((a: Job, b: Job) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
+			// Return the requested slice
+			return allJobs.slice(start, end + 1)
+		}
 	}
 }
 

@@ -1,11 +1,88 @@
 <script setup lang="ts">
+interface QueueStats {
+	name: string
+	displayName: string
+	waiting: number
+	prioritized: number
+	waitingChildren: number
+	active: number
+	completed: number
+	failed: number
+	delayed: number
+	paused: boolean
+	total: number
+}
+
+interface JobsResponse {
+	stats: QueueStats[]
+	totalJobs: number
+	totalActive: number
+	totalWaiting: number
+	totalCompleted: number
+	totalFailed: number
+	totalDelayed: number
+}
+
 definePageMeta({
 	title: "Jobs",
 	layout: "default",
 })
 
-const { data, error, status, refresh } = await useLazyFetch("/api/jobs")
+const { data, error, status, refresh } = await useLazyFetch<JobsResponse>("/api/jobs")
 const { data: redisInfo } = await useFetch("/api/redis-info")
+const { data: metricsData } = await useFetch("/api/queue-metrics-daily", { query: { days: 14 } })
+
+// Helper to get daily data for a queue
+function getQueueDaily(queueName: string) {
+	if (!metricsData.value?.perQueue[queueName]) return undefined
+	return metricsData.value.perQueue[queueName].daily
+}
+
+// Chart queue selector
+const selectedChartQueue = ref<string | undefined>(undefined)
+
+const chartQueueLabel = computed(() => {
+	if (!selectedChartQueue.value) return "All Queues"
+	return metricsData.value?.perQueue[selectedChartQueue.value]?.displayName ?? "Select Queue"
+})
+
+const chartQueueMenuItems = computed(() => {
+	const queueChildren = metricsData.value?.perQueue
+		? Object.entries(metricsData.value.perQueue).map(([key, value]) => ({
+				label: value.displayName,
+				onSelect: () => {
+					selectedChartQueue.value = key
+				},
+			}))
+		: []
+
+	return [
+		{
+			label: "All Queues",
+			icon: "i-lucide-layers",
+			onSelect: () => {
+				selectedChartQueue.value = undefined
+			},
+		},
+		{
+			label: "Per Queue",
+			icon: "i-lucide-list",
+			children: queueChildren,
+		},
+	]
+})
+
+// Chart data based on selected queue
+const chartData = computed(() => {
+	if (!metricsData.value) return []
+
+	if (selectedChartQueue.value) {
+		const queueData = metricsData.value.perQueue[selectedChartQueue.value]
+		if (queueData) return queueData.daily
+	}
+
+	return metricsData.value.aggregated.daily
+})
 
 if (error.value) {
 	console.error("Jobs fetch error:", error.value)
@@ -33,36 +110,6 @@ async function togglePauseAllQueues() {
 	}
 }
 
-// Compute segments for a queue with pre-calculated percentages
-function getQueueSegments(queue: {
-	active?: number
-	waiting?: number
-	prioritized?: number
-	waitingChildren?: number
-	completed?: number
-	failed?: number
-	delayed?: number
-	total?: number
-}) {
-	const total = queue.total ?? 0
-	if (total === 0) return []
-
-	return [
-		{ key: "active", count: queue.active ?? 0 },
-		{ key: "waiting", count: queue.waiting ?? 0 },
-		{ key: "prioritized", count: queue.prioritized ?? 0 },
-		{ key: "waitingChildren", count: queue.waitingChildren ?? 0 },
-		{ key: "completed", count: queue.completed ?? 0 },
-		{ key: "failed", count: queue.failed ?? 0 },
-		{ key: "delayed", count: queue.delayed ?? 0 },
-	]
-		.filter(s => s.count > 0)
-		.map(s => ({
-			...s,
-			percentage: Math.round((s.count / total) * 10000) / 100,
-		}))
-}
-
 // Auto-refresh every 5 seconds
 let refreshInterval: ReturnType<typeof setInterval> | null = null
 
@@ -80,7 +127,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<UDashboardPanel>
+	<UDashboardPanel class="jobs-page">
 		<template #header>
 			<UDashboardNavbar
 				title="Job Queues"
@@ -128,7 +175,7 @@ onUnmounted(() => {
 								:name="anyQueuePaused ? 'i-lucide-play' : 'i-lucide-pause'"
 								class="size-4 mr-2"
 							/>
-							{{ anyQueuePaused ? 'Resume All' : 'Pause All' }}
+							{{ anyQueuePaused ? "Resume All" : "Pause All" }}
 						</UButton>
 					</div>
 				</template>
@@ -136,50 +183,30 @@ onUnmounted(() => {
 			<!-- Redis Info Bar -->
 			<div
 				v-if="redisInfo"
-				class="flex items-center justify-center gap-8 py-2 px-4 bg-muted/50 border-t text-sm"
+				class="redis-info-bar"
 			>
-				<div class="text-center">
-					<div class="font-medium">
-						{{ redisInfo.version }}
-					</div>
-					<div class="text-xs text-muted-foreground">
-						Version
-					</div>
+				<div class="redis-stat">
+					<span class="redis-value">{{ redisInfo.version }}</span>
+					<span class="redis-label">Version</span>
 				</div>
-				<div class="text-center">
-					<div class="font-medium">
-						{{ redisInfo.uptimeDays }}
-					</div>
-					<div class="text-xs text-muted-foreground">
-						Uptime (days)
-					</div>
+				<div class="redis-stat">
+					<span class="redis-value">{{ redisInfo.uptimeDays }}</span>
+					<span class="redis-label">Uptime (days)</span>
 				</div>
-				<div class="text-center">
-					<div class="font-medium">
-						{{ redisInfo.connectedClients }}
-					</div>
-					<div class="text-xs text-muted-foreground">
-						Connections
-					</div>
+				<div class="redis-stat">
+					<span class="redis-value">{{ redisInfo.connectedClients }}</span>
+					<span class="redis-label">Connections</span>
 				</div>
-				<div class="text-center">
-					<div class="font-medium">
-						{{ redisInfo.usedMemory }}
-					</div>
-					<div class="text-xs text-muted-foreground">
-						Memory used
-					</div>
+				<div class="redis-stat">
+					<span class="redis-value">{{ redisInfo.usedMemory }}</span>
+					<span class="redis-label">Memory used</span>
 				</div>
 				<div
 					v-if="redisInfo.maxMemory"
-					class="text-center"
+					class="redis-stat"
 				>
-					<div class="font-medium">
-						{{ redisInfo.maxMemory }}
-					</div>
-					<div class="text-xs text-muted-foreground">
-						Memory max
-					</div>
+					<span class="redis-value">{{ redisInfo.maxMemory }}</span>
+					<span class="redis-label">Memory max</span>
 				</div>
 			</div>
 		</template>
@@ -188,107 +215,107 @@ onUnmounted(() => {
 			<!-- Loading state (only on initial load, not refreshes) -->
 			<div
 				v-if="status === 'pending' && !data"
-				class="flex items-center justify-center py-12"
+				class="loading-state"
 			>
 				<UIcon
 					name="i-lucide-loader-2"
-					class="h-8 w-8 animate-spin text-muted-foreground"
+					class="loading-icon"
 				/>
 			</div>
 
 			<!-- Error state -->
 			<div
 				v-else-if="error"
-				class="py-12 text-center"
+				class="error-state"
 			>
-				<div class="size-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+				<div class="error-icon-wrapper">
 					<UIcon
 						name="i-lucide-alert-circle"
-						class="size-8 text-destructive"
+						class="error-icon"
 					/>
 				</div>
-				<h3 class="text-lg font-semibold">
+				<h3 class="error-title">
 					Failed to load jobs
 				</h3>
-				<p class="text-sm text-muted-foreground">
+				<p class="error-message">
 					{{ error.statusCode === 403 ? "You don't have permission to view this page" : error.message }}
 				</p>
 			</div>
 
 			<div
 				v-else-if="data"
-				class="space-y-6"
+				class="page-content"
 			>
 				<!-- Global Stats -->
-				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-					<div class="text-center p-4 rounded-lg bg-muted">
-						<div class="text-2xl font-bold text-blue-500">
-							{{ data.totalActive.toLocaleString() }}
-						</div>
-						<div class="text-sm text-muted-foreground">
-							Active
-						</div>
-					</div>
-					<div class="text-center p-4 rounded-lg bg-muted">
-						<div class="text-2xl font-bold text-yellow-500">
-							{{ data.totalWaiting.toLocaleString() }}
-						</div>
-						<div class="text-sm text-muted-foreground">
-							Waiting
-						</div>
-					</div>
-					<div class="text-center p-4 rounded-lg bg-muted">
-						<div class="text-2xl font-bold text-green-500">
-							{{ data.totalCompleted.toLocaleString() }}
-						</div>
-						<div class="text-sm text-muted-foreground">
-							Completed
-						</div>
-					</div>
-					<div class="text-center p-4 rounded-lg bg-muted">
-						<div
-							class="text-2xl font-bold"
-							:class="data.totalFailed > 0 ? 'text-red-500' : 'text-muted-foreground'"
-						>
-							{{ data.totalFailed.toLocaleString() }}
-						</div>
-						<div class="text-sm text-muted-foreground">
-							Failed
-						</div>
-					</div>
-					<div class="text-center p-4 rounded-lg bg-muted">
-						<div class="text-2xl font-bold text-cyan-500">
-							{{ data.totalDelayed.toLocaleString() }}
-						</div>
-						<div class="text-sm text-muted-foreground">
-							Delayed
-						</div>
-					</div>
-				</div>
-
-				<!-- Metrics Chart -->
-				<UCard>
-					<JobsActivityChart
-						:height="200"
-						show-queue-selector
+				<UiStatCardGrid :cols="5">
+					<UiStatCard
+						:value="data.totalActive.toLocaleString()"
+						label="Active"
+						icon="i-lucide-play"
+						color="blue"
 					/>
-				</UCard>
+					<UiStatCard
+						:value="data.totalWaiting.toLocaleString()"
+						label="Waiting"
+						icon="i-lucide-clock"
+						color="amber"
+					/>
+					<UiStatCard
+						:value="data.totalCompleted.toLocaleString()"
+						label="Completed"
+						icon="i-lucide-check-circle"
+						color="green"
+					/>
+					<UiStatCard
+						:value="data.totalFailed.toLocaleString()"
+						label="Failed"
+						icon="i-lucide-x-circle"
+						:color="data.totalFailed > 0 ? 'red' : 'gray'"
+					/>
+					<UiStatCard
+						:value="data.totalDelayed.toLocaleString()"
+						label="Delayed"
+						icon="i-lucide-timer"
+						color="cyan"
+					/>
+				</UiStatCardGrid>
+
+				<!-- Daily Activity Chart -->
+				<UiContentCard
+					title="Job Activity"
+					description="Daily completed and failed jobs (last 14 days)"
+					icon="i-lucide-activity"
+					color="blue"
+				>
+					<template #header-actions>
+						<UDropdownMenu :items="chartQueueMenuItems">
+							<UButton
+								:label="chartQueueLabel"
+								color="neutral"
+								variant="outline"
+								size="xs"
+								trailing-icon="i-lucide-chevron-down"
+							/>
+						</UDropdownMenu>
+					</template>
+					<JobsDailySummaryChart :data="chartData" />
+				</UiContentCard>
 
 				<!-- Empty state -->
 				<div
 					v-if="data.stats.length === 0"
-					class="py-12 text-center"
+					class="empty-state"
 				>
-					<div class="size-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+					<div class="empty-icon-wrapper">
 						<UIcon
 							name="i-lucide-briefcase"
-							class="size-8 text-muted-foreground"
+							class="empty-icon"
 						/>
 					</div>
-					<h3 class="text-lg font-semibold">
+					<h3 class="empty-title">
 						No job queues
 					</h3>
-					<p class="text-sm text-muted-foreground">
+					<p class="empty-message">
 						Job queues will appear here once workers are running.
 					</p>
 				</div>
@@ -296,64 +323,171 @@ onUnmounted(() => {
 				<!-- Queue cards -->
 				<div
 					v-else
-					class="grid gap-4 md:grid-cols-2"
+					class="queue-grid"
 				>
-					<NuxtLink
+					<JobsQueueCard
 						v-for="queue in data.stats"
 						:key="queue.name"
-						:to="`/jobs/${queue.name}`"
-						class="block"
-					>
-						<UCard class="hover:shadow-md transition-shadow">
-							<div class="space-y-3">
-								<div class="flex items-center justify-between">
-									<h3 class="font-medium">{{ queue.displayName }}</h3>
-									<span
-										v-if="queue.paused"
-										class="text-xs text-muted-foreground"
-									>[Paused]</span>
-								</div>
-
-								<div class="flex items-center gap-3">
-									<div class="flex-1 h-6 bg-muted rounded-md overflow-hidden flex">
-										<div
-											v-for="segment in getQueueSegments(queue)"
-											:key="segment.key"
-											class="h-full flex items-center justify-center text-xs text-white font-medium"
-											:class="{
-												'bg-blue-500': segment.key === 'active',
-												'bg-yellow-500': segment.key === 'waiting',
-												'bg-orange-500': segment.key === 'prioritized',
-												'bg-purple-500': segment.key === 'waitingChildren',
-												'bg-green-500': segment.key === 'completed',
-												'bg-red-500': segment.key === 'failed',
-												'bg-cyan-500': segment.key === 'delayed',
-											}"
-											:style="{ width: `${segment.percentage}%` }"
-										>
-											<span v-if="segment.percentage > 8">{{ segment.count }}</span>
-										</div>
-									</div>
-									<span class="text-sm text-muted-foreground whitespace-nowrap">
-										{{ (queue.total ?? 0).toLocaleString() }} Jobs
-									</span>
-								</div>
-							</div>
-						</UCard>
-					</NuxtLink>
+						:queue="queue"
+						:daily="getQueueDaily(queue.name)"
+					/>
 				</div>
 			</div>
 
 			<!-- Loading state -->
 			<div
 				v-else
-				class="flex items-center justify-center py-8"
+				class="loading-state"
 			>
 				<UIcon
 					name="i-lucide-loader-2"
-					class="size-6 animate-spin text-muted-foreground"
+					class="loading-icon"
 				/>
 			</div>
 		</template>
 	</UDashboardPanel>
 </template>
+
+<style scoped>
+.jobs-page {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+
+/* Redis Info Bar */
+.redis-info-bar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 2rem;
+	padding: 0.5rem 1rem;
+	background: var(--ui-bg-muted);
+	border-top: 1px solid var(--ui-border);
+}
+
+.redis-stat {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.redis-value {
+	font-size: var(--font-size-base);
+	font-weight: 500;
+	color: var(--ui-text);
+}
+
+.redis-label {
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-muted);
+}
+
+/* Loading state */
+.loading-state {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 3rem;
+}
+
+.loading-icon {
+	width: 2rem;
+	height: 2rem;
+	animation: spin 1s linear infinite;
+	color: var(--ui-text-muted);
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+/* Error state */
+.error-state {
+	padding: 3rem;
+	text-align: center;
+}
+
+.error-icon-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 4rem;
+	height: 4rem;
+	margin: 0 auto 1rem;
+	border-radius: 50%;
+	background: var(--ui-error-soft);
+}
+
+.error-icon {
+	width: 2rem;
+	height: 2rem;
+	color: var(--ui-error);
+}
+
+.error-title {
+	font-size: var(--font-size-lg);
+	font-weight: 600;
+	color: var(--ui-text);
+}
+
+.error-message {
+	font-size: var(--font-size-sm);
+	color: var(--ui-text-muted);
+	margin-top: 0.25rem;
+}
+
+/* Page content */
+.page-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+/* Empty state */
+.empty-state {
+	padding: 3rem;
+	text-align: center;
+}
+
+.empty-icon-wrapper {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 4rem;
+	height: 4rem;
+	margin: 0 auto 1rem;
+	border-radius: 50%;
+	background: var(--ui-bg-muted);
+}
+
+.empty-icon {
+	width: 2rem;
+	height: 2rem;
+	color: var(--ui-text-muted);
+}
+
+.empty-title {
+	font-size: var(--font-size-lg);
+	font-weight: 600;
+	color: var(--ui-text);
+}
+
+.empty-message {
+	font-size: var(--font-size-sm);
+	color: var(--ui-text-muted);
+	margin-top: 0.25rem;
+}
+
+/* Queue grid */
+.queue-grid {
+	display: grid;
+	gap: 1rem;
+}
+
+@media (min-width: 768px) {
+	.queue-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>

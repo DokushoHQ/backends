@@ -30,6 +30,17 @@ interface DuplicateJobInput {
 const name = ref("")
 const data = ref("")
 const dataError = ref<string | null>(null)
+
+// Validate JSON as user types
+const isValidJson = computed(() => {
+	try {
+		JSON.parse(data.value)
+		return true
+	}
+	catch {
+		return false
+	}
+})
 const delay = ref("")
 const priority = ref("")
 const attempts = ref("3")
@@ -120,20 +131,45 @@ async function handleSubmit() {
 
 					<!-- Job Data -->
 					<UFormField label="Job Data (JSON)">
-						<UTextarea
+						<UiJsonEditor
 							v-model="data"
 							placeholder="{}"
-							required
 							:rows="10"
-							class="w-full font-mono text-sm"
-							@input="dataError = null"
+							:error="!!dataError || (!isValidJson && data.length > 0)"
+							@update:model-value="dataError = null"
 						/>
-						<p
+
+						<!-- Validation feedback -->
+						<div
 							v-if="dataError"
-							class="text-sm text-red-500 mt-1"
+							class="validation-error"
 						>
+							<UIcon
+								name="i-lucide-alert-circle"
+								class="size-3.5"
+							/>
 							{{ dataError }}
-						</p>
+						</div>
+						<div
+							v-else-if="!isValidJson && data.length > 0"
+							class="validation-error"
+						>
+							<UIcon
+								name="i-lucide-alert-circle"
+								class="size-3.5"
+							/>
+							Invalid JSON syntax
+						</div>
+						<div
+							v-else-if="isValidJson && data.length > 0"
+							class="validation-success"
+						>
+							<UIcon
+								name="i-lucide-check-circle"
+								class="size-3.5"
+							/>
+							Valid JSON
+						</div>
 					</UFormField>
 
 					<!-- Options Grid -->
@@ -225,3 +261,23 @@ async function handleSubmit() {
 		</template>
 	</UModal>
 </template>
+
+<style scoped>
+.validation-error {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	font-size: var(--font-size-xs);
+	color: var(--ui-error);
+	margin-top: 0.375rem;
+}
+
+.validation-success {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	font-size: var(--font-size-xs);
+	color: var(--ui-success);
+	margin-top: 0.375rem;
+}
+</style>

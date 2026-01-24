@@ -3,6 +3,12 @@ useHead({
 	title: "Dokusho",
 	titleTemplate: "%s - Dokusho",
 })
+
+// Initialize theme on app mount
+const { initTheme } = useTheme()
+onMounted(() => {
+	initTheme()
+})
 </script>
 
 <template>

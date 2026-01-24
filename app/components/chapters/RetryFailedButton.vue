@@ -80,14 +80,15 @@ function handleModalCompleted() {
 			v-if="hasFailures"
 			variant="outline"
 			size="sm"
+			:title="`Retry failed (${stats?.failedPages ?? 0} pages)`"
 			:loading="loading"
 			@click="handleClick"
 		>
 			<UIcon
 				name="i-lucide-refresh-cw"
-				class="h-4 w-4 mr-2"
+				class="h-4 w-4"
 			/>
-			Retry Failed ({{ stats?.failedPages ?? 0 }} pages)
+			<span>Retry Failed ({{ stats?.failedPages ?? 0 }} pages)</span>
 		</UButton>
 
 		<ChaptersRetryProgressModal

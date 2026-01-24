@@ -140,6 +140,7 @@ model Chapter {
 
     @@unique([source_id, external_id])
     @@index([serie_id, page_fetch_status])
+    @@index([serie_id, enabled, language])
     @@map("chapter")
 }
 

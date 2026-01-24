@@ -1,0 +1,73 @@
+/*
+ * Old Manga Paper Theme
+ *
+ * Inspired by the warm, comfortable feeling of physical manga pages.
+ * Light variant uses warm cream tones (~hue 80) for cozy reading.
+ * Dark variant uses cool slate tones (~hue 260) for nighttime comfort.
+ */
+
+/* Light variant - Warm Paper */
+.theme-old-manga {
+	/* Background surfaces - warm cream tones */
+	--ui-bg: oklch(0.965 0.012 85);            /* Soft cream page background */
+	--ui-bg-elevated: oklch(0.993 0.005 85);   /* Warm white cards - like fresh paper */
+	--ui-bg-muted: oklch(0.935 0.018 80);      /* Deeper cream for hover/muted areas */
+
+	/* Borders - warm tones */
+	--ui-border: oklch(0.88 0.02 75);          /* Warm border color */
+	--ui-border-muted: oklch(0.92 0.015 80);   /* Subtle warm border */
+
+	/* Text - warm gray tones */
+	--ui-text-muted: oklch(0.55 0.02 75);      /* Warm muted text */
+	--ui-text-dimmed: oklch(0.65 0.015 80);    /* Softer dimmed text */
+
+	/* Custom purple for this theme */
+	--color-purple: oklch(0.55 0.2 285);
+
+	/* Custom cyan for delayed status */
+	--color-cyan: oklch(0.55 0.15 200);
+
+	/* Custom orange for prioritized status */
+	--color-orange: oklch(0.65 0.18 55);
+
+	/* Soft color variants (15% opacity for backgrounds) */
+	--color-purple-soft: color-mix(in oklch, var(--color-purple) 15%, transparent);
+	--color-cyan-soft: color-mix(in oklch, var(--color-cyan) 15%, transparent);
+	--color-orange-soft: color-mix(in oklch, var(--color-orange) 15%, transparent);
+	--ui-primary-soft: color-mix(in oklch, var(--ui-primary) 15%, transparent);
+	--ui-success-soft: color-mix(in oklch, var(--ui-success) 15%, transparent);
+	--ui-warning-soft: color-mix(in oklch, var(--ui-warning) 15%, transparent);
+	--ui-error-soft: color-mix(in oklch, var(--ui-error) 15%, transparent);
+	--ui-info-soft: color-mix(in oklch, var(--ui-info) 15%, transparent);
+}
+
+/* Dark variant - Cool Ink */
+.theme-old-manga.dark {
+	/* Background surfaces - cool slate tones */
+	--ui-bg: oklch(0.155 0.015 260);           /* Deep slate background */
+	--ui-bg-elevated: oklch(0.205 0.018 255);  /* Lifted card surfaces */
+	--ui-bg-muted: oklch(0.255 0.02 255);      /* Hover states */
+
+	/* Borders - cool tones */
+	--ui-border: oklch(0.32 0.02 260);         /* Subtle cool border */
+	--ui-border-muted: oklch(0.26 0.015 260);  /* Very subtle border */
+
+	/* Custom purple - brighter for dark mode visibility */
+	--color-purple: oklch(0.7 0.16 280);
+
+	/* Custom cyan for delayed status - brighter for dark mode */
+	--color-cyan: oklch(0.7 0.12 200);
+
+	/* Custom orange for prioritized status - brighter for dark mode */
+	--color-orange: oklch(0.75 0.15 55);
+
+	/* Soft color variants (15% opacity for backgrounds) */
+	--color-purple-soft: color-mix(in oklch, var(--color-purple) 15%, transparent);
+	--color-cyan-soft: color-mix(in oklch, var(--color-cyan) 15%, transparent);
+	--color-orange-soft: color-mix(in oklch, var(--color-orange) 15%, transparent);
+	--ui-primary-soft: color-mix(in oklch, var(--ui-primary) 15%, transparent);
+	--ui-success-soft: color-mix(in oklch, var(--ui-success) 15%, transparent);
+	--ui-warning-soft: color-mix(in oklch, var(--ui-warning) 15%, transparent);
+	--ui-error-soft: color-mix(in oklch, var(--ui-error) 15%, transparent);
+	--ui-info-soft: color-mix(in oklch, var(--ui-info) 15%, transparent);
+}
