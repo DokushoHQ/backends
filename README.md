@@ -18,6 +18,25 @@ PRs welcome - if your code works, manual test is passing and isn't a complete di
 - Auth with better-auth (password, OIDC, API keys)
 - Soft delete with grace period (in case you mess up)
 
+## Screenshots
+
+<p align="center">
+  <img src=".github/screenshots/overview.png" alt="Overview Dashboard" width="100%">
+</p>
+
+<details>
+<summary>More screenshots</summary>
+
+| Series | Sources |
+|--------|---------|
+| ![Series](.github/screenshots/series.png) | ![Sources](.github/screenshots/sources.png) |
+
+| Jobs | Attention Center |
+|------|------------------|
+| ![Jobs](.github/screenshots/jobs.png) | ![Attention Center](.github/screenshots/attention_center.png) |
+
+</details>
+
 ## Working On
 
 - Better update scheduling, sometimes job are added again when scheduler is running again. I will pin an issue, do not hesitate to reply if you think you have a solution after reading the code
