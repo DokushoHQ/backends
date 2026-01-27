@@ -47,6 +47,14 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 		return
 	}
 
+	// Query max date_upload per language for language-specific sorting
+	// Using date_upload (when chapter was released) rather than created_at (when we imported it)
+	const chapterDatesByLanguage = await db.chapter.groupBy({
+		by: ["language"],
+		where: { serie_id: serieId, enabled: true },
+		_max: { date_upload: true },
+	})
+
 	const primarySource = serie.sources[0]
 	if (!primarySource) {
 		job.log("No primary source found, removing from index")
@@ -147,7 +155,15 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 		.filter(a => a.missing_count > 0)
 		.map(a => a.language)
 
-	// 6. Update Meilisearch
+	// 6. Build language-specific updated_at timestamps (e.g., En_updated_at, Fr_updated_at)
+	const languageUpdatedAt: Record<string, number> = {}
+	for (const { language, _max } of chapterDatesByLanguage) {
+		if (_max.date_upload) {
+			languageUpdatedAt[`${language}_updated_at`] = _max.date_upload.getTime()
+		}
+	}
+
+	// 7. Update Meilisearch
 	await serieIndex.updateDocuments(
 		[
 			{
@@ -170,6 +186,7 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 				source_ids: serie.sources.map(s => s.source.id),
 				// Sorting and filtering
 				updated_at: updated.updated_at.getTime(),
+				...languageUpdatedAt, // Language-specific timestamps (e.g., En_updated_at)
 				soft_deleted: serie.soft_deleted_at !== null,
 				chapter_count: serie._count.chapters,
 				languages_available: serie.chapters.map(c => c.language),
