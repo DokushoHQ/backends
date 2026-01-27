@@ -1,0 +1,74 @@
+// Chapter availability tracking for cross-source deduplication
+// Tracks missing chapters per serie per language
+
+model ChapterAvailability {
+    id         String   @id @default(uuid()) @db.Uuid
+    created_at DateTime @default(now()) @db.Timestamptz()
+    updated_at DateTime @default(now()) @updatedAt @db.Timestamptz()
+
+    serie_id String   @db.Uuid
+    language Language
+
+    // Missing chapters in primary source (calculated via calculateMissingChapters)
+    /// [MissingChapterType]
+    missing_chapters Json @default("[]")
+
+    // Quick-access statistics
+    missing_count      Int @default(0)
+    fillable_count     Int @default(0)
+    auto_enabled_count Int @default(0)
+
+    serie             Serie             @relation(fields: [serie_id], references: [id], onDelete: Cascade)
+    fillable_chapters FillableChapter[]
+
+    @@unique([serie_id, language])
+    @@index([serie_id])
+    @@index([missing_count])
+    @@map("chapter_availability")
+}
+
+// Secondary source chapters that can fill gaps in primary source
+model FillableChapter {
+    id         String   @id @default(uuid()) @db.Uuid
+    created_at DateTime @default(now()) @db.Timestamptz()
+
+    availability_id String @db.Uuid
+    chapter_number  Float
+
+    // The secondary chapter that can fill this gap
+    chapter_id String @db.Uuid
+    source_id  String @db.Uuid
+
+    availability ChapterAvailability @relation(fields: [availability_id], references: [id], onDelete: Cascade)
+    chapter      Chapter             @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
+    source       Source              @relation(fields: [source_id], references: [id], onDelete: Cascade)
+
+    @@unique([availability_id, chapter_number, chapter_id])
+    @@index([availability_id])
+    @@map("fillable_chapter")
+}
+
+// Per-serie user preferences for chapter deduplication behavior
+model SerieChapterPreference {
+    id         String   @id @default(uuid()) @db.Uuid
+    created_at DateTime @default(now()) @db.Timestamptz()
+    updated_at DateTime @default(now()) @updatedAt @db.Timestamptz()
+
+    serie_id String @unique @db.Uuid
+
+    // When primary source fetch fails/is missing, should we use secondary?
+    // Per-language configuration: { "En": true, "Fr": false }
+    /// [LanguageBooleanMapType]
+    use_secondary_fallback Json @default("{}")
+
+    // Global default when language not specified in map
+    use_secondary_fallback_default Boolean @default(true)
+
+    // Notification preferences (for future use)
+    notify_on_new_gaps   Boolean @default(false)
+    notify_on_gap_filled Boolean @default(false)
+
+    serie Serie @relation(fields: [serie_id], references: [id], onDelete: Cascade)
+
+    @@map("serie_chapter_preference")
+}

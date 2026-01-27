@@ -23,6 +23,11 @@ export type SerieIndex = {
 	// Resolved display values (includes custom locked values)
 	title: string
 	synopsis?: string
+	// Chapter availability (cross-source deduplication)
+	has_missing_chapters: boolean
+	total_missing_chapters: number
+	total_fillable_chapters: number
+	languages_with_gaps: Language[]
 } & FlattenData
 
 let _meilisearch: Meilisearch | null = null
@@ -83,7 +88,7 @@ export async function configureSerieIndex() {
 
 	const settings: Parameters<typeof index.updateSettings>[0] = {
 		sortableAttributes: ["updated_at"],
-		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists", "chapter_count", "languages_available"],
+		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists", "chapter_count", "languages_available", "has_missing_chapters", "total_missing_chapters", "languages_with_gaps"],
 	}
 
 	let needsReindex = false

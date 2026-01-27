@@ -17,10 +17,12 @@ model Source {
     rate_limit_duration     Int        @default(30000)
     /// [StringArray]
     last_fetch_fingerprint  Json?
+    priority                Int        @default(5) // Lower = higher priority for secondary source selection
 
-    serie_sources     SerieSource[]
-    chapters          Chapter[]
-    scanlation_groups ScanlationGroup[]
+    serie_sources      SerieSource[]
+    chapters           Chapter[]
+    scanlation_groups  ScanlationGroup[]
+    fillable_chapters  FillableChapter[]
 
     @@map("source")
 }
@@ -55,6 +57,10 @@ model Serie {
     authors  Author[]
     artists  Artist[]
 
+    // Chapter availability tracking (cross-source deduplication)
+    chapter_availability ChapterAvailability[]
+    chapter_preference   SerieChapterPreference?
+
     @@index([soft_deleted_at, updated_at(sort: Desc)])
     @@index([cover])
     @@map("serie")
@@ -87,6 +93,7 @@ model SerieSource {
 
     // Source priority for aggregation
     is_primary Boolean @default(false)
+    priority   Int     @default(5) // Lower = higher priority, primary always 1
 
     // Scheduling fields (per-source tracking)
     last_checked_at      DateTime? @db.Timestamptz()
@@ -133,10 +140,11 @@ model Chapter {
     /// [CustomMetadataType]
     custom_metadata Json?
 
-    serie  Serie             @relation(fields: [serie_id], references: [id], onDelete: Cascade)
-    source Source            @relation(fields: [source_id], references: [id])
-    data   ChapterData[]
-    groups ScanlationGroup[]
+    serie       Serie             @relation(fields: [serie_id], references: [id], onDelete: Cascade)
+    source      Source            @relation(fields: [source_id], references: [id])
+    data        ChapterData[]
+    groups      ScanlationGroup[]
+    fillable_for FillableChapter[]
 
     @@unique([source_id, external_id])
     @@index([serie_id, page_fetch_status])

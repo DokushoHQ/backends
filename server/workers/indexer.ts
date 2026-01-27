@@ -28,6 +28,14 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 				distinct: ["language"],
 			},
 			_count: { select: { chapters: { where: { enabled: true } } } },
+			// Chapter availability data for cross-source deduplication
+			chapter_availability: {
+				select: {
+					language: true,
+					missing_count: true,
+					fillable_count: true,
+				},
+			},
 		},
 	})
 
@@ -131,7 +139,14 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 		if (alternates.length) flatFields[`alternates_titles_${lang}`] = alternates
 	}
 
-	// 5. Update Meilisearch
+	// 5. Calculate chapter availability stats
+	const totalMissingChapters = serie.chapter_availability.reduce((sum, a) => sum + a.missing_count, 0)
+	const totalFillableChapters = serie.chapter_availability.reduce((sum, a) => sum + a.fillable_count, 0)
+	const languagesWithGaps = serie.chapter_availability
+		.filter(a => a.missing_count > 0)
+		.map(a => a.language)
+
+	// 6. Update Meilisearch
 	await serieIndex.updateDocuments(
 		[
 			{
@@ -157,6 +172,11 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 				soft_deleted: serie.soft_deleted_at !== null,
 				chapter_count: serie._count.chapters,
 				languages_available: serie.chapters.map(c => c.language),
+				// Chapter availability (cross-source deduplication)
+				has_missing_chapters: totalMissingChapters > 0,
+				total_missing_chapters: totalMissingChapters,
+				total_fillable_chapters: totalFillableChapters,
+				languages_with_gaps: languagesWithGaps,
 			},
 		],
 		{ primaryKey: "id" },

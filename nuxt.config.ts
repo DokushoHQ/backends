@@ -64,6 +64,11 @@ export default defineNuxtConfig({
 		},
 	},
 	compatibilityDate: "2026-01-12",
+	nitro: {
+		rollupConfig: {
+			external: ["node:sqlite"],
+		},
+	},
 	eslint: {
 		config: {
 			stylistic: {
@@ -91,11 +96,6 @@ export default defineNuxtConfig({
 		auth: {
 			user: "", // Set via NUXT_NODEMAILER_AUTH_USER env var
 			pass: "", // Set via NUXT_NODEMAILER_AUTH_PASS env var
-		},
-	},
-	nitro: {
-		rollupConfig: {
-			external: ["node:sqlite"],
 		},
 	},
 })
