@@ -19,6 +19,11 @@ const { data: deletionStatus, refresh: refreshDeletionStatus } = await useFetch(
 	`/api/v1/serie/${serieId.value}/deletion-status`,
 )
 
+// Fetch chapter availability (pre-calculated missing chapters)
+const { data: availabilityData, refresh: refreshAvailability } = await useLazyFetch(
+	`/api/v1/serie/${serieId.value}/availability`,
+)
+
 // Computed values
 const title = computed(() => serie.value?.title ?? "")
 const synopsis = computed(() => serie.value?.synopsis ?? "")
@@ -62,15 +67,18 @@ const unacknowledgedRemovedCount = computed(() =>
 	chapters.value.filter(c => c.source_removed_at !== null && c.source_removal_acknowledged_at === null).length,
 )
 
-// Calculate missing chapters
+// Get pre-calculated missing chapters from availability data
 const missingChapters = computed(() => {
-	const chapterNumbers: number[] = []
-	for (const c of enabledChapters.value) {
-		if (typeof c.chapter_number === "number") {
-			chapterNumbers.push(c.chapter_number)
+	const availability = availabilityData.value?.availability ?? []
+	// Combine missing chapters from all languages
+	const allMissing = new Set<number>()
+	for (const a of availability) {
+		const missing = a.missing_chapters as number[]
+		for (const m of missing) {
+			allMissing.add(m)
 		}
 	}
-	return calculateMissingChapters(chapterNumbers)
+	return [...allMissing].sort((a, b) => a - b)
 })
 
 // Create combined list with chapters and missing markers

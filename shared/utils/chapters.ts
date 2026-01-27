@@ -141,9 +141,17 @@ export const extractChapterNumber = (title: string): number | null => {
 /**
  * Calculate missing chapter numbers in a series based on existing chapter numbers.
  * Handles both whole chapters and sub-chapters (e.g., 1.1, 1.2).
- * Skips supplementary chapters (.5).
+ * Skips supplementary chapters (.5) and ignores fractions above .5 (.6, .7, etc).
+ *
+ * @param chapters - Array of chapter numbers
+ * @param subChapterThreshold - Threshold for trailing fraction detection (default 0.7 = 70%)
+ *   Contiguous gaps within a chapter are always detected regardless of threshold.
+ *   Trailing fractions (e.g., chapter ends at .2 when others have .3) use the threshold.
  */
-export const calculateMissingChapters = (chapters: number[]): number[] => {
+export const calculateMissingChapters = (
+	chapters: number[],
+	subChapterThreshold = 0.7,
+): number[] => {
 	if (chapters.length === 0) return []
 
 	// Round fractions to 1 decimal place to avoid floating point issues
@@ -155,8 +163,9 @@ export const calculateMissingChapters = (chapters: number[]): number[] => {
 		const whole = Math.floor(chapter)
 		const fraction = roundFraction(chapter)
 
-		// Skip supplementary chapters (.5)
-		if (Math.abs(fraction - 0.5) < 1e-9) continue
+		// Skip supplementary chapters (.5) and fractions above .5 (.6, .7, .8, .9)
+		// These are considered secondary/bonus content and not tracked for gap detection
+		if (fraction >= 0.5 - 1e-9) continue
 
 		if (!byWhole.has(whole)) byWhole.set(whole, new Set())
 		byWhole.get(whole)?.add(fraction)
@@ -176,7 +185,11 @@ export const calculateMissingChapters = (chapters: number[]): number[] => {
 		}
 	}
 
-	// 2. Detect missing sub-chapters based on common patterns
+	// 2. Detect missing sub-chapters
+	// Two types of gaps:
+	// a) Contiguous gaps - ALWAYS detected (e.g., .1 and .3 present → .2 is missing)
+	// b) Trailing fractions - threshold-based (e.g., 70%+ have .3 → expect .3 on all)
+
 	// Count how often each fraction appears across all chapters
 	const fractionCounts = new Map<number, number>()
 	for (const fractions of byWhole.values()) {
@@ -185,25 +198,39 @@ export const calculateMissingChapters = (chapters: number[]): number[] => {
 		}
 	}
 
-	// Find fractions that appear in at least 2 chapters or 30% of chapters
-	// These are considered "expected" fractions for each chapter
-	const threshold = Math.max(2, Math.floor(byWhole.size * 0.3))
+	// Find fractions that appear frequently enough to be "expected" (trailing fraction detection)
+	const threshold = Math.max(2, Math.floor(byWhole.size * subChapterThreshold))
 	const expectedFractions = [...fractionCounts.entries()]
 		.filter(([, count]) => count >= threshold)
 		.map(([f]) => f)
 		.filter(f => f !== 0) // Don't expect .0 if chapters use .1, .2
 		.sort((a, b) => a - b)
 
-	// If there's a pattern of sub-chapters, check for missing ones
-	if (expectedFractions.length > 0) {
-		for (const [whole, fractions] of byWhole) {
-			// Skip if this chapter has a .0 (whole number) - it's complete
-			if (fractions.has(0)) continue
+	// Check each chapter for missing sub-chapters
+	for (const [whole, fractions] of byWhole) {
+		// Skip if this chapter has a .0 (whole number) - it's complete
+		if (fractions.has(0)) continue
 
-			for (const expectedF of expectedFractions) {
-				if (!fractions.has(expectedF)) {
-					missing.push(whole + expectedF)
-				}
+		const fractionsArray = [...fractions].sort((a, b) => a - b)
+		if (fractionsArray.length === 0) continue
+
+		const minFraction = fractionsArray[0] as number
+		const maxFraction = fractionsArray[fractionsArray.length - 1] as number
+
+		// a) ALWAYS detect contiguous gaps within the chapter's range
+		// E.g., if we have .1 and .3, flag .2 as missing
+		for (let f = minFraction; f <= maxFraction; f = Math.round((f + 0.1) * 10) / 10) {
+			if (!fractions.has(f)) {
+				missing.push(whole + f)
+			}
+		}
+
+		// b) Leading/trailing fractions - only if they meet the threshold
+		// E.g., if 70%+ of chapters have .1 and .3, expect all split chapters to have them
+		for (const expectedF of expectedFractions) {
+			// Check fractions before the chapter's min (leading) or after max (trailing)
+			if ((expectedF < minFraction || expectedF > maxFraction) && !fractions.has(expectedF)) {
+				missing.push(whole + expectedF)
 			}
 		}
 	}

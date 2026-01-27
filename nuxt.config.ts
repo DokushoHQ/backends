@@ -52,6 +52,7 @@ export default defineNuxtConfig({
 		importSimilarityThreshold: "0.8",
 		duplicateDetectionThreshold: 0.85,
 		duplicateDetectionBatchSize: 100,
+		subChapterThreshold: 0.7,
 		openrouterApiKey: "",
 		enabledLanguages: "En",
 		primaryLanguage: "En",

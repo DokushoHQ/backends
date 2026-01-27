@@ -6,6 +6,8 @@ import { deduplicateForLanguage, persistDedupResults } from "../utils/chapter-de
 import type { Language } from "../utils/db"
 import { db } from "../utils/db"
 
+const config = useRuntimeConfig()
+
 export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedupJobResult>({
 	name: QUEUE_NAME,
 	options: {
@@ -103,6 +105,7 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 				language,
 				sourcesWithPriority,
 				log,
+				config.subChapterThreshold,
 			)
 
 			// Persist results to database

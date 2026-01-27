@@ -169,6 +169,125 @@ describe("calculateMissingChapters", () => {
 		const chapters = [1, 2, 3.1, 3.2, 4, 6]
 		expect(calculateMissingChapters(chapters)).toEqual([5])
 	})
+
+	describe("sub-chapter threshold parameter", () => {
+		// Contiguous gaps are ALWAYS detected (no threshold)
+		it("always detects contiguous gaps (.1 and .3 → flag .2)", () => {
+			const chapters = [1.1, 1.3, 2, 3]
+			expect(calculateMissingChapters(chapters)).toContain(1.2)
+		})
+
+		it("always detects contiguous gaps (.1, .2, .4 → flag .3)", () => {
+			const chapters = [1.1, 1.2, 1.4, 2, 3]
+			expect(calculateMissingChapters(chapters)).toContain(1.3)
+		})
+
+		// Trailing fractions use threshold (default 70%)
+		it("flags trailing .3 when 80% have .3 (above 70% threshold)", () => {
+			// 4/5 = 80% have .3
+			const chapters = [
+				1.1, 1.2, 1.3,
+				2.1, 2.2, 2.3,
+				3.1, 3.2, 3.3,
+				4.1, 4.2, 4.3,
+				5.1, 5.2, // no .3, but 80% > 70% → flag 5.3
+			]
+			expect(calculateMissingChapters(chapters)).toContain(5.3)
+		})
+
+		it("does NOT flag trailing .3 when only 50% have .3 (below 70% threshold)", () => {
+			// 5/10 = 50% have .3
+			const chapters = [
+				1.1, 1.2, 1.3,
+				2.1, 2.2, 2.3,
+				3.1, 3.2, 3.3,
+				4.1, 4.2, 4.3,
+				5.1, 5.2, 5.3,
+				6.1, 6.2, // no .3
+				7.1, 7.2, // no .3
+				8.1, 8.2, // no .3
+				9.1, 9.2, // no .3
+				10.1, 10.2, // no .3 - 50% < 70%
+			]
+			expect(calculateMissingChapters(chapters)).not.toContain(6.3)
+		})
+
+		// Trailing .4 detection based on threshold
+		it("does NOT flag trailing .4 when below threshold (only 20% have .4)", () => {
+			// 2/10 = 20% have .4 (below 70% threshold)
+			const chapters = [
+				1.1, 1.2, 1.3, 1.4, // has .4
+				2.1, 2.2, 2.3, 2.4, // has .4
+				3.1, 3.2, 3.3, // no .4
+				4.1, 4.2, 4.3, // no .4
+				5.1, 5.2, 5.3, // no .4
+				6.1, 6.2, 6.3, // no .4
+				7.1, 7.2, 7.3, // no .4
+				8.1, 8.2, 8.3, // no .4
+				9.1, 9.2, 9.3, // no .4
+				10.1, 10.2, 10.3, // no .4
+			]
+			expect(calculateMissingChapters(chapters)).not.toContain(3.4)
+			expect(calculateMissingChapters(chapters)).not.toContain(10.4)
+		})
+
+		it("flags trailing .4 when above threshold (80% have .4)", () => {
+			// 8/10 = 80% have .4 (above 70% threshold)
+			const chapters = [
+				1.1, 1.2, 1.3, 1.4, // has .4
+				2.1, 2.2, 2.3, 2.4, // has .4
+				3.1, 3.2, 3.3, 3.4, // has .4
+				4.1, 4.2, 4.3, 4.4, // has .4
+				5.1, 5.2, 5.3, 5.4, // has .4
+				6.1, 6.2, 6.3, 6.4, // has .4
+				7.1, 7.2, 7.3, 7.4, // has .4
+				8.1, 8.2, 8.3, 8.4, // has .4
+				9.1, 9.2, 9.3, // no .4, should be flagged
+				10.1, 10.2, 10.3, // no .4, should be flagged
+			]
+			expect(calculateMissingChapters(chapters)).toContain(9.4)
+			expect(calculateMissingChapters(chapters)).toContain(10.4)
+		})
+
+		it("ignores fractions above .5 (flags missing .4 but not .6, .7, .8)", () => {
+			// Fractions above .5 are ignored entirely - they don't count as gaps
+			// .5 is the supplementary chapter boundary
+			const chapters = [
+				1.1, 1.2, 1.3, 1.4, // complete
+				2.1, 2.2, 2.3, 2.4, // complete
+				3.1, 3.2, 3.3, 3.7, 3.8, // missing .4, has .7 and .8 (above .5)
+			]
+			const missing = calculateMissingChapters(chapters)
+			expect(missing).toContain(3.4) // missing .4 should be flagged (meets threshold)
+			expect(missing).not.toContain(3.5) // supplementary, never flagged
+			expect(missing).not.toContain(3.6) // above .5, ignored
+			expect(missing).not.toContain(3.7) // above .5, ignored (even though it exists)
+			expect(missing).not.toContain(3.8) // above .5, ignored (even though it exists)
+		})
+
+		// Custom threshold parameter
+		it("respects custom threshold parameter", () => {
+			// 8/10 = 80% have .3, use 90% threshold
+			const chapters = [
+				1.1, 1.2, 1.3,
+				2.1, 2.2, 2.3,
+				3.1, 3.2, 3.3,
+				4.1, 4.2, 4.3,
+				5.1, 5.2, 5.3,
+				6.1, 6.2, 6.3,
+				7.1, 7.2, 7.3,
+				8.1, 8.2, 8.3,
+				9.1, 9.2, // no .3
+				10.1, 10.2, // no .3
+			]
+			// With 90% threshold (9 needed, only 8 have .3), don't flag 9.3 or 10.3
+			expect(calculateMissingChapters(chapters, 0.9)).not.toContain(9.3)
+			expect(calculateMissingChapters(chapters, 0.9)).not.toContain(10.3)
+			// With 70% threshold (7 needed, 8 have .3), flag 9.3 and 10.3
+			expect(calculateMissingChapters(chapters, 0.7)).toContain(9.3)
+			expect(calculateMissingChapters(chapters, 0.7)).toContain(10.3)
+		})
+	})
 })
 
 describe("extractSeasonAndEpisode", () => {

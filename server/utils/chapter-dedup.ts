@@ -108,6 +108,7 @@ export async function deduplicateForLanguage(
 	language: Language,
 	sources: SourceInfo[],
 	log: (msg: string) => void,
+	subChapterThreshold = 0.7,
 ): Promise<DedupLanguageResult> {
 	const primarySource = sources.find(s => s.is_primary)
 
@@ -151,7 +152,7 @@ export async function deduplicateForLanguage(
 		.filter(c => isPrimaryChapterAvailable(c))
 		.map(c => c.chapter_number)
 
-	const missingChapters = calculateMissingChapters(availablePrimaryNumbers)
+	const missingChapters = calculateMissingChapters(availablePrimaryNumbers, subChapterThreshold)
 	const missingSet = new Set(missingChapters)
 
 	log(`  Missing from primary: ${missingChapters.length} chapters`)
