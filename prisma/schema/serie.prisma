@@ -130,6 +130,9 @@ model Chapter {
     // Manual duplicate control
     enabled Boolean @default(true)
 
+    // User override: null = auto-managed, true = user enabled, false = user disabled
+    manual_override Boolean?
+
     // Page fetch tracking
     page_fetch_status PageFetchStatus @default(Pending)
 

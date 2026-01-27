@@ -121,6 +121,12 @@ useHead({
 							@updated="refresh"
 						/>
 					</div>
+
+					<!-- Manual overrides section -->
+					<SeriesEditChapterOverridesSection
+						:serie-id="serieId"
+						@updated="refresh"
+					/>
 				</div>
 			</template>
 		</UDashboardPanel>

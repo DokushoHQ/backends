@@ -77,6 +77,7 @@ type ChapterInfo = {
 	enabled: boolean
 	page_fetch_status: PageFetchStatus
 	groups: { id: string, name: string }[]
+	manual_override: boolean | null
 }
 
 /** Extended chapter info for same-source dedup (includes upload date) */
@@ -224,6 +225,7 @@ export async function deduplicateForLanguage(
 			enabled: true,
 			page_fetch_status: true,
 			groups: { select: { id: true, name: true } },
+			manual_override: true,
 		},
 	})
 
@@ -297,6 +299,11 @@ export async function deduplicateForLanguage(
 	// Determine which chapters to enable/disable
 	const toEnable: string[] = []
 	const toDisable: string[] = []
+
+	// Build set of chapters with manual overrides - these should be skipped
+	const manualOverrideIds = new Set(
+		chapters.filter(c => c.manual_override !== null).map(c => c.id),
+	)
 
 	// Build map of primary chapter numbers for quick lookup
 	// Use array to handle same-source duplicates (multiple chapters with same number)
@@ -484,6 +491,11 @@ export async function deduplicateForLanguage(
 		}
 	}
 
+	// Filter out chapters with manual overrides - they should not be changed by dedup
+	const filteredToEnable = toEnable.filter(id => !manualOverrideIds.has(id))
+	const filteredToDisable = toDisable.filter(id => !manualOverrideIds.has(id))
+	const filteredPrimaryToDisable = primaryToDisable.filter(id => !manualOverrideIds.has(id))
+
 	return {
 		missing_chapters: missingChapters,
 		fillable_chapters: fillableChapters,
@@ -493,9 +505,9 @@ export async function deduplicateForLanguage(
 			ready_count: readyChapterNumbers.size,
 		},
 		changes: {
-			to_enable: toEnable,
-			to_disable: toDisable,
-			primary_to_disable: primaryToDisable,
+			to_enable: filteredToEnable,
+			to_disable: filteredToDisable,
+			primary_to_disable: filteredPrimaryToDisable,
 		},
 	}
 }
@@ -700,12 +712,18 @@ export async function dedupSameSourceChapters(
 			page_fetch_status: true,
 			date_upload: true,
 			groups: { select: { id: true, name: true } },
+			manual_override: true,
 		},
 	})
 
 	if (chapters.length === 0) {
 		return { changes: { to_enable: [], to_disable: [] }, duplicates_processed: 0 }
 	}
+
+	// Build set of chapters with manual overrides - these should be skipped
+	const manualOverrideIds = new Set(
+		chapters.filter(c => c.manual_override !== null).map(c => c.id),
+	)
 
 	const toEnable: string[] = []
 	const toDisable: string[] = []
@@ -867,8 +885,12 @@ export async function dedupSameSourceChapters(
 		}
 	}
 
+	// Filter out chapters with manual overrides - they should not be changed by dedup
+	const filteredToEnable = toEnable.filter(id => !manualOverrideIds.has(id))
+	const filteredToDisable = toDisable.filter(id => !manualOverrideIds.has(id))
+
 	return {
-		changes: { to_enable: toEnable, to_disable: toDisable },
+		changes: { to_enable: filteredToEnable, to_disable: filteredToDisable },
 		duplicates_processed: duplicateNumbers.length,
 	}
 }

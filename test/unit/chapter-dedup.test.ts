@@ -26,6 +26,7 @@ const createChapter = (overrides: Partial<{
 	page_fetch_status: string
 	date_upload: Date
 	groups: { id: string, name: string }[]
+	manual_override: boolean | null
 }>) => ({
 	id: overrides.id ?? crypto.randomUUID(),
 	chapter_number: overrides.chapter_number ?? 1,
@@ -34,6 +35,7 @@ const createChapter = (overrides: Partial<{
 	page_fetch_status: overrides.page_fetch_status ?? "Success",
 	date_upload: overrides.date_upload ?? new Date("2024-01-01"),
 	groups: overrides.groups ?? [],
+	manual_override: overrides.manual_override ?? null,
 })
 
 const mockLog = vi.fn()
@@ -357,6 +359,119 @@ describe("dedupSameSourceChapters", () => {
 			expect(result.changes.to_disable).toEqual([])
 		})
 	})
+
+	describe("manual override handling", () => {
+		it("skips chapters with manual_override = true from being disabled", async () => {
+			const groupA = { id: "group-a", name: "Group A" }
+			const groupB = { id: "group-b", name: "Group B" }
+
+			// Two duplicate chapters, one has manual_override = true (user enabled)
+			const chapters = [
+				createChapter({
+					id: "ch-1",
+					chapter_number: 1,
+					enabled: true,
+					groups: [groupA],
+					manual_override: true, // User manually enabled this
+				}),
+				createChapter({
+					id: "ch-2",
+					chapter_number: 1,
+					enabled: false,
+					groups: [groupB],
+					manual_override: null,
+				}),
+			]
+
+			vi.mocked(db.chapter.findMany).mockResolvedValue(chapters)
+			vi.mocked(db.serieChapterPreference.findUnique).mockResolvedValue(null)
+			// Even though Group B has higher priority, ch-1 should NOT be disabled
+			vi.mocked(db.serieGroupPreference.findMany).mockResolvedValue([
+				{ group_id: groupA.id, priority: 5 },
+				{ group_id: groupB.id, priority: 10 },
+			])
+
+			const result = await dedupSameSourceChapters("serie-1", "source-1", "en", mockLog)
+
+			// ch-1 has manual_override, so it should NOT be disabled even though ch-2 has higher group priority
+			expect(result.changes.to_disable).not.toContain("ch-1")
+			// ch-2 would normally be enabled but since ch-1 can't be disabled, behavior may vary
+			// The important thing is ch-1 stays protected
+		})
+
+		it("skips chapters with manual_override = false from being enabled", async () => {
+			const groupA = { id: "group-a", name: "Group A" }
+			const groupB = { id: "group-b", name: "Group B" }
+
+			// Two duplicate chapters, one has manual_override = false (user disabled)
+			const chapters = [
+				createChapter({
+					id: "ch-1",
+					chapter_number: 1,
+					enabled: true,
+					groups: [groupA],
+					manual_override: null,
+				}),
+				createChapter({
+					id: "ch-2",
+					chapter_number: 1,
+					enabled: false,
+					groups: [groupB],
+					manual_override: false, // User manually disabled this
+				}),
+			]
+
+			vi.mocked(db.chapter.findMany).mockResolvedValue(chapters)
+			vi.mocked(db.serieChapterPreference.findUnique).mockResolvedValue(null)
+			// Group B has higher priority, but ch-2 has manual_override = false
+			vi.mocked(db.serieGroupPreference.findMany).mockResolvedValue([
+				{ group_id: groupA.id, priority: 5 },
+				{ group_id: groupB.id, priority: 10 },
+			])
+
+			const result = await dedupSameSourceChapters("serie-1", "source-1", "en", mockLog)
+
+			// ch-2 has manual_override = false, so it should NOT be enabled even though it has higher group priority
+			expect(result.changes.to_enable).not.toContain("ch-2")
+		})
+
+		it("allows dedup changes for chapters with manual_override = null", async () => {
+			const groupA = { id: "group-a", name: "Group A" }
+			const groupB = { id: "group-b", name: "Group B" }
+
+			// Two duplicate chapters, both auto-managed (manual_override = null)
+			const chapters = [
+				createChapter({
+					id: "ch-1",
+					chapter_number: 1,
+					enabled: true,
+					groups: [groupA],
+					manual_override: null,
+				}),
+				createChapter({
+					id: "ch-2",
+					chapter_number: 1,
+					enabled: false,
+					groups: [groupB],
+					manual_override: null,
+				}),
+			]
+
+			vi.mocked(db.chapter.findMany).mockResolvedValue(chapters)
+			vi.mocked(db.serieChapterPreference.findUnique).mockResolvedValue(null)
+			// Group B has higher priority
+			vi.mocked(db.serieGroupPreference.findMany).mockResolvedValue([
+				{ group_id: groupA.id, priority: 5 },
+				{ group_id: groupB.id, priority: 10 },
+			])
+
+			const result = await dedupSameSourceChapters("serie-1", "source-1", "en", mockLog)
+
+			// Both are auto-managed, so normal dedup applies
+			expect(result.changes.to_enable).toContain("ch-2")
+			expect(result.changes.to_disable).toContain("ch-1")
+		})
+	})
 })
 
 describe("deduplicateForLanguage", () => {
@@ -666,6 +781,88 @@ describe("deduplicateForLanguage", () => {
 			expect(result.stats.missing_count).toBe(1) // Only chapter 2 missing
 			expect(result.stats.available_count).toBe(1)
 			expect(result.stats.ready_count).toBe(1)
+		})
+	})
+
+	describe("manual override handling", () => {
+		it("skips chapters with manual_override from enable/disable changes", async () => {
+			const primarySource = createSource({ source_id: "primary", is_primary: true })
+			const secondarySource = createSource({ source_id: "secondary", is_primary: false })
+
+			const groupPrimary = { id: "group-primary", name: "Primary Group" }
+			const groupSecondary = { id: "group-secondary", name: "Secondary Group" }
+
+			const chapters = [
+				// Primary chapter with manual_override = true (user enabled it)
+				createChapter({
+					id: "ch-primary",
+					chapter_number: 1,
+					source_id: "primary",
+					enabled: true,
+					groups: [groupPrimary],
+					manual_override: true,
+				}),
+				// Secondary chapter with higher group priority
+				createChapter({
+					id: "ch-secondary",
+					chapter_number: 1,
+					source_id: "secondary",
+					enabled: false,
+					groups: [groupSecondary],
+					manual_override: null,
+				}),
+			]
+
+			vi.mocked(db.chapter.findMany).mockResolvedValue(chapters)
+			vi.mocked(db.serieChapterPreference.findUnique).mockResolvedValue(null)
+			// Secondary group has higher priority, would normally disable primary
+			vi.mocked(db.serieGroupPreference.findMany).mockResolvedValue([
+				{ group_id: groupPrimary.id, priority: 5 },
+				{ group_id: groupSecondary.id, priority: 10 },
+			])
+
+			const result = await deduplicateForLanguage(
+				"serie-1",
+				"en",
+				[primarySource, secondarySource],
+				mockLog,
+			)
+
+			// Primary chapter has manual_override, so it should NOT be disabled
+			expect(result.changes.to_disable).not.toContain("ch-primary")
+		})
+
+		it("skips manually disabled chapters from being enabled", async () => {
+			const primarySource = createSource({ source_id: "primary", is_primary: true })
+			const secondarySource = createSource({ source_id: "secondary", is_primary: false })
+
+			const chapters = [
+				// Primary has chapter 1 and 3 (missing 2)
+				createChapter({ id: "ch-1", chapter_number: 1, source_id: "primary", enabled: true }),
+				createChapter({ id: "ch-3", chapter_number: 3, source_id: "primary", enabled: true }),
+				// Secondary has chapter 2 but user manually disabled it
+				createChapter({
+					id: "ch-2-sec",
+					chapter_number: 2,
+					source_id: "secondary",
+					enabled: false,
+					manual_override: false, // User manually disabled
+				}),
+			]
+
+			vi.mocked(db.chapter.findMany).mockResolvedValue(chapters)
+			vi.mocked(db.serieChapterPreference.findUnique).mockResolvedValue(null)
+			vi.mocked(db.serieGroupPreference.findMany).mockResolvedValue([])
+
+			const result = await deduplicateForLanguage(
+				"serie-1",
+				"en",
+				[primarySource, secondarySource],
+				mockLog,
+			)
+
+			// Chapter 2 has manual_override = false, so it should NOT be enabled
+			expect(result.changes.to_enable).not.toContain("ch-2-sec")
 		})
 	})
 })

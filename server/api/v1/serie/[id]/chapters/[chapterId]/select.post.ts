@@ -44,24 +44,21 @@ export default defineEventHandler(async (event) => {
 
 	// Update enabled status: enable selected, disable others
 	const toDisable = duplicates.filter(c => c.id !== chapterId && c.enabled).map(c => c.id)
-	const needsEnable = duplicates.find(c => c.id === chapterId && !c.enabled)
 
 	await db.$transaction(async (tx) => {
-		// Disable other duplicates
+		// Disable other duplicates with manual override marker
 		if (toDisable.length > 0) {
 			await tx.chapter.updateMany({
 				where: { id: { in: toDisable } },
-				data: { enabled: false },
+				data: { enabled: false, manual_override: false },
 			})
 		}
 
-		// Enable selected chapter
-		if (needsEnable) {
-			await tx.chapter.update({
-				where: { id: chapterId },
-				data: { enabled: true },
-			})
-		}
+		// Enable selected chapter with manual override marker
+		await tx.chapter.update({
+			where: { id: chapterId },
+			data: { enabled: true, manual_override: true },
+		})
 
 		// Store group preference for future chapters (if the chapter has groups)
 		if (selectedChapter.groups.length > 0) {
