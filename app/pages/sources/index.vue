@@ -35,6 +35,14 @@ async function triggerSourceRefresh(sourceId: string) {
 				>
 					<template #right>
 						<UButton
+							v-if="isAdmin"
+							icon="i-lucide-settings"
+							variant="ghost"
+							to="/sources/settings"
+						>
+							<span class="hidden sm:inline">Settings</span>
+						</UButton>
+						<UButton
 							icon="i-lucide-refresh-cw"
 							variant="ghost"
 							:loading="pending"

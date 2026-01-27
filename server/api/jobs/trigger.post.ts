@@ -2,7 +2,7 @@ import { z } from "zod"
 import updateSchedulerQueue from "../../queues/update-scheduler"
 
 const triggerSchema = z.object({
-	type: z.enum(["FETCH_LATEST", "REFRESH_ALL", "RETRY_FAILED_PAGES", "REINDEX_ALL"]),
+	type: z.enum(["FETCH_LATEST", "REFRESH_ALL", "RETRY_FAILED_PAGES", "RECOMPUTE_ALL"]),
 	sourceId: z.string().optional(),
 })
 

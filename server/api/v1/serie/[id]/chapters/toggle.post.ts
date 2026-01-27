@@ -31,9 +31,10 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, message: "Some chapters not found or don't belong to this serie" })
 	}
 
+	// Set manual_override to match the enabled state - this prevents auto-dedup from overriding user choice
 	const result = await db.chapter.updateMany({
 		where: { id: { in: chapterIds } },
-		data: { enabled },
+		data: { enabled, manual_override: enabled },
 	})
 
 	return { success: true, count: result.count }

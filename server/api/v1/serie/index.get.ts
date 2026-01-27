@@ -6,7 +6,7 @@ const PAGE_SIZE = 24
 const querySchema = z.object({
 	page: z.coerce.number().int().min(1).default(1),
 	q: z.string().trim().optional(),
-	filter: z.enum(["failing", "no-chapters"]).optional(),
+	filter: z.enum(["failing", "no-chapters", "unfilled-gaps", "filled-gaps"]).optional(),
 	source: z.string().uuid().optional(),
 	genre: z.string().optional(),
 	author: z.string().optional(),
@@ -47,11 +47,15 @@ export default defineEventHandler(async (event) => {
 
 	const failingFilter = filter === "failing"
 	const noChaptersFilter = filter === "no-chapters"
+	const unfilledGapsFilter = filter === "unfilled-gaps"
+	const filledGapsFilter = filter === "filled-gaps"
 
 	// Build Meilisearch filter array
 	function buildFilters(): string[] {
 		const filters: string[] = ["soft_deleted = false"]
 		if (noChaptersFilter) filters.push("chapter_count = 0")
+		if (unfilledGapsFilter) filters.push("has_unfilled_gaps = true")
+		if (filledGapsFilter) filters.push("gaps_all_filled = true")
 		if (languageFilter) filters.push(`languages_available = "${languageFilter}"`)
 		if (sourceFilter) filters.push(`source_ids = "${sourceFilter}"`)
 		if (genreFilter) filters.push(`genres = "${genreFilter}"`)

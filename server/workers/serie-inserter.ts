@@ -1,6 +1,7 @@
 import { defineWorker } from "#processor"
 import { DelayedError, MetricsTime } from "bullmq"
 import type { ChapterDataJobData } from "../queues/chapter-data"
+import type { ChapterDedupJobData } from "../queues/chapter-dedup"
 import type { CoverUpdateJobData } from "../queues/cover-update"
 import type { IndexerJobData } from "../queues/indexer"
 import type { SerieInserterJobData, SerieInserterJobResult } from "../queues/serie-inserter"
@@ -161,6 +162,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					}
 
 					serieId = targetSerieId
+					const isPrimaryValue = isPrimary ?? false
 					const newSerieSource = await tx.serieSource.create({
 						data: {
 							serie_id: targetSerieId,
@@ -172,7 +174,8 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 							cover_source_url: serieData.cover.toString(),
 							status: serieData.status,
 							type: serieData.type,
-							is_primary: isPrimary ?? false,
+							is_primary: isPrimaryValue,
+							priority: isPrimaryValue ? 1 : 5,
 							...(serieData.externalUrl && { external_url: serieData.externalUrl.toString() }),
 						},
 					})
@@ -190,6 +193,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					})
 					serieId = newSerie.id
 
+					const isPrimaryValue = isPrimary ?? true
 					const newSerieSource = await tx.serieSource.create({
 						data: {
 							serie_id: newSerie.id,
@@ -201,7 +205,8 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 							cover_source_url: serieData.cover.toString(),
 							status: serieData.status,
 							type: serieData.type,
-							is_primary: isPrimary ?? true,
+							is_primary: isPrimaryValue,
+							priority: isPrimaryValue ? 1 : 5,
 							...(serieData.externalUrl && { external_url: serieData.externalUrl.toString() }),
 						},
 					})
@@ -350,48 +355,99 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 			const mode = existingSerieSource ? "Updated" : targetSerieId ? "Linked to" : "Created"
 			log(`${mode} serie ${serie_id} with ${chapter_ids.length} chapters to process`)
 
-			// Create two independent flows for faster indexing and fault tolerance
+			// Create a single unified flow to avoid race conditions
+			// Execution order: cover+dedup -> indexer -> chapters -> dedup -> indexer (final)
 			const flowProducer = getFlowProducer()
 			// Inherit priority from parent job, default to NORMAL
 			const priority = job.opts.priority ?? JOB_PRIORITY.NORMAL
 
-			// Flow 1: Cover Update -> Indexer (fast path, serie searchable after cover completes)
-			await flowProducer.add({
-				name: `indexer-cover-${serie_id}`,
-				queueName: "indexer",
-				data: { serie_id, type: "UPDATE" } as IndexerJobData,
-				opts: { priority },
-				children: [
-					{
-						name: `cover-source-${serie_source_id}`,
-						queueName: "cover-update",
-						data: {
-							type: "SOURCE",
-							serie_source_id,
-						} as CoverUpdateJobData,
-						opts: { priority },
-					},
-				],
-			})
+			// Early jobs: cover update and optimistic deduplication
+			const earlyChildren = [
+				{
+					name: `cover-${serie_source_id}`,
+					queueName: "cover-update",
+					data: {
+						type: "SOURCE",
+						serie_source_id,
+					} as CoverUpdateJobData,
+					opts: { priority },
+				},
+				{
+					name: `dedup-early-${serie_id}`,
+					queueName: "chapter-dedup",
+					data: { serie_id } as ChapterDedupJobData,
+					opts: { priority },
+				},
+			]
 
-			// Flow 2: Chapter Data -> Indexer (if chapters need refresh)
 			if (chapter_ids.length > 0) {
+				// Full flow: indexer-final <- dedup-final <- chapters <- indexer-middle <- (cover + dedup-early)
+				// Two dedup passes: early (optimistic) and final (accurate after chapters complete)
 				await flowProducer.add({
-					name: `indexer-chapters-${serie_id}`,
+					name: `indexer-final-${serie_id}`,
 					queueName: "indexer",
 					data: { serie_id, type: "UPDATE" } as IndexerJobData,
 					opts: { priority },
-					children: chapter_ids.map(chapter_id => ({
-						name: `chapter-${serie_id}-${chapter_id}`,
-						queueName: "chapter-data",
-						data: {
-							serie_id,
-							source_id: sourceId,
-							chapter_id,
-							type: "UPDATE",
-						} as ChapterDataJobData,
-						opts: { priority },
-					})),
+					children: [
+						{
+							name: `dedup-final-${serie_id}`,
+							queueName: "chapter-dedup",
+							data: { serie_id } as ChapterDedupJobData,
+							opts: { priority },
+							children: chapter_ids.map((chapter_id, index) => ({
+								name: `chapter-${chapter_id}`,
+								queueName: "chapter-data",
+								data: {
+									serie_id,
+									source_id: sourceId,
+									chapter_id,
+									type: "UPDATE",
+								} as ChapterDataJobData,
+								opts: { priority },
+								// First chapter waits for middle indexer (which waits for cover+dedup-early)
+								...(index === 0 && {
+									children: [
+										{
+											name: `indexer-middle-${serie_id}`,
+											queueName: "indexer",
+											data: { serie_id, type: "UPDATE" } as IndexerJobData,
+											opts: { priority },
+											children: earlyChildren,
+										},
+									],
+								}),
+							})),
+						},
+					],
+				})
+			}
+			else {
+				// No chapters to update: indexer-final <- dedup <- cover
+				// Single dedup is enough when no new chapters
+				await flowProducer.add({
+					name: `indexer-final-${serie_id}`,
+					queueName: "indexer",
+					data: { serie_id, type: "UPDATE" } as IndexerJobData,
+					opts: { priority },
+					children: [
+						{
+							name: `dedup-${serie_id}`,
+							queueName: "chapter-dedup",
+							data: { serie_id } as ChapterDedupJobData,
+							opts: { priority },
+							children: [
+								{
+									name: `cover-${serie_source_id}`,
+									queueName: "cover-update",
+									data: {
+										type: "SOURCE",
+										serie_source_id,
+									} as CoverUpdateJobData,
+									opts: { priority },
+								},
+							],
+						},
+					],
 				})
 			}
 
@@ -405,7 +461,10 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 			})
 
 			await job.updateProgress(100)
-			log(`Spawned ${chapter_ids.length} chapter jobs, cover update, and indexer`)
+			const flowDesc = chapter_ids.length > 0
+				? `cover + dedup -> indexer -> ${chapter_ids.length} chapters -> dedup -> indexer`
+				: `cover -> dedup -> indexer`
+			log(`Spawned unified flow: ${flowDesc}`)
 
 			return { serie_id, chapters_queued: chapter_ids.length }
 		}

@@ -67,6 +67,8 @@ const series = computed(() => (data.value?.data ?? []).filter((s): s is NonNulla
 const pagination = computed(() => data.value?.pagination ?? { page: 1, pageSize: 24, total: 0, totalPages: 0 })
 const isFailingFilter = computed(() => filterType.value === "failing")
 const isNoChaptersFilter = computed(() => filterType.value === "no-chapters")
+const isUnfilledGapsFilter = computed(() => filterType.value === "unfilled-gaps")
+const isFilledGapsFilter = computed(() => filterType.value === "filled-gaps")
 const hasMetadataFilters = computed(() => !!genreFilter.value || !!authorFilter.value || !!artistFilter.value || !!statusFilter.value || !!typeFilter.value || !!languageFilter.value)
 const hasActiveFilters = computed(() => !!filterType.value || !!sourceFilter.value || hasMetadataFilters.value)
 
@@ -75,6 +77,8 @@ const activeFilterCount = computed(() => {
 	let count = 0
 	if (isFailingFilter.value) count++
 	if (isNoChaptersFilter.value) count++
+	if (isUnfilledGapsFilter.value) count++
+	if (isFilledGapsFilter.value) count++
 	if (sourceFilter.value) count++
 	if (genreFilter.value) count++
 	if (authorFilter.value) count++
@@ -104,6 +108,8 @@ const pageDescription = computed(() => {
 
 	if (isFailingFilter.value) filters.push("failing")
 	if (isNoChaptersFilter.value) filters.push("no chapters")
+	if (isUnfilledGapsFilter.value) filters.push("unfilled gaps")
+	if (isFilledGapsFilter.value) filters.push("filled gaps")
 	if (currentSourceName.value) filters.push(`from ${currentSourceName.value}`)
 	if (currentLanguageLabel.value) filters.push(`in ${currentLanguageLabel.value}`)
 	if (typeFilter.value) filters.push(typeFilter.value)
@@ -219,6 +225,36 @@ function setPage(newPage: number) {
 										class="chip-icon"
 									/>
 									No chapters
+									<UIcon
+										name="i-lucide-x"
+										class="chip-close"
+									/>
+								</button>
+								<button
+									v-if="isUnfilledGapsFilter"
+									class="filter-chip filter-chip-purple"
+									@click="updateFilters({ filter: undefined })"
+								>
+									<UIcon
+										name="i-lucide-puzzle"
+										class="chip-icon"
+									/>
+									Unfilled gaps
+									<UIcon
+										name="i-lucide-x"
+										class="chip-close"
+									/>
+								</button>
+								<button
+									v-if="isFilledGapsFilter"
+									class="filter-chip filter-chip-success"
+									@click="updateFilters({ filter: undefined })"
+								>
+									<UIcon
+										name="i-lucide-check-circle"
+										class="chip-icon"
+									/>
+									Filled gaps
 									<UIcon
 										name="i-lucide-x"
 										class="chip-close"
@@ -411,6 +447,38 @@ function setPage(newPage: number) {
 														class="filter-option-check"
 													/>
 												</button>
+												<button
+													class="filter-option"
+													:class="{ active: isUnfilledGapsFilter }"
+													@click="updateFilters({ filter: 'unfilled-gaps' })"
+												>
+													<UIcon
+														name="i-lucide-puzzle"
+														class="filter-option-icon filter-option-icon-purple"
+													/>
+													<span class="filter-option-label">Unfilled gaps</span>
+													<UIcon
+														v-if="isUnfilledGapsFilter"
+														name="i-lucide-check"
+														class="filter-option-check"
+													/>
+												</button>
+												<button
+													class="filter-option"
+													:class="{ active: isFilledGapsFilter }"
+													@click="updateFilters({ filter: 'filled-gaps' })"
+												>
+													<UIcon
+														name="i-lucide-check-circle"
+														class="filter-option-icon filter-option-icon-success"
+													/>
+													<span class="filter-option-label">Filled gaps</span>
+													<UIcon
+														v-if="isFilledGapsFilter"
+														name="i-lucide-check"
+														class="filter-option-check"
+													/>
+												</button>
 											</div>
 										</div>
 
@@ -541,13 +609,17 @@ function setPage(newPage: number) {
 				</div>
 
 				<!-- Empty state -->
-				<SeriesEmptyState
+				<div
 					v-else-if="series.length === 0"
-					:type="emptyStateType"
-					:search-query="searchQuery"
-					:is-admin="isAdmin"
-					@clear-filters="clearFilters"
-				/>
+					class="empty-state-wrapper"
+				>
+					<SeriesEmptyState
+						:type="emptyStateType"
+						:search-query="searchQuery"
+						:is-admin="isAdmin"
+						@clear-filters="clearFilters"
+					/>
+				</div>
 
 				<!-- Series grid -->
 				<div
@@ -638,6 +710,26 @@ function setPage(newPage: number) {
 
 .filter-chip-warning:hover {
 	background: color-mix(in oklch, var(--ui-warning) 20%, transparent);
+}
+
+.filter-chip-purple {
+	background: var(--color-purple-soft);
+	border-color: color-mix(in oklch, var(--color-purple) 30%, transparent);
+	color: var(--color-purple);
+}
+
+.filter-chip-purple:hover {
+	background: color-mix(in oklch, var(--color-purple) 20%, transparent);
+}
+
+.filter-chip-success {
+	background: var(--ui-success-soft);
+	border-color: color-mix(in oklch, var(--ui-success) 30%, transparent);
+	color: var(--ui-success);
+}
+
+.filter-chip-success:hover {
+	background: color-mix(in oklch, var(--ui-success) 20%, transparent);
 }
 
 .chip-icon {
@@ -891,6 +983,22 @@ function setPage(newPage: number) {
 	color: var(--ui-warning);
 }
 
+.filter-option-icon-purple {
+	color: var(--color-purple);
+}
+
+.filter-option.active .filter-option-icon-purple {
+	color: var(--color-purple);
+}
+
+.filter-option-icon-success {
+	color: var(--ui-success);
+}
+
+.filter-option.active .filter-option-icon-success {
+	color: var(--ui-success);
+}
+
 .filter-option-label {
 	flex: 1;
 	min-width: 0;
@@ -1047,6 +1155,13 @@ function setPage(newPage: number) {
 	}
 }
 
+/* Empty state wrapper */
+.empty-state-wrapper {
+	display: flex;
+	flex: 1;
+	min-height: 60vh;
+}
+
 /* Error state */
 .error-state {
 	display: flex;
@@ -1055,6 +1170,7 @@ function setPage(newPage: number) {
 	justify-content: center;
 	padding: 3rem 1.5rem;
 	text-align: center;
+	min-height: 60vh;
 }
 
 .error-icon {

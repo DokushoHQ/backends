@@ -59,6 +59,7 @@
 		"unzipper": "^0.12.3",
 		"vue": "latest",
 		"vue-chrts": "^2.0.0",
+		"vuedraggable": "^4.1.0",
 		"zod": "^4.3.5"
 	},
 	"devDependencies": {

@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, message: "Serie ID required" })
 	}
 
-	const [serie, chapterHealth] = await Promise.all([
+	const [serie, chapterHealth, chapterAvailability] = await Promise.all([
 		db.serie.findUnique({
 			where: { id },
 			include: {
@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
 						id: true,
 						external_id: true,
 						is_primary: true,
+						priority: true,
 						external_url: true,
 						consecutive_failures: true,
 						title: true,
@@ -23,7 +24,7 @@ export default defineEventHandler(async (event) => {
 						cover: true,
 						source: { select: { id: true, external_id: true, name: true, icon: true } },
 					},
-					orderBy: { is_primary: "desc" },
+					orderBy: [{ is_primary: "desc" }, { priority: "asc" }],
 				},
 				genres: { select: { id: true, title: true } },
 				authors: { select: { id: true, name: true } },
@@ -35,6 +36,10 @@ export default defineEventHandler(async (event) => {
 			by: ["page_fetch_status"],
 			where: { serie_id: id },
 			_count: true,
+		}),
+		db.chapterAvailability.aggregate({
+			where: { serie_id: id },
+			_sum: { missing_count: true },
 		}),
 	])
 
@@ -98,5 +103,7 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
-	return { ...serie, sources: sourcesWithUrls, chapterHealthCounts }
+	const totalMissingChapters = chapterAvailability._sum.missing_count ?? 0
+
+	return { ...serie, sources: sourcesWithUrls, chapterHealthCounts, totalMissingChapters }
 })

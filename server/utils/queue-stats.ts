@@ -3,6 +3,10 @@ import backupParserQueue, {
 	DISPLAY_NAME as BACKUP_PARSER_DISPLAY,
 	QUEUE_NAME as BACKUP_PARSER_NAME,
 } from "../queues/backup-parser"
+import chapterDedupQueue, {
+	DISPLAY_NAME as CHAPTER_DEDUP_DISPLAY,
+	QUEUE_NAME as CHAPTER_DEDUP_NAME,
+} from "../queues/chapter-dedup"
 import duplicateDetectorQueue, {
 	DISPLAY_NAME as DUPLICATE_DETECTOR_DISPLAY,
 	QUEUE_NAME as DUPLICATE_DETECTOR_NAME,
@@ -47,6 +51,7 @@ import updateSchedulerQueue, {
 const queues = {
 	serieInserter: serieInserterQueue,
 	chapterData: chapterDataQueue,
+	chapterDedup: chapterDedupQueue,
 	coverUpdate: coverUpdateQueue,
 	indexer: indexerQueue,
 	updateScheduler: updateSchedulerQueue,
@@ -74,6 +79,7 @@ export const queueConfig: Record<
 > = {
 	serieInserter: { name: SERIE_INSERTER_NAME, displayName: SERIE_INSERTER_DISPLAY },
 	chapterData: { name: CHAPTER_DATA_NAME, displayName: CHAPTER_DATA_DISPLAY },
+	chapterDedup: { name: CHAPTER_DEDUP_NAME, displayName: CHAPTER_DEDUP_DISPLAY },
 	coverUpdate: { name: COVER_UPDATE_NAME, displayName: COVER_UPDATE_DISPLAY },
 	indexer: { name: INDEXER_NAME, displayName: INDEXER_DISPLAY },
 	updateScheduler: { name: UPDATE_SCHEDULER_NAME, displayName: UPDATE_SCHEDULER_DISPLAY },

@@ -1,0 +1,106 @@
+// Chapter availability tracking for cross-source deduplication
+// Tracks missing chapters per serie per language
+
+model ChapterAvailability {
+    id         String   @id @default(uuid()) @db.Uuid
+    created_at DateTime @default(now()) @db.Timestamptz()
+    updated_at DateTime @default(now()) @updatedAt @db.Timestamptz()
+
+    serie_id String   @db.Uuid
+    language Language
+
+    // Missing chapters in primary source (calculated via calculateMissingChapters)
+    /// [MissingChapterType]
+    missing_chapters Json @default("[]")
+
+    // Quick-access statistics
+    missing_count      Int @default(0)
+    available_count    Int @default(0) // Secondary chapters that exist for missing numbers
+    ready_count        Int @default(0) // Secondary chapters that are fetched (Success status)
+    auto_enabled_count Int @default(0)
+
+    serie             Serie             @relation(fields: [serie_id], references: [id], onDelete: Cascade)
+    fillable_chapters FillableChapter[]
+
+    @@unique([serie_id, language])
+    @@index([serie_id])
+    @@index([missing_count])
+    @@map("chapter_availability")
+}
+
+// Secondary source chapters that can fill gaps in primary source
+model FillableChapter {
+    id         String   @id @default(uuid()) @db.Uuid
+    created_at DateTime @default(now()) @db.Timestamptz()
+
+    availability_id String @db.Uuid
+    chapter_number  Float
+
+    // The secondary chapter that can fill this gap
+    chapter_id String @db.Uuid
+    source_id  String @db.Uuid
+
+    availability ChapterAvailability @relation(fields: [availability_id], references: [id], onDelete: Cascade)
+    chapter      Chapter             @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
+    source       Source              @relation(fields: [source_id], references: [id], onDelete: Cascade)
+
+    @@unique([availability_id, chapter_number, chapter_id])
+    @@index([availability_id])
+    @@map("fillable_chapter")
+}
+
+// Per-serie user preferences for chapter deduplication behavior
+model SerieChapterPreference {
+    id         String   @id @default(uuid()) @db.Uuid
+    created_at DateTime @default(now()) @db.Timestamptz()
+    updated_at DateTime @default(now()) @updatedAt @db.Timestamptz()
+
+    serie_id String @unique @db.Uuid
+
+    // When primary source fetch fails/is missing, should we use secondary?
+    // Per-language configuration: { "En": true, "Fr": false }
+    /// [LanguageBooleanMapType]
+    use_secondary_fallback Json @default("{}")
+
+    // Global default when language not specified in map
+    use_secondary_fallback_default Boolean @default(true)
+
+    // Prefer unsplit/whole chapters over split versions (e.g., prefer Ch 1 over Ch 1.1, 1.2, 1.3)
+    // When enabled, whole chapters take priority even from secondary sources
+    /// [LanguageBooleanMapType]
+    prefer_unsplit Json @default("{}")
+
+    // Global default when language not specified in prefer_unsplit map
+    prefer_unsplit_default Boolean @default(true)
+
+    // Notification preferences (for future use)
+    notify_on_new_gaps   Boolean @default(false)
+    notify_on_gap_filled Boolean @default(false)
+
+    serie Serie @relation(fields: [serie_id], references: [id], onDelete: Cascade)
+
+    @@map("serie_chapter_preference")
+}
+
+// Per-serie scanlation group preference for same-source deduplication
+// When multiple uploads exist for the same chapter from different groups,
+// this controls which group is preferred
+model SerieGroupPreference {
+    id         String   @id @default(uuid()) @db.Uuid
+    created_at DateTime @default(now()) @db.Timestamptz()
+    updated_at DateTime @default(now()) @updatedAt @db.Timestamptz()
+
+    serie_id String   @db.Uuid
+    group_id String   @db.Uuid
+    language Language
+
+    // Higher = more preferred (0 = neutral/default)
+    priority Int @default(0)
+
+    serie Serie           @relation(fields: [serie_id], references: [id], onDelete: Cascade)
+    group ScanlationGroup @relation(fields: [group_id], references: [id], onDelete: Cascade)
+
+    @@unique([serie_id, group_id, language])
+    @@index([serie_id, language])
+    @@map("serie_group_preference")
+}

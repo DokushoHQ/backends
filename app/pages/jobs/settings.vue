@@ -74,10 +74,10 @@ const jobs = ref([
 		loading: false,
 	},
 	{
-		type: "REINDEX_ALL" as const,
-		title: "Reindex All Series",
-		description: "Force re-index all series in Meilisearch",
-		icon: "i-lucide-search",
+		type: "RECOMPUTE_ALL" as const,
+		title: "Recompute All Series",
+		description: "Run chapter deduplication then reindex all series in search engine",
+		icon: "i-lucide-calculator",
 		loading: false,
 	},
 ])

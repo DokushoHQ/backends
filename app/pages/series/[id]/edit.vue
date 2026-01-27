@@ -89,37 +89,44 @@ useHead({
 					v-else-if="serie"
 					class="edit-content"
 				>
-					<!-- Page header -->
-					<div class="page-header">
-						<div class="header-icon">
-							<UIcon
-								name="i-lucide-settings-2"
-								class="icon"
-							/>
-						</div>
-						<div class="header-text">
-							<h1>Edit Metadata</h1>
-							<p>Override source metadata or set custom display values. Locked fields won't be updated by source refreshes.</p>
-						</div>
-					</div>
-
-					<!-- Section cards -->
-					<div class="sections">
-						<SeriesEditTitleSection
-							:serie="serie"
-							@updated="refresh"
-						/>
-
-						<SeriesEditSynopsisSection
-							:serie="serie"
-							@updated="refresh"
-						/>
-
+					<!-- Identity section: Cover + Title -->
+					<div class="identity-row">
 						<SeriesEditCoverSection
 							:serie="serie"
+							class="cover-section"
+							@updated="refresh"
+						/>
+						<div class="identity-text">
+							<SeriesEditTitleSection
+								:serie="serie"
+								@updated="refresh"
+							/>
+							<SeriesEditSynopsisSection
+								:serie="serie"
+								@updated="refresh"
+							/>
+						</div>
+					</div>
+
+					<!-- Preferences section -->
+					<div class="preferences-row">
+						<SeriesEditChapterPreferencesSection
+							:serie-id="serieId"
+							:sources="serie.sources"
+							@updated="refresh"
+						/>
+
+						<SeriesEditGroupPreferencesSection
+							:serie-id="serieId"
 							@updated="refresh"
 						/>
 					</div>
+
+					<!-- Manual overrides section -->
+					<SeriesEditChapterOverridesSection
+						:serie-id="serieId"
+						@updated="refresh"
+					/>
 				</div>
 			</template>
 		</UDashboardPanel>
@@ -131,56 +138,53 @@ useHead({
 	display: flex;
 	flex-direction: column;
 	gap: 1.5rem;
-	max-width: 56rem;
+	max-width: 72rem;
 }
 
-/* Page header */
-.page-header {
-	display: flex;
-	align-items: flex-start;
-	gap: 1rem;
-	padding: 1.25rem 1.5rem;
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
-}
-
-.header-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 2.5rem;
-	height: 2.5rem;
-	background: var(--ui-primary-soft);
-	border-radius: 0.5rem;
-	flex-shrink: 0;
-}
-
-.header-icon .icon {
-	width: 1.25rem;
-	height: 1.25rem;
-	color: var(--ui-primary);
-}
-
-.header-text h1 {
-	font-size: var(--font-size-lg);
-	font-weight: 600;
-	color: var(--ui-text);
-	margin: 0 0 0.25rem 0;
-}
-
-.header-text p {
-	font-size: var(--font-size-sm);
-	color: var(--ui-text-muted);
-	margin: 0;
-	line-height: 1.5;
-}
-
-/* Sections */
-.sections {
+/* Identity row: Cover + Title/Synopsis */
+.identity-row {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
+}
+
+@media (min-width: 768px) {
+	.identity-row {
+		flex-direction: row;
+		gap: 1.5rem;
+	}
+
+	.cover-section {
+		flex-shrink: 0;
+		width: 16rem;
+	}
+
+	.identity-text {
+		flex: 1;
+		min-width: 0;
+	}
+}
+
+.identity-text {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+/* Preferences row: Chapter + Group preferences */
+.preferences-row {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+	.preferences-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1.5rem;
+		align-items: start;
+	}
 }
 
 /* Loading state */
