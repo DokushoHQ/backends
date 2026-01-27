@@ -11,6 +11,12 @@ type ChapterInfo = {
 	page_fetch_status: PageFetchStatus
 }
 
+/** Extended chapter info for same-source dedup (includes groups) */
+type ChapterWithGroups = ChapterInfo & {
+	date_upload: Date
+	groups: { id: string, name: string }[]
+}
+
 /** Source info used internally during deduplication */
 type SourceInfo = {
 	source_id: string
@@ -204,11 +210,13 @@ export async function deduplicateForLanguage(
 	const toDisable: string[] = []
 
 	// Build map of primary chapter numbers for quick lookup
-	const primaryChapterMap = new Map<number, ChapterInfo>()
+	// Use array to handle same-source duplicates (multiple chapters with same number)
+	const primaryChapterMap = new Map<number, ChapterInfo[]>()
 	for (const c of primaryChapters) {
-		primaryChapterMap.set(c.chapter_number, c)
+		const existing = primaryChapterMap.get(c.chapter_number) || []
+		existing.push(c)
+		primaryChapterMap.set(c.chapter_number, existing)
 	}
-
 	// Get user preference for this language (whether to use secondary for failed primary)
 	const useSecondaryOnFail = await getSecondaryFallbackPreference(serieId, language)
 
@@ -227,8 +235,9 @@ export async function deduplicateForLanguage(
 	})
 
 	for (const secondary of sortedSecondaryChapters) {
-		const primaryChapter = primaryChapterMap.get(secondary.chapter_number)
-		const primaryAvailable = isPrimaryChapterAvailable(primaryChapter)
+		const primaryChaptersForNumber = primaryChapterMap.get(secondary.chapter_number) || []
+		// Check if ANY primary chapter for this number is available
+		const primaryAvailable = primaryChaptersForNumber.some(c => isPrimaryChapterAvailable(c))
 
 		if (primaryAvailable) {
 			// Primary source has this chapter with successful data
@@ -241,8 +250,9 @@ export async function deduplicateForLanguage(
 		else if (missingSet.has(secondary.chapter_number)) {
 			// Primary is missing this chapter (or failed) and it's in the calculated gaps
 			// Check if user pref allows secondary fallback when primary exists but failed
-			const primaryExists = primaryChapter !== undefined
-			const primaryFailed = primaryChapter && ["Failed", "PermanentlyFailed"].includes(primaryChapter.page_fetch_status)
+			const primaryExists = primaryChaptersForNumber.length > 0
+			const primaryFailed = primaryChaptersForNumber.length > 0
+				&& primaryChaptersForNumber.every(c => ["Failed", "PermanentlyFailed"].includes(c.page_fetch_status))
 
 			// Enable secondary if:
 			// 1. Primary doesn't exist at all, OR
@@ -341,6 +351,223 @@ export async function persistDedupResults(
 					chapter_id: f.chapter_id,
 					source_id: f.source_id,
 				})),
+			})
+		}
+
+		return {
+			enabled: result.changes.to_enable.length,
+			disabled: result.changes.to_disable.length,
+		}
+	})
+}
+
+// ============================================================================
+// Same-Source Deduplication (Multiple uploads from different scanlation groups)
+// ============================================================================
+
+/** Result of same-source deduplication for a single language */
+export type SameSourceDedupResult = {
+	changes: {
+		to_enable: string[]
+		to_disable: string[]
+	}
+	duplicates_processed: number
+}
+
+/**
+ * Get scanlation group preferences for a serie + language.
+ * Returns a map of group_id -> priority (higher = more preferred).
+ */
+async function getGroupPreferences(
+	serieId: string,
+	language: Language,
+): Promise<Map<string, number>> {
+	const prefs = await db.serieGroupPreference.findMany({
+		where: { serie_id: serieId, language },
+		select: { group_id: true, priority: true },
+	})
+
+	const map = new Map<string, number>()
+	for (const pref of prefs) {
+		map.set(pref.group_id, pref.priority)
+	}
+	return map
+}
+
+/**
+ * Count chapters per scanlation group for a serie + source + language.
+ * Used as a heuristic to prefer established groups.
+ */
+async function getGroupChapterCounts(
+	serieId: string,
+	sourceId: string,
+	language: Language,
+): Promise<Map<string, number>> {
+	// Get all chapters for this serie/source/language with their groups
+	const chapters = await db.chapter.findMany({
+		where: { serie_id: serieId, source_id: sourceId, language },
+		select: {
+			groups: { select: { id: true } },
+		},
+	})
+
+	const counts = new Map<string, number>()
+	for (const chapter of chapters) {
+		for (const group of chapter.groups) {
+			counts.set(group.id, (counts.get(group.id) || 0) + 1)
+		}
+	}
+	return counts
+}
+
+/**
+ * Select the best chapter from a set of duplicates.
+ *
+ * Selection priority:
+ * 1. Check group preferences - if any chapter's group has a stored preference, use highest priority
+ * 2. Otherwise use heuristic: group with most chapters in this serie (established group)
+ * 3. Tie-breaker: latest upload date (likely better quality/fixes)
+ */
+function selectBestChapter(
+	duplicates: ChapterWithGroups[],
+	groupPrefs: Map<string, number>,
+	groupCounts: Map<string, number>,
+): ChapterWithGroups {
+	// Sort by: group preference (desc) -> group chapter count (desc) -> upload date (desc)
+	const sorted = [...duplicates].sort((a, b) => {
+		// Get max preference priority among chapter's groups
+		const aPrefMax = Math.max(0, ...a.groups.map(g => groupPrefs.get(g.id) || 0))
+		const bPrefMax = Math.max(0, ...b.groups.map(g => groupPrefs.get(g.id) || 0))
+
+		// If either has a preference, compare by preference
+		if (aPrefMax !== bPrefMax) {
+			return bPrefMax - aPrefMax // Higher preference wins
+		}
+
+		// Get max chapter count among chapter's groups
+		const aCountMax = Math.max(0, ...a.groups.map(g => groupCounts.get(g.id) || 0))
+		const bCountMax = Math.max(0, ...b.groups.map(g => groupCounts.get(g.id) || 0))
+
+		if (aCountMax !== bCountMax) {
+			return bCountMax - aCountMax // Higher count wins
+		}
+
+		// Tie-breaker: later upload date wins
+		return b.date_upload.getTime() - a.date_upload.getTime()
+	})
+
+	return sorted[0]!
+}
+
+/**
+ * Process same-source deduplication for a single source + language within a serie.
+ *
+ * When multiple chapters have the same (source_id, chapter_number, language),
+ * automatically enable the "best" one and disable others.
+ */
+export async function dedupSameSourceChapters(
+	serieId: string,
+	sourceId: string,
+	language: Language,
+	log: (msg: string) => void,
+): Promise<SameSourceDedupResult> {
+	// Load all chapters for this serie + source + language with groups
+	const chapters = await db.chapter.findMany({
+		where: { serie_id: serieId, source_id: sourceId, language },
+		select: {
+			id: true,
+			chapter_number: true,
+			source_id: true,
+			enabled: true,
+			page_fetch_status: true,
+			date_upload: true,
+			groups: { select: { id: true, name: true } },
+		},
+	})
+
+	if (chapters.length === 0) {
+		return { changes: { to_enable: [], to_disable: [] }, duplicates_processed: 0 }
+	}
+
+	// Group chapters by chapter_number
+	const chaptersByNumber = new Map<number, ChapterWithGroups[]>()
+	for (const c of chapters) {
+		const list = chaptersByNumber.get(c.chapter_number) || []
+		list.push(c)
+		chaptersByNumber.set(c.chapter_number, list)
+	}
+
+	// Find chapter numbers with duplicates (> 1 chapter)
+	const duplicateNumbers: number[] = []
+	for (const [num, list] of chaptersByNumber) {
+		if (list.length > 1) {
+			duplicateNumbers.push(num)
+		}
+	}
+
+	if (duplicateNumbers.length === 0) {
+		return { changes: { to_enable: [], to_disable: [] }, duplicates_processed: 0 }
+	}
+
+	log(`  Same-source: found ${duplicateNumbers.length} chapter numbers with duplicates`)
+
+	// Get group preferences and chapter counts for selection
+	const groupPrefs = await getGroupPreferences(serieId, language)
+	const groupCounts = await getGroupChapterCounts(serieId, sourceId, language)
+
+	const toEnable: string[] = []
+	const toDisable: string[] = []
+
+	for (const num of duplicateNumbers) {
+		const duplicates = chaptersByNumber.get(num)!
+		const best = selectBestChapter(duplicates, groupPrefs, groupCounts)
+
+		for (const chapter of duplicates) {
+			if (chapter.id === best.id) {
+				// This is the selected best - ensure it's enabled
+				if (!chapter.enabled) {
+					toEnable.push(chapter.id)
+					log(`    Ch ${num}: enabling ${chapter.groups.map(g => g.name).join(", ") || "no group"}`)
+				}
+			}
+			else {
+				// Not the best - ensure it's disabled
+				if (chapter.enabled) {
+					toDisable.push(chapter.id)
+					log(`    Ch ${num}: disabling ${chapter.groups.map(g => g.name).join(", ") || "no group"}`)
+				}
+			}
+		}
+	}
+
+	return {
+		changes: { to_enable: toEnable, to_disable: toDisable },
+		duplicates_processed: duplicateNumbers.length,
+	}
+}
+
+/**
+ * Persist same-source deduplication results to database.
+ */
+export async function persistSameSourceDedupResults(
+	result: SameSourceDedupResult,
+): Promise<{ enabled: number, disabled: number }> {
+	if (result.changes.to_enable.length === 0 && result.changes.to_disable.length === 0) {
+		return { enabled: 0, disabled: 0 }
+	}
+
+	return db.$transaction(async (tx) => {
+		if (result.changes.to_enable.length > 0) {
+			await tx.chapter.updateMany({
+				where: { id: { in: result.changes.to_enable } },
+				data: { enabled: true },
+			})
+		}
+
+		if (result.changes.to_disable.length > 0) {
+			await tx.chapter.updateMany({
+				where: { id: { in: result.changes.to_disable } },
+				data: { enabled: false },
 			})
 		}
 

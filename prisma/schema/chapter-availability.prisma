@@ -73,3 +73,26 @@ model SerieChapterPreference {
 
     @@map("serie_chapter_preference")
 }
+
+// Per-serie scanlation group preference for same-source deduplication
+// When multiple uploads exist for the same chapter from different groups,
+// this controls which group is preferred
+model SerieGroupPreference {
+    id         String   @id @default(uuid()) @db.Uuid
+    created_at DateTime @default(now()) @db.Timestamptz()
+    updated_at DateTime @default(now()) @updatedAt @db.Timestamptz()
+
+    serie_id String   @db.Uuid
+    group_id String   @db.Uuid
+    language Language
+
+    // Higher = more preferred (0 = neutral/default)
+    priority Int @default(0)
+
+    serie Serie           @relation(fields: [serie_id], references: [id], onDelete: Cascade)
+    group ScanlationGroup @relation(fields: [group_id], references: [id], onDelete: Cascade)
+
+    @@unique([serie_id, group_id, language])
+    @@index([serie_id, language])
+    @@map("serie_group_preference")
+}

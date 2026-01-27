@@ -142,7 +142,6 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 
 	// 5. Calculate chapter availability stats
 	const totalMissingChapters = serie.chapter_availability.reduce((sum, a) => sum + a.missing_count, 0)
-	const totalAvailableChapters = serie.chapter_availability.reduce((sum, a) => sum + a.available_count, 0)
 	const totalReadyChapters = serie.chapter_availability.reduce((sum, a) => sum + a.ready_count, 0)
 	const languagesWithGaps = serie.chapter_availability
 		.filter(a => a.missing_count > 0)

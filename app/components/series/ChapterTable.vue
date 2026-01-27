@@ -1,8 +1,44 @@
 <script setup lang="ts">
-import type { TableColumn } from "@nuxt/ui"
 import type { PageFetchStatus, UIChapter, UIChapterItem } from "#shared/ui/type/chapter"
 
 const { formatRelativeTime } = useFormatters()
+
+// Alternative selection state
+const isSelectingAlternative = ref(false)
+
+async function handleSelectAlternative(chapterId: string) {
+	isSelectingAlternative.value = true
+	try {
+		await $fetch(`/api/v1/serie/${props.serieId}/chapters/${chapterId}/select`, {
+			method: "POST",
+		})
+		emit("versionSelected")
+	}
+	catch (e) {
+		console.error("Failed to select alternative:", e)
+	}
+	finally {
+		isSelectingAlternative.value = false
+	}
+}
+
+function getStatusLabel(status: PageFetchStatus): string {
+	switch (status) {
+		case "Success": return "Ready"
+		case "Pending": return "Pending"
+		case "InProgress": return "Loading"
+		default: return "Failed"
+	}
+}
+
+function getStatusColor(status: PageFetchStatus): string {
+	switch (status) {
+		case "Success": return "text-emerald-500"
+		case "Pending":
+		case "InProgress": return "text-amber-500"
+		default: return "text-red-500"
+	}
+}
 
 // Status badge config
 function getStatusBadge(status: PageFetchStatus) {
@@ -33,6 +69,7 @@ const props = defineProps<{
 const emit = defineEmits<{
 	chaptersDeleted: []
 	chaptersAcknowledged: []
+	versionSelected: []
 }>()
 
 const selectedIds = ref<Set<string>>(new Set())
@@ -45,6 +82,9 @@ const deleteDialogOpen = ref(false)
 // Viewer state
 const viewerOpen = ref(false)
 const viewerChapter = ref<UIChapter | null>(null)
+
+// Expanded groups state (keyed by "chapterNumber-language")
+const expandedGroups = ref<Set<string>>(new Set())
 
 // Filters (language is now handled by parent tabs)
 const sourceFilter = ref("all")
@@ -83,43 +123,102 @@ function getSourceAvailabilityStatus(chapter: UIChapter): "available" | "removed
 	return chapter.source_removal_acknowledged_at ? "removed-acknowledged" : "removed-unacknowledged"
 }
 
-// Filter items (no language filter, no missing markers)
-const filteredItems = computed(() => {
-	return props.items.filter((item) => {
-		if (item.type === "missing") return false // Skip missing markers
+// Filter a single chapter
+function passesFilters(chapter: UIChapter): boolean {
+	if (sourceFilter.value !== "all" && chapter.source.external_id !== sourceFilter.value) {
+		return false
+	}
 
-		const chapter = item.data
+	if (groupFilter.value === "none" && chapter.groups.length > 0) {
+		return false
+	}
+	if (groupFilter.value !== "all" && groupFilter.value !== "none" && !chapter.groups.some((g: { id: string }) => g.id === groupFilter.value)) {
+		return false
+	}
 
-		if (sourceFilter.value !== "all" && chapter.source.external_id !== sourceFilter.value) {
-			return false
+	if (statusFilter.value !== "all" && chapter.page_fetch_status !== statusFilter.value) {
+		return false
+	}
+
+	if (sourceAvailabilityFilter.value !== "all" && getSourceAvailabilityStatus(chapter) !== sourceAvailabilityFilter.value) {
+		return false
+	}
+
+	return true
+}
+
+// Group chapters by (chapter_number, language) for nested display
+type ChapterGroup = {
+	key: string
+	chapterNumber: number
+	language: string
+	primary: UIChapter | null // The enabled chapter (or first if none enabled)
+	duplicates: UIChapter[] // Other versions (disabled)
+}
+
+const groupedChapters = computed<ChapterGroup[]>(() => {
+	const groups = new Map<string, { chapters: UIChapter[] }>()
+
+	// Group all chapters by (chapter_number, language)
+	for (const { data: chapter } of chapters.value) {
+		if (!passesFilters(chapter)) continue
+
+		const key = `${chapter.chapter_number}-${chapter.language}`
+		if (!groups.has(key)) {
+			groups.set(key, { chapters: [] })
 		}
+		groups.get(key)!.chapters.push(chapter)
+	}
 
-		if (groupFilter.value === "none" && chapter.groups.length > 0) {
-			return false
-		}
-		if (groupFilter.value !== "all" && groupFilter.value !== "none" && !chapter.groups.some((g: { id: string }) => g.id === groupFilter.value)) {
-			return false
-		}
+	// Convert to array and determine primary vs duplicates
+	const result: ChapterGroup[] = []
+	for (const [key, group] of groups) {
+		// Sort: enabled first (using original data, not optimistic state), then by date_upload desc
+		// Using chapter.enabled instead of getEnabled() keeps row positions stable during optimistic updates
+		const sorted = [...group.chapters].sort((a, b) => {
+			if (a.enabled !== b.enabled) return b.enabled ? 1 : -1
+			return new Date(b.date_upload).getTime() - new Date(a.date_upload).getTime()
+		})
 
-		if (statusFilter.value !== "all" && chapter.page_fetch_status !== statusFilter.value) {
-			return false
-		}
+		const primary = sorted[0] || null
+		const duplicates = sorted.slice(1)
 
-		if (sourceAvailabilityFilter.value !== "all" && getSourceAvailabilityStatus(chapter) !== sourceAvailabilityFilter.value) {
-			return false
+		if (primary) {
+			result.push({
+				key,
+				chapterNumber: primary.chapter_number,
+				language: primary.language,
+				primary,
+				duplicates,
+			})
 		}
+	}
 
-		return true
-	})
+	// Sort by chapter number descending
+	result.sort((a, b) => b.chapterNumber - a.chapterNumber)
+
+	return result
 })
 
-const filteredChapters = computed(() =>
-	filteredItems.value.filter(
-		(item): item is { type: "chapter", data: UIChapter } => item.type === "chapter",
-	),
-)
+const totalChapterCount = computed(() => chapters.value.length)
+const visibleChapterCount = computed(() => {
+	let count = 0
+	for (const group of groupedChapters.value) {
+		count += 1 + group.duplicates.length
+	}
+	return count
+})
 
-const filteredChapterIds = computed(() => filteredChapters.value.map(c => c.data.id))
+const filteredChapterIds = computed(() => {
+	const ids: string[] = []
+	for (const group of groupedChapters.value) {
+		if (group.primary) ids.push(group.primary.id)
+		for (const dup of group.duplicates) {
+			ids.push(dup.id)
+		}
+	}
+	return ids
+})
 
 const allSelected = computed(() =>
 	selectedIds.value.size > 0 && filteredChapterIds.value.every(id => selectedIds.value.has(id)),
@@ -191,6 +290,17 @@ function toggleSelect(id: string) {
 		next.add(id)
 	}
 	selectedIds.value = next
+}
+
+function toggleGroup(key: string) {
+	const next = new Set(expandedGroups.value)
+	if (next.has(key)) {
+		next.delete(key)
+	}
+	else {
+		next.add(key)
+	}
+	expandedGroups.value = next
 }
 
 async function handleToggleEnabled(chapterId: string, currentEnabled: boolean) {
@@ -300,10 +410,12 @@ function openViewer(chapter: UIChapter) {
 	viewerOpen.value = true
 }
 
-function handleRowSelect(_event: Event, row: { original: UIChapterItem }) {
-	if (row.original.type === "chapter") {
-		openViewer(row.original.data)
-	}
+function isUnacknowledgedRemoved(chapter: UIChapter): boolean {
+	return !!chapter.source_removed_at && !chapter.source_removal_acknowledged_at
+}
+
+function isAcknowledgedRemoved(chapter: UIChapter): boolean {
+	return !!chapter.source_removed_at && !!chapter.source_removal_acknowledged_at
 }
 
 // Source filter items
@@ -338,173 +450,6 @@ const sourceAvailabilityFilterItems = [
 	{ label: "Removed (Unack.)", value: "removed-unacknowledged" },
 	{ label: "Removed (Ack.)", value: "removed-acknowledged" },
 ]
-
-// Table columns
-const columns = computed<TableColumn<UIChapterItem>[]>(() => {
-	const cols: TableColumn<UIChapterItem>[] = []
-
-	if (props.isAdmin) {
-		cols.push({
-			id: "select",
-			header: () =>
-				h(resolveComponent("UCheckbox"), {
-					"modelValue": allSelected.value,
-					"indeterminate": someSelected.value,
-					"onUpdate:modelValue": toggleSelectAll,
-				}),
-			cell: ({ row }) => {
-				if (row.original.type === "missing") return null
-				const chapter = (row.original as { type: "chapter", data: UIChapter }).data
-				return h(resolveComponent("UCheckbox"), {
-					"modelValue": selectedIds.value.has(chapter.id),
-					"onUpdate:modelValue": () => toggleSelect(chapter.id),
-					"onClick": (e: Event) => e.stopPropagation(),
-				})
-			},
-		})
-	}
-
-	cols.push(
-		{
-			id: "chapter",
-			header: "Chapter",
-			cell: ({ row }) => {
-				if (row.original.type === "missing") {
-					return h("span", { class: "flex items-center gap-2 font-medium text-orange-500" }, [
-						h(resolveComponent("UIcon"), { name: "i-lucide-alert-triangle", class: "h-3 w-3" }),
-						`Ch. ${row.original.chapterNumber}`,
-					])
-				}
-				const chapter = (row.original as { type: "chapter", data: UIChapter }).data
-				// Only show strike-through for unacknowledged removed chapters
-				const isUnacknowledgedRemoved = !!chapter.source_removed_at && !chapter.source_removal_acknowledged_at
-				const isAcknowledgedRemoved = !!chapter.source_removed_at && !!chapter.source_removal_acknowledged_at
-				const baseClass = isUnacknowledgedRemoved ? "font-medium opacity-50 line-through" : "font-medium"
-				return h("span", { class: `flex items-center gap-1.5 ${baseClass}` }, [
-					chapter.volume_number !== null
-						? h("span", { class: "text-muted-foreground mr-1" }, `Vol. ${chapter.volume_number}`)
-						: null,
-					`Ch. ${chapter.chapter_number}`,
-					// Show cloud-off icon for acknowledged removed chapters
-					isAcknowledgedRemoved
-						? h(resolveComponent("UIcon"), {
-								name: "i-lucide-cloud-off",
-								class: "h-3 w-3 text-muted-foreground",
-								title: "Removed from source (acknowledged)",
-							})
-						: null,
-				])
-			},
-		},
-		{
-			id: "title",
-			header: "Title",
-			cell: ({ row }) => {
-				if (row.original.type === "missing") {
-					return h("span", { class: "text-orange-500/70 italic text-sm" }, "Missing chapter")
-				}
-				const chapter = (row.original as { type: "chapter", data: UIChapter }).data
-				// Only show strike-through for unacknowledged removed chapters
-				const isUnacknowledgedRemoved = !!chapter.source_removed_at && !chapter.source_removal_acknowledged_at
-				const baseClass = isUnacknowledgedRemoved ? "text-muted-foreground opacity-50 line-through" : "text-muted-foreground"
-				return h("span", { class: baseClass }, chapter.title || "No title")
-			},
-		},
-		{
-			id: "source",
-			header: "Source",
-			cell: ({ row }) => {
-				if (row.original.type === "missing") return null
-				const chapter = (row.original as { type: "chapter", data: UIChapter }).data
-				return h(resolveComponent("UBadge"), { variant: "subtle" }, () => chapter.source.name)
-			},
-		},
-		{
-			id: "groups",
-			header: "Groups",
-			cell: ({ row }) => {
-				if (row.original.type === "missing") return null
-				const chapter = (row.original as { type: "chapter", data: UIChapter }).data
-				const groups = chapter.groups
-				if (!groups?.length) {
-					return h("span", { class: "text-muted-foreground/50 italic" }, "-")
-				}
-				return h(
-					"div",
-					{ class: "flex flex-wrap gap-1", onClick: (e: Event) => e.stopPropagation() },
-					groups.map(group =>
-						h(resolveComponent("UBadge"), { key: group.id, variant: "outline" }, () =>
-							group.url
-								? h(
-										"a",
-										{
-											href: group.url,
-											target: "_blank",
-											rel: "noopener noreferrer",
-											class: "hover:underline",
-										},
-										group.name,
-									)
-								: group.name,
-						),
-					),
-				)
-			},
-		},
-		{
-			id: "uploaded",
-			header: "Uploaded",
-			cell: ({ row }) => {
-				if (row.original.type === "missing") return null
-				const chapter = (row.original as { type: "chapter", data: UIChapter }).data
-				return h(
-					"span",
-					{ class: "text-sm text-muted-foreground" },
-					formatRelativeTime(chapter.date_upload),
-				)
-			},
-		},
-	)
-
-	if (props.isAdmin) {
-		cols.push({
-			id: "status",
-			header: "Status",
-			cell: ({ row }) => {
-				if (row.original.type === "missing") return null
-				const chapter = (row.original as { type: "chapter", data: UIChapter }).data
-				const badge = getStatusBadge(chapter.page_fetch_status)
-				return h(resolveComponent("UBadge"), {
-					color: badge.color,
-					variant: "subtle",
-					class: "gap-1",
-				}, () => [
-					h(resolveComponent("UIcon"), { name: badge.icon, class: "h-3 w-3" }),
-					badge.label,
-				])
-			},
-		})
-	}
-
-	if (props.isAdmin) {
-		cols.push({
-			id: "enabled",
-			header: "Enabled",
-			cell: ({ row }) => {
-				if (row.original.type === "missing") return null
-				const chapter = row.original.data
-				return h(resolveComponent("USwitch"), {
-					"modelValue": getEnabled(chapter),
-					"disabled": isPending.value,
-					"onUpdate:modelValue": () => handleToggleEnabled(chapter.id, getEnabled(chapter)),
-					"onClick": (e: Event) => e.stopPropagation(),
-				})
-			},
-		})
-	}
-
-	return cols
-})
 </script>
 
 <template>
@@ -559,7 +504,11 @@ const columns = computed<TableColumn<UIChapterItem>[]>(() => {
 			</UButton>
 
 			<span class="text-xs text-muted-foreground ml-auto">
-				{{ filteredChapters.length }} of {{ chapters.length }} chapters
+				{{ groupedChapters.length }} chapters
+				<template v-if="visibleChapterCount !== groupedChapters.length">
+					({{ visibleChapterCount }} with duplicates)
+				</template>
+				of {{ totalChapterCount }} total
 			</span>
 		</div>
 
@@ -621,21 +570,449 @@ const columns = computed<TableColumn<UIChapterItem>[]>(() => {
 			</UButton>
 		</div>
 
-		<!-- Table -->
+		<!-- Custom Table with nested rows -->
 		<div class="max-h-[60vh] overflow-auto">
-			<UTable
-				:data="filteredItems"
-				:columns="columns"
-				sticky
-				:ui="{
-					root: 'min-w-full',
-					thead: 'bg-elevated',
-					tr: 'hover:bg-muted/50 transition-colors cursor-pointer data-[selected=true]:bg-muted',
-					td: 'px-4 py-3',
-					th: 'px-4 py-3 text-left font-medium bg-elevated',
-				}"
-				@select="handleRowSelect"
-			/>
+			<table class="w-full">
+				<thead class="bg-elevated sticky top-0 z-10">
+					<tr class="border-b">
+						<th
+							v-if="isAdmin"
+							class="px-4 py-3 text-left font-medium w-10"
+						>
+							<UCheckbox
+								:model-value="allSelected"
+								:indeterminate="someSelected"
+								@update:model-value="toggleSelectAll"
+							/>
+						</th>
+						<th class="px-4 py-3 text-left font-medium w-8" />
+						<th class="px-4 py-3 text-left font-medium">
+							Chapter
+						</th>
+						<th class="px-4 py-3 text-left font-medium">
+							Title
+						</th>
+						<th class="px-4 py-3 text-left font-medium">
+							Source
+						</th>
+						<th class="px-4 py-3 text-left font-medium">
+							Groups
+						</th>
+						<th class="px-4 py-3 text-left font-medium">
+							Uploaded
+						</th>
+						<th
+							v-if="isAdmin"
+							class="px-4 py-3 text-left font-medium"
+						>
+							Status
+						</th>
+						<th
+							v-if="isAdmin"
+							class="px-4 py-3 text-left font-medium"
+						>
+							Enabled
+						</th>
+					</tr>
+				</thead>
+				<tbody>
+					<template
+						v-for="group in groupedChapters"
+						:key="group.key"
+					>
+						<!-- Primary row -->
+						<tr
+							v-if="group.primary"
+							class="border-b hover:bg-muted/50 transition-colors cursor-pointer"
+							@click="openViewer(group.primary)"
+						>
+							<!-- Checkbox -->
+							<td
+								v-if="isAdmin"
+								class="px-4 py-3"
+								@click.stop
+							>
+								<UCheckbox
+									:model-value="selectedIds.has(group.primary.id)"
+									@update:model-value="toggleSelect(group.primary.id)"
+								/>
+							</td>
+
+							<!-- Expand/collapse -->
+							<td
+								class="px-2 py-3"
+								@click.stop
+							>
+								<button
+									v-if="group.duplicates.length > 0"
+									class="p-1 rounded hover:bg-muted transition-colors"
+									@click="toggleGroup(group.key)"
+								>
+									<UIcon
+										:name="expandedGroups.has(group.key) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+										class="h-4 w-4 text-muted-foreground"
+									/>
+								</button>
+								<span
+									v-else
+									class="w-6 inline-block"
+								/>
+							</td>
+
+							<!-- Chapter number -->
+							<td class="px-4 py-3">
+								<div class="flex items-center gap-2">
+									<span
+										:class="[
+											'font-medium',
+											isUnacknowledgedRemoved(group.primary) && 'opacity-50 line-through',
+										]"
+									>
+										<span
+											v-if="group.primary.volume_number !== null"
+											class="text-muted-foreground mr-1"
+										>
+											Vol. {{ group.primary.volume_number }}
+										</span>
+										Ch. {{ group.primary.chapter_number }}
+									</span>
+									<UIcon
+										v-if="isAcknowledgedRemoved(group.primary)"
+										name="i-lucide-cloud-off"
+										class="h-3 w-3 text-muted-foreground"
+										title="Removed from source (acknowledged)"
+									/>
+									<!-- Duplicate count badge -->
+									<span
+										v-if="group.duplicates.length > 0"
+										class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20"
+									>
+										<UIcon
+											name="i-lucide-layers"
+											class="h-3 w-3"
+										/>
+										{{ group.duplicates.length + 1 }}
+									</span>
+								</div>
+							</td>
+
+							<!-- Title -->
+							<td class="px-4 py-3">
+								<span
+									:class="[
+										'text-muted-foreground',
+										isUnacknowledgedRemoved(group.primary) && 'opacity-50 line-through',
+									]"
+								>
+									{{ group.primary.title || 'No title' }}
+								</span>
+							</td>
+
+							<!-- Source -->
+							<td class="px-4 py-3">
+								<UBadge variant="subtle">
+									{{ group.primary.source.name }}
+								</UBadge>
+							</td>
+
+							<!-- Groups -->
+							<td
+								class="px-4 py-3"
+								@click.stop
+							>
+								<div class="flex flex-wrap items-center gap-1">
+									<template v-if="group.primary.groups.length">
+										<UBadge
+											v-for="grp in group.primary.groups"
+											:key="grp.id"
+											variant="outline"
+										>
+											<a
+												v-if="grp.url"
+												:href="grp.url"
+												target="_blank"
+												rel="noopener noreferrer"
+												class="hover:underline"
+											>
+												{{ grp.name }}
+											</a>
+											<template v-else>
+												{{ grp.name }}
+											</template>
+										</UBadge>
+									</template>
+									<span
+										v-else
+										class="text-muted-foreground/50 italic"
+									>-</span>
+
+									<!-- Same-source alternatives popover -->
+									<UPopover
+										v-if="group.primary.has_alternatives && group.primary.alternatives?.length"
+										:content="{ side: 'bottom', align: 'start' }"
+									>
+										<template #default="{ open }">
+											<button
+												type="button"
+												class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-all"
+												:class="[
+													open
+														? 'bg-purple-500 text-white'
+														: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 hover:bg-purple-500/25',
+												]"
+											>
+												<UIcon
+													name="i-lucide-layers"
+													class="w-3 h-3"
+												/>
+												+{{ group.primary.alternatives!.length }}
+											</button>
+										</template>
+										<template #content>
+											<div class="p-3 min-w-[280px] max-w-[360px]">
+												<div class="flex items-center gap-2 mb-3 pb-2 border-b border-border">
+													<UIcon
+														name="i-lucide-layers"
+														class="w-4 h-4 text-purple-500"
+													/>
+													<span class="text-sm font-medium">Alternative Versions</span>
+												</div>
+
+												<div class="space-y-2">
+													<!-- Current version indicator -->
+													<div class="flex items-center gap-2 p-2 rounded-md bg-purple-500/10 border border-purple-500/20">
+														<UIcon
+															name="i-lucide-check-circle"
+															class="w-4 h-4 text-purple-500 shrink-0"
+														/>
+														<div class="flex-1 min-w-0">
+															<div class="text-xs font-medium truncate">
+																{{ group.primary.groups[0]?.name || 'Unknown Group' }}
+															</div>
+															<div class="text-xs text-muted-foreground">
+																Current • {{ formatRelativeTime(group.primary.date_upload) }}
+															</div>
+														</div>
+														<span :class="['text-xs font-medium', getStatusColor(group.primary.page_fetch_status)]">
+															{{ getStatusLabel(group.primary.page_fetch_status) }}
+														</span>
+													</div>
+
+													<!-- Alternative versions -->
+													<div
+														v-for="alt in group.primary.alternatives"
+														:key="alt.id"
+														class="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
+													>
+														<div class="w-4 h-4 shrink-0" />
+														<div class="flex-1 min-w-0">
+															<div class="text-xs font-medium truncate">
+																{{ alt.groups[0]?.name || 'Unknown Group' }}
+															</div>
+															<div class="text-xs text-muted-foreground">
+																{{ formatRelativeTime(alt.date_upload) }}
+															</div>
+														</div>
+														<span :class="['text-xs font-medium mr-2', getStatusColor(alt.page_fetch_status)]">
+															{{ getStatusLabel(alt.page_fetch_status) }}
+														</span>
+														<UButton
+															size="xs"
+															variant="soft"
+															color="primary"
+															:loading="isSelectingAlternative"
+															@click.stop="handleSelectAlternative(alt.id)"
+														>
+															Switch
+														</UButton>
+													</div>
+												</div>
+											</div>
+										</template>
+									</UPopover>
+								</div>
+							</td>
+
+							<!-- Uploaded -->
+							<td class="px-4 py-3">
+								<span class="text-sm text-muted-foreground">
+									{{ formatRelativeTime(group.primary.date_upload) }}
+								</span>
+							</td>
+
+							<!-- Status (admin only) -->
+							<td
+								v-if="isAdmin"
+								class="px-4 py-3"
+							>
+								<UBadge
+									:color="getStatusBadge(group.primary.page_fetch_status).color"
+									variant="subtle"
+									class="gap-1"
+								>
+									<UIcon
+										:name="getStatusBadge(group.primary.page_fetch_status).icon"
+										class="h-3 w-3"
+									/>
+									{{ getStatusBadge(group.primary.page_fetch_status).label }}
+								</UBadge>
+							</td>
+
+							<!-- Enabled (admin only) -->
+							<td
+								v-if="isAdmin"
+								class="px-4 py-3"
+								@click.stop
+							>
+								<USwitch
+									:model-value="getEnabled(group.primary)"
+									:disabled="isPending"
+									@update:model-value="handleToggleEnabled(group.primary.id, getEnabled(group.primary))"
+								/>
+							</td>
+						</tr>
+
+						<!-- Duplicate rows (nested) -->
+						<template v-if="expandedGroups.has(group.key)">
+							<tr
+								v-for="dup in group.duplicates"
+								:key="dup.id"
+								class="border-b bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+								@click="openViewer(dup)"
+							>
+								<!-- Checkbox -->
+								<td
+									v-if="isAdmin"
+									class="px-4 py-2"
+									@click.stop
+								>
+									<UCheckbox
+										:model-value="selectedIds.has(dup.id)"
+										@update:model-value="toggleSelect(dup.id)"
+									/>
+								</td>
+
+								<!-- Indent spacer -->
+								<td class="px-2 py-2">
+									<div class="ml-2 pl-2 border-l-2 border-purple-500/30 h-full" />
+								</td>
+
+								<!-- Chapter number (dimmed, shows it's a duplicate) -->
+								<td class="px-4 py-2">
+									<span
+										:class="[
+											'text-sm text-muted-foreground',
+											isUnacknowledgedRemoved(dup) && 'opacity-50 line-through',
+										]"
+									>
+										<UIcon
+											name="i-lucide-corner-down-right"
+											class="h-3 w-3 mr-1 inline"
+										/>
+										Ch. {{ dup.chapter_number }}
+									</span>
+								</td>
+
+								<!-- Title -->
+								<td class="px-4 py-2">
+									<span
+										:class="[
+											'text-sm text-muted-foreground',
+											isUnacknowledgedRemoved(dup) && 'opacity-50 line-through',
+										]"
+									>
+										{{ dup.title || 'No title' }}
+									</span>
+								</td>
+
+								<!-- Source -->
+								<td class="px-4 py-2">
+									<UBadge
+										variant="outline"
+										size="sm"
+									>
+										{{ dup.source.name }}
+									</UBadge>
+								</td>
+
+								<!-- Groups -->
+								<td
+									class="px-4 py-2"
+									@click.stop
+								>
+									<div class="flex flex-wrap gap-1">
+										<template v-if="dup.groups.length">
+											<UBadge
+												v-for="grp in dup.groups"
+												:key="grp.id"
+												variant="outline"
+												size="sm"
+											>
+												{{ grp.name }}
+											</UBadge>
+										</template>
+										<span
+											v-else
+											class="text-muted-foreground/50 italic text-sm"
+										>-</span>
+									</div>
+								</td>
+
+								<!-- Uploaded -->
+								<td class="px-4 py-2">
+									<span class="text-xs text-muted-foreground">
+										{{ formatRelativeTime(dup.date_upload) }}
+									</span>
+								</td>
+
+								<!-- Status (admin only) -->
+								<td
+									v-if="isAdmin"
+									class="px-4 py-2"
+								>
+									<UBadge
+										:color="getStatusBadge(dup.page_fetch_status).color"
+										variant="subtle"
+										size="sm"
+										class="gap-1"
+									>
+										<UIcon
+											:name="getStatusBadge(dup.page_fetch_status).icon"
+											class="h-3 w-3"
+										/>
+										{{ getStatusBadge(dup.page_fetch_status).label }}
+									</UBadge>
+								</td>
+
+								<!-- Enabled (admin only) -->
+								<td
+									v-if="isAdmin"
+									class="px-4 py-2"
+									@click.stop
+								>
+									<USwitch
+										:model-value="getEnabled(dup)"
+										:disabled="isPending"
+										size="sm"
+										@click.stop
+										@update:model-value="handleToggleEnabled(dup.id, getEnabled(dup))"
+									/>
+								</td>
+							</tr>
+						</template>
+					</template>
+
+					<!-- Empty state -->
+					<tr v-if="groupedChapters.length === 0">
+						<td
+							:colspan="isAdmin ? 9 : 6"
+							class="px-4 py-8 text-center text-muted-foreground"
+						>
+							No chapters found
+						</td>
+					</tr>
+				</tbody>
+			</table>
 		</div>
 
 		<SeriesChapterViewer

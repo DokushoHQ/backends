@@ -1,6 +1,15 @@
 // Page fetch status enum values
 export type PageFetchStatus = "Pending" | "InProgress" | "Success" | "Partial" | "Failed" | "PermanentlyFailed" | "Incomplete"
 
+// Alternative chapter info for duplicate display
+export interface UIChapterAlternative {
+	id: string
+	enabled: boolean
+	date_upload: string | Date
+	page_fetch_status: PageFetchStatus
+	groups: { id: string, name: string, url: string | null }[]
+}
+
 // Chapter type for ChapterTable component
 // Note: Date fields accept both Date and string to handle Nuxt serialization
 export interface UIChapter {
@@ -16,6 +25,9 @@ export interface UIChapter {
 	page_fetch_status: PageFetchStatus
 	source: { external_id: string, name: string }
 	groups: { id: string, name: string, url: string | null }[]
+	// Same-source duplicate info (only populated when includeDisabled=true)
+	has_alternatives?: boolean
+	alternatives?: UIChapterAlternative[]
 }
 
 // Union type for chapter list items (chapter or missing marker)

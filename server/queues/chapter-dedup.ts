@@ -28,6 +28,10 @@ export type ChapterDedupJobResult = {
 	total_ready: number
 	chapters_enabled: number
 	chapters_disabled: number
+	// Same-source dedup stats
+	same_source_duplicates_processed: number
+	same_source_enabled: number
+	same_source_disabled: number
 }
 
 export default defineQueue<ChapterDedupJobData, ChapterDedupJobResult, typeof QUEUE_NAME>({

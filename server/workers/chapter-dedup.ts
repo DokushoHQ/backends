@@ -2,7 +2,7 @@ import { defineWorker } from "#processor"
 import { MetricsTime } from "bullmq"
 import type { ChapterDedupJobData, ChapterDedupJobResult } from "../queues/chapter-dedup"
 import { chapterDedupJobDataSchema, QUEUE_NAME } from "../queues/chapter-dedup"
-import { deduplicateForLanguage, persistDedupResults } from "../utils/chapter-dedup"
+import { dedupSameSourceChapters, deduplicateForLanguage, persistDedupResults, persistSameSourceDedupResults } from "../utils/chapter-dedup"
 import type { Language } from "../utils/db"
 import { db } from "../utils/db"
 
@@ -94,7 +94,8 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 		let totalEnabled = 0
 		let totalDisabled = 0
 
-		// Process each language
+		// Phase 1: Cross-source deduplication
+		log("Phase 1: Cross-source deduplication")
 		for (let i = 0; i < languagesToProcess.length; i++) {
 			const language = languagesToProcess[i]!
 			log(`Processing language ${language} (${i + 1}/${languagesToProcess.length})`)
@@ -117,13 +118,44 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 			totalEnabled += enabled
 			totalDisabled += disabled
 
-			// Update progress
-			const progress = 10 + Math.floor(((i + 1) / languagesToProcess.length) * 85)
+			// Update progress (Phase 1: 10-50%)
+			const progress = 10 + Math.floor(((i + 1) / languagesToProcess.length) * 40)
 			await job.updateProgress(progress)
 		}
 
+		// Phase 2: Same-source deduplication (multiple uploads from different groups)
+		// Only process the PRIMARY source - secondary source chapters stay disabled
+		// (cross-source dedup already handles which secondary chapters to enable for gaps)
+		log("Phase 2: Same-source deduplication (primary source only)")
+		let sameSourceDuplicatesProcessed = 0
+		let sameSourceEnabled = 0
+		let sameSourceDisabled = 0
+
+		const primarySource = serie.sources.find(s => s.is_primary)
+		if (primarySource) {
+			for (const language of languagesToProcess) {
+				log(`Same-source dedup: primary source ${primarySource.source_id}, language ${language}`)
+
+				const result = await dedupSameSourceChapters(serie_id, primarySource.source_id, language, log)
+				const { enabled, disabled } = await persistSameSourceDedupResults(result)
+
+				sameSourceDuplicatesProcessed += result.duplicates_processed
+				sameSourceEnabled += enabled
+				sameSourceDisabled += disabled
+
+				// Update progress (Phase 2: 50-95%)
+				const progress = 50 + Math.floor(((languagesToProcess.indexOf(language) + 1) / languagesToProcess.length) * 45)
+				await job.updateProgress(progress)
+			}
+		}
+		else {
+			log("No primary source found, skipping same-source dedup")
+		}
+
 		await job.updateProgress(100)
-		log(`Deduplication complete: ${totalMissing} missing, ${totalAvailable} available, ${totalReady} ready, +${totalEnabled} enabled, -${totalDisabled} disabled`)
+		log(`Deduplication complete:`)
+		log(`  Cross-source: ${totalMissing} missing, ${totalAvailable} available, ${totalReady} ready, +${totalEnabled} enabled, -${totalDisabled} disabled`)
+		log(`  Same-source: ${sameSourceDuplicatesProcessed} duplicates processed, +${sameSourceEnabled} enabled, -${sameSourceDisabled} disabled`)
 
 		return {
 			serie_id,
@@ -133,6 +165,9 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 			total_ready: totalReady,
 			chapters_enabled: totalEnabled,
 			chapters_disabled: totalDisabled,
+			same_source_duplicates_processed: sameSourceDuplicatesProcessed,
+			same_source_enabled: sameSourceEnabled,
+			same_source_disabled: sameSourceDisabled,
 		}
 	},
 })
