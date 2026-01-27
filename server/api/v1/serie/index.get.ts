@@ -109,14 +109,22 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
+	// Determine sort field - use language-specific timestamp when filtering by language
+	function getSortField(): string {
+		if (languageFilter) {
+			return `${languageFilter}_updated_at:desc`
+		}
+		return "updated_at:desc"
+	}
+
 	// Default: Meilisearch search with optional filters
 	// - With search query: relevance sorting
-	// - Without search query: sort by updated_at desc
+	// - Without search query: sort by updated_at desc (or language-specific timestamp)
 	const searchResult = await serieIndex.search(searchQuery ?? "", {
 		limit: PAGE_SIZE,
 		offset: (page - 1) * PAGE_SIZE,
 		filter: buildFilters().join(" AND "),
-		...(!searchQuery && { sort: ["updated_at:desc"] }),
+		...(!searchQuery && { sort: [getSortField()] }),
 	})
 
 	const ids = searchResult.hits.map(hit => hit.id)
@@ -142,7 +150,15 @@ export default defineEventHandler(async (event) => {
 		const dbData = seriesMap.get(id)
 		if (!dbData) return null
 		const hit = hitsMap.get(id)
-		return { ...dbData, sources: hit?.sources ?? [] }
+		// Get language-specific timestamp if filtering by language, otherwise global updated_at
+		const lastChapterAt = languageFilter
+			? (hit?.[`${languageFilter}_updated_at` as keyof typeof hit] as number | undefined)
+			: hit?.updated_at
+		return {
+			...dbData,
+			sources: hit?.sources ?? [],
+			last_chapter_at: lastChapterAt ? new Date(lastChapterAt) : null,
+		}
 	}).filter(Boolean)
 	const total = searchResult.estimatedTotalHits ?? series.length
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { formatRelativeTime } = useFormatters()
+
 interface Props {
 	serie: {
 		id: string
@@ -6,6 +8,7 @@ interface Props {
 		cover: string | null
 		_count?: { chapters: number }
 		failureCount?: number
+		last_chapter_at?: string | null
 	}
 }
 
@@ -41,6 +44,17 @@ defineProps<Props>()
 				<div class="chapter-badge">
 					<span class="chapter-number">{{ serie._count?.chapters ?? 0 }}</span>
 					<span class="chapter-label">Ch</span>
+				</div>
+				<!-- Update time badge -->
+				<div
+					v-if="serie.last_chapter_at"
+					class="update-badge"
+				>
+					<UIcon
+						name="i-lucide-clock"
+						class="update-icon"
+					/>
+					<span class="update-time">{{ formatRelativeTime(serie.last_chapter_at) }}</span>
 				</div>
 			</template>
 		</SeriesCardBase>
@@ -137,5 +151,32 @@ defineProps<Props>()
 	font-weight: 700;
 	color: var(--ui-text);
 	font-variant-numeric: tabular-nums;
+}
+
+/* Update time badge */
+.update-badge {
+	position: absolute;
+	bottom: 0.625rem;
+	right: calc(0.625rem + 0.25rem); /* Account for corner cut */
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.25rem 0.5rem;
+	background: color-mix(in oklch, var(--ui-bg-elevated) 95%, transparent);
+	backdrop-filter: blur(8px);
+	border-radius: 0.25rem;
+	border: 1px solid var(--ui-border-muted);
+}
+
+.update-icon {
+	width: 0.625rem;
+	height: 0.625rem;
+	color: var(--ui-text-muted);
+}
+
+.update-time {
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+	color: var(--ui-text-muted);
 }
 </style>

@@ -1,9 +1,13 @@
 import { type Index, Meilisearch } from "meilisearch"
-import type { Language, SerieStatus, SerieType } from "./db"
+import { Language, type SerieStatus, type SerieType } from "./db"
 
 export type FlattenPrefix = "synopsis" | "title" | "alternates_titles"
 export type FlattenRow = `${FlattenPrefix}_${Language}`
 export type FlattenData = Partial<Record<FlattenRow, string[]>>
+
+// Language-specific updated_at timestamps for sorting by language
+export type LanguageUpdatedAtKey = `${Language}_updated_at`
+export type LanguageUpdatedAtData = Partial<Record<LanguageUpdatedAtKey, number>>
 
 export type SerieIndex = {
 	id: string
@@ -30,7 +34,7 @@ export type SerieIndex = {
 	total_missing_chapters: number
 	total_fillable_chapters: number
 	languages_with_gaps: Language[]
-} & FlattenData
+} & FlattenData & LanguageUpdatedAtData
 
 let _meilisearch: Meilisearch | null = null
 let _serieIndex: Index<SerieIndex> | null = null
@@ -88,8 +92,11 @@ export async function configureSerieIndex() {
 		// Index might not exist yet
 	}
 
+	// Build language-specific sortable attributes (e.g., En_updated_at, Fr_updated_at)
+	const languageTimestamps = Object.values(Language).map(lang => `${lang}_updated_at`)
+
 	const settings: Parameters<typeof index.updateSettings>[0] = {
-		sortableAttributes: ["updated_at"],
+		sortableAttributes: ["updated_at", ...languageTimestamps],
 		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists", "chapter_count", "languages_available", "has_missing_chapters", "has_unfilled_gaps", "gaps_all_filled", "total_missing_chapters", "languages_with_gaps"],
 	}
 
