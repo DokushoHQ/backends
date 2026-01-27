@@ -89,34 +89,37 @@ useHead({
 					v-else-if="serie"
 					class="edit-content"
 				>
-					<!-- Two-column layout on large screens -->
-					<div class="sections-grid">
-						<!-- Left column: Text metadata -->
-						<div class="sections-column">
+					<!-- Identity section: Cover + Title -->
+					<div class="identity-row">
+						<SeriesEditCoverSection
+							:serie="serie"
+							class="cover-section"
+							@updated="refresh"
+						/>
+						<div class="identity-text">
 							<SeriesEditTitleSection
 								:serie="serie"
 								@updated="refresh"
 							/>
-
 							<SeriesEditSynopsisSection
 								:serie="serie"
 								@updated="refresh"
 							/>
 						</div>
+					</div>
 
-						<!-- Right column: Visual + Chapter settings -->
-						<div class="sections-column">
-							<SeriesEditCoverSection
-								:serie="serie"
-								@updated="refresh"
-							/>
+					<!-- Preferences section -->
+					<div class="preferences-row">
+						<SeriesEditChapterPreferencesSection
+							:serie-id="serieId"
+							:sources="serie.sources"
+							@updated="refresh"
+						/>
 
-							<SeriesEditChapterPreferencesSection
-								:serie-id="serieId"
-								:sources="serie.sources"
-								@updated="refresh"
-							/>
-						</div>
+						<SeriesEditGroupPreferencesSection
+							:serie-id="serieId"
+							@updated="refresh"
+						/>
 					</div>
 				</div>
 			</template>
@@ -129,31 +132,53 @@ useHead({
 	display: flex;
 	flex-direction: column;
 	gap: 1.5rem;
+	max-width: 72rem;
 }
 
-/* Sections grid - two columns on large screens */
-.sections-grid {
-	display: grid;
-	gap: 1.5rem;
-}
-
-@media (min-width: 1024px) {
-	.sections-grid {
-		grid-template-columns: 1fr 1fr;
-		gap: 1.5rem;
-	}
-}
-
-@media (min-width: 1280px) {
-	.sections-grid {
-		gap: 2rem;
-	}
-}
-
-.sections-column {
+/* Identity row: Cover + Title/Synopsis */
+.identity-row {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
+}
+
+@media (min-width: 768px) {
+	.identity-row {
+		flex-direction: row;
+		gap: 1.5rem;
+	}
+
+	.cover-section {
+		flex-shrink: 0;
+		width: 16rem;
+	}
+
+	.identity-text {
+		flex: 1;
+		min-width: 0;
+	}
+}
+
+.identity-text {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+/* Preferences row: Chapter + Group preferences */
+.preferences-row {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+	.preferences-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1.5rem;
+		align-items: start;
+	}
 }
 
 /* Loading state */
