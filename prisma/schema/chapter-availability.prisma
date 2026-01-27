@@ -15,7 +15,8 @@ model ChapterAvailability {
 
     // Quick-access statistics
     missing_count      Int @default(0)
-    fillable_count     Int @default(0)
+    available_count    Int @default(0) // Secondary chapters that exist for missing numbers
+    ready_count        Int @default(0) // Secondary chapters that are fetched (Success status)
     auto_enabled_count Int @default(0)
 
     serie             Serie             @relation(fields: [serie_id], references: [id], onDelete: Cascade)

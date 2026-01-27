@@ -24,7 +24,8 @@ export type ChapterDedupJobResult = {
 	serie_id: string
 	languages_processed: string[]
 	total_missing: number
-	total_fillable: number
+	total_available: number
+	total_ready: number
 	chapters_enabled: number
 	chapters_disabled: number
 }

@@ -1,5 +1,6 @@
 import { defineWorker } from "#processor"
 import { MetricsTime, type Job } from "bullmq"
+import chapterDedupQueue, { JOB_PRIORITY as DEDUP_PRIORITY } from "../queues/chapter-dedup"
 import indexerQueue from "../queues/indexer"
 import pageRetryQueue from "../queues/page-retry"
 import serieInserterQueue, { JOB_PRIORITY } from "../queues/serie-inserter"
@@ -287,10 +288,11 @@ async function handleRetryFailedPages(job: Job<UpdateSchedulerJobData>) {
 }
 
 /**
- * REINDEX_ALL task: Queue indexer jobs for all series to force Meilisearch re-indexing.
+ * RECOMPUTE_ALL task: Run chapter deduplication and then reindex all series.
+ * This ensures availability stats are up-to-date and search index reflects current state.
  */
-async function handleReindexAll(job: Job<UpdateSchedulerJobData>) {
-	job.log("Starting REINDEX_ALL task")
+async function handleRecomputeAll(job: Job<UpdateSchedulerJobData>) {
+	job.log("Starting RECOMPUTE_ALL task")
 	await job.updateProgress(5)
 
 	// Get all non-deleted series
@@ -299,18 +301,35 @@ async function handleReindexAll(job: Job<UpdateSchedulerJobData>) {
 		select: { id: true },
 	})
 
-	job.log(`Found ${series.length} series to reindex`)
+	job.log(`Found ${series.length} series to process`)
 
-	// Queue indexer jobs with staggered delays (100ms apart)
+	// Phase 1: Queue dedup jobs (50ms apart)
+	job.log("Phase 1: Queuing chapter deduplication jobs...")
 	for (const [i, serie] of series.entries()) {
-		await indexerQueue.add(
-			`reindex-${serie.id}`,
-			{ serie_id: serie.id, type: "UPDATE" },
-			{ delay: i * 100 },
+		await chapterDedupQueue.add(
+			`recompute-dedup-${serie.id}`,
+			{ serie_id: serie.id },
+			{ delay: i * 50, priority: DEDUP_PRIORITY.LOW },
 		)
 	}
+	job.log(`Queued ${series.length} dedup jobs`)
+	await job.updateProgress(50)
 
-	job.log(`REINDEX_ALL complete. Queued: ${series.length} indexer jobs`)
+	// Phase 2: Queue indexer jobs with offset to run after dedup completes
+	// Add base delay to allow dedup jobs to finish first
+	const dedupEstimatedMs = series.length * 50 + 5000 // dedup delay spread + buffer
+	job.log(`Phase 2: Queuing indexer jobs (starting after ${Math.round(dedupEstimatedMs / 1000)}s)...`)
+
+	for (const [i, serie] of series.entries()) {
+		await indexerQueue.add(
+			`recompute-index-${serie.id}`,
+			{ serie_id: serie.id, type: "UPDATE" },
+			{ delay: dedupEstimatedMs + (i * 100) },
+		)
+	}
+	job.log(`Queued ${series.length} indexer jobs`)
+
+	job.log(`RECOMPUTE_ALL complete. Total: ${series.length} series (dedup + index)`)
 	await job.updateProgress(100)
 }
 
@@ -332,8 +351,8 @@ export default defineWorker<typeof QUEUE_NAME, UpdateSchedulerJobData, undefined
 		else if (data.type === "RETRY_FAILED_PAGES") {
 			await handleRetryFailedPages(job)
 		}
-		else if (data.type === "REINDEX_ALL") {
-			await handleReindexAll(job)
+		else if (data.type === "RECOMPUTE_ALL") {
+			await handleRecomputeAll(job)
 		}
 	},
 })

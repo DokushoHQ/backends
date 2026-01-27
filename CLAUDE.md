@@ -28,6 +28,9 @@ pnpm db:generate            # Generate Prisma client
 pnpm db:migrate:dev         # Create/apply dev migration
 pnpm db:migrate             # Apply migrations (production)
 pnpm db:studio              # Open Prisma Studio
+
+# Direct Database Access (via Docker)
+docker exec dokusho-postgres psql -U dokusho -d dokusho -c "SELECT * FROM serie LIMIT 5;"
 ```
 
 ## Architecture

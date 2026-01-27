@@ -89,36 +89,34 @@ useHead({
 					v-else-if="serie"
 					class="edit-content"
 				>
-					<!-- Page header -->
-					<div class="page-header">
-						<div class="header-icon">
-							<UIcon
-								name="i-lucide-settings-2"
-								class="icon"
+					<!-- Two-column layout on large screens -->
+					<div class="sections-grid">
+						<!-- Left column: Text metadata -->
+						<div class="sections-column">
+							<SeriesEditTitleSection
+								:serie="serie"
+								@updated="refresh"
+							/>
+
+							<SeriesEditSynopsisSection
+								:serie="serie"
+								@updated="refresh"
 							/>
 						</div>
-						<div class="header-text">
-							<h1>Edit Metadata</h1>
-							<p>Override source metadata or set custom display values. Locked fields won't be updated by source refreshes.</p>
+
+						<!-- Right column: Visual + Chapter settings -->
+						<div class="sections-column">
+							<SeriesEditCoverSection
+								:serie="serie"
+								@updated="refresh"
+							/>
+
+							<SeriesEditChapterPreferencesSection
+								:serie-id="serieId"
+								:sources="serie.sources"
+								@updated="refresh"
+							/>
 						</div>
-					</div>
-
-					<!-- Section cards -->
-					<div class="sections">
-						<SeriesEditTitleSection
-							:serie="serie"
-							@updated="refresh"
-						/>
-
-						<SeriesEditSynopsisSection
-							:serie="serie"
-							@updated="refresh"
-						/>
-
-						<SeriesEditCoverSection
-							:serie="serie"
-							@updated="refresh"
-						/>
 					</div>
 				</div>
 			</template>
@@ -131,53 +129,28 @@ useHead({
 	display: flex;
 	flex-direction: column;
 	gap: 1.5rem;
-	max-width: 56rem;
 }
 
-/* Page header */
-.page-header {
-	display: flex;
-	align-items: flex-start;
-	gap: 1rem;
-	padding: 1.25rem 1.5rem;
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+/* Sections grid - two columns on large screens */
+.sections-grid {
+	display: grid;
+	gap: 1.5rem;
 }
 
-.header-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 2.5rem;
-	height: 2.5rem;
-	background: var(--ui-primary-soft);
-	border-radius: 0.5rem;
-	flex-shrink: 0;
+@media (min-width: 1024px) {
+	.sections-grid {
+		grid-template-columns: 1fr 1fr;
+		gap: 1.5rem;
+	}
 }
 
-.header-icon .icon {
-	width: 1.25rem;
-	height: 1.25rem;
-	color: var(--ui-primary);
+@media (min-width: 1280px) {
+	.sections-grid {
+		gap: 2rem;
+	}
 }
 
-.header-text h1 {
-	font-size: var(--font-size-lg);
-	font-weight: 600;
-	color: var(--ui-text);
-	margin: 0 0 0.25rem 0;
-}
-
-.header-text p {
-	font-size: var(--font-size-sm);
-	color: var(--ui-text-muted);
-	margin: 0;
-	line-height: 1.5;
-}
-
-/* Sections */
-.sections {
+.sections-column {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;

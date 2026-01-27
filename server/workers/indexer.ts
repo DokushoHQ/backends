@@ -33,7 +33,8 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 				select: {
 					language: true,
 					missing_count: true,
-					fillable_count: true,
+					available_count: true,
+					ready_count: true,
 				},
 			},
 		},
@@ -141,7 +142,8 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 
 	// 5. Calculate chapter availability stats
 	const totalMissingChapters = serie.chapter_availability.reduce((sum, a) => sum + a.missing_count, 0)
-	const totalFillableChapters = serie.chapter_availability.reduce((sum, a) => sum + a.fillable_count, 0)
+	const totalAvailableChapters = serie.chapter_availability.reduce((sum, a) => sum + a.available_count, 0)
+	const totalReadyChapters = serie.chapter_availability.reduce((sum, a) => sum + a.ready_count, 0)
 	const languagesWithGaps = serie.chapter_availability
 		.filter(a => a.missing_count > 0)
 		.map(a => a.language)
@@ -173,9 +175,13 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 				chapter_count: serie._count.chapters,
 				languages_available: serie.chapters.map(c => c.language),
 				// Chapter availability (cross-source deduplication)
+				// has_unfilled_gaps: gaps exist that aren't covered by ready secondary chapters
+				// gaps_all_filled: all gaps are covered by ready secondary chapters
 				has_missing_chapters: totalMissingChapters > 0,
+				has_unfilled_gaps: totalMissingChapters > totalReadyChapters,
+				gaps_all_filled: totalMissingChapters > 0 && totalReadyChapters >= totalMissingChapters,
 				total_missing_chapters: totalMissingChapters,
-				total_fillable_chapters: totalFillableChapters,
+				total_fillable_chapters: totalReadyChapters,
 				languages_with_gaps: languagesWithGaps,
 			},
 		],

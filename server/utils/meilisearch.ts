@@ -25,6 +25,8 @@ export type SerieIndex = {
 	synopsis?: string
 	// Chapter availability (cross-source deduplication)
 	has_missing_chapters: boolean
+	has_unfilled_gaps: boolean // Gaps exist that aren't filled by secondary
+	gaps_all_filled: boolean // Has gaps but all are filled by secondary
 	total_missing_chapters: number
 	total_fillable_chapters: number
 	languages_with_gaps: Language[]
@@ -88,7 +90,7 @@ export async function configureSerieIndex() {
 
 	const settings: Parameters<typeof index.updateSettings>[0] = {
 		sortableAttributes: ["updated_at"],
-		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists", "chapter_count", "languages_available", "has_missing_chapters", "total_missing_chapters", "languages_with_gaps"],
+		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists", "chapter_count", "languages_available", "has_missing_chapters", "has_unfilled_gaps", "gaps_all_filled", "total_missing_chapters", "languages_with_gaps"],
 	}
 
 	let needsReindex = false

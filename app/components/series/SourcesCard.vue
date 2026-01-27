@@ -4,6 +4,7 @@ interface SerieSource {
 	external_id: string
 	external_url: string | null
 	is_primary: boolean
+	priority: number
 	consecutive_failures: number
 	source: {
 		id: string
@@ -12,9 +13,19 @@ interface SerieSource {
 	}
 }
 
-defineProps<{
+const props = defineProps<{
 	sources: SerieSource[] | null
 }>()
+
+// Sort sources: primary first, then by priority
+const sortedSources = computed(() => {
+	if (!props.sources) return []
+	return [...props.sources].sort((a, b) => {
+		if (a.is_primary) return -1
+		if (b.is_primary) return 1
+		return (a.priority ?? 5) - (b.priority ?? 5)
+	})
+})
 </script>
 
 <template>
@@ -41,7 +52,7 @@ defineProps<{
 			class="sources-list"
 		>
 			<a
-				v-for="source in sources"
+				v-for="(source, idx) in sortedSources"
 				:key="source.id"
 				:href="source.external_url ?? '#'"
 				target="_blank"
@@ -50,6 +61,10 @@ defineProps<{
 			>
 				<div class="source-info">
 					<span class="source-name">
+						<span
+							v-if="sortedSources.length > 1"
+							class="priority-rank"
+						>{{ idx + 1 }}.</span>
 						{{ source.source.name }}
 						<span
 							v-if="source.is_primary"
@@ -174,6 +189,13 @@ defineProps<{
 	font-size: var(--font-size-sm);
 	font-weight: 500;
 	color: var(--ui-text);
+}
+
+.priority-rank {
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-text-muted);
+	min-width: 1.25rem;
 }
 
 .primary-badge {

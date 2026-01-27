@@ -25,7 +25,7 @@ const title = computed(() => {
 		case "no-failures":
 			return "All series healthy"
 		case "no-results":
-			return "No matches found"
+			return props.searchQuery ? "No matches found" : "No series found"
 		default:
 			return "Your library awaits"
 	}
@@ -36,7 +36,10 @@ const description = computed(() => {
 		case "no-failures":
 			return "Every series is updating successfully. Nice work keeping things tidy."
 		case "no-results":
-			return `No series matching "${props.searchQuery}". Try a different search term.`
+			if (props.searchQuery) {
+				return `No series matching "${props.searchQuery}". Try a different search term.`
+			}
+			return "No series match the current filters. Try adjusting your selection."
 		default:
 			return "Start building your collection by importing series from your favorite sources."
 	}
@@ -98,6 +101,8 @@ const description = computed(() => {
 	justify-content: center;
 	padding: 3rem 1.5rem;
 	text-align: center;
+	flex: 1;
+	min-height: 0;
 }
 
 .empty-illustration {
@@ -127,7 +132,7 @@ const description = computed(() => {
 .book-1 {
 	width: 2.5rem;
 	height: 3.5rem;
-	left: -1rem;
+	left: -2.5rem;
 	background: color-mix(in oklch, var(--ui-primary) 20%, var(--ui-bg-muted));
 	transform: rotate(-8deg);
 }
@@ -135,7 +140,7 @@ const description = computed(() => {
 .book-2 {
 	width: 2.25rem;
 	height: 3.25rem;
-	left: 0.5rem;
+	left: -1rem;
 	background: color-mix(in oklch, var(--ui-warning) 25%, var(--ui-bg-muted));
 	transform: rotate(-2deg);
 }
@@ -143,7 +148,7 @@ const description = computed(() => {
 .book-3 {
 	width: 2rem;
 	height: 3rem;
-	left: 1.75rem;
+	left: 0.25rem;
 	background: color-mix(in oklch, var(--ui-success) 20%, var(--ui-bg-muted));
 	transform: rotate(5deg);
 }

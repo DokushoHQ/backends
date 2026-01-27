@@ -292,6 +292,12 @@ useHead({
 						@retried="refreshChapters"
 					/>
 
+					<!-- Chapter availability card (admin only, when gaps exist) -->
+					<SeriesChapterAvailabilityCard
+						v-if="isAdmin && (serie.totalMissingChapters ?? 0) > 0"
+						:serie-id="serieId"
+					/>
+
 					<!-- Info Cards Grid -->
 					<div class="cards-grid">
 						<SeriesDetailsCard

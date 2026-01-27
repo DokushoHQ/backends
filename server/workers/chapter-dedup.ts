@@ -49,7 +49,8 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 				serie_id,
 				languages_processed: [],
 				total_missing: 0,
-				total_fillable: 0,
+				total_available: 0,
+				total_ready: 0,
 				chapters_enabled: 0,
 				chapters_disabled: 0,
 			}
@@ -67,7 +68,8 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 				serie_id,
 				languages_processed: [],
 				total_missing: 0,
-				total_fillable: 0,
+				total_available: 0,
+				total_ready: 0,
 				chapters_enabled: 0,
 				chapters_disabled: 0,
 			}
@@ -85,7 +87,8 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 		}))
 
 		let totalMissing = 0
-		let totalFillable = 0
+		let totalAvailable = 0
+		let totalReady = 0
 		let totalEnabled = 0
 		let totalDisabled = 0
 
@@ -106,7 +109,8 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 			const { enabled, disabled } = await persistDedupResults(serie_id, language, result)
 
 			totalMissing += result.stats.missing_count
-			totalFillable += result.stats.fillable_count
+			totalAvailable += result.stats.available_count
+			totalReady += result.stats.ready_count
 			totalEnabled += enabled
 			totalDisabled += disabled
 
@@ -116,13 +120,14 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 		}
 
 		await job.updateProgress(100)
-		log(`Deduplication complete: ${totalMissing} missing, ${totalFillable} fillable, +${totalEnabled} enabled, -${totalDisabled} disabled`)
+		log(`Deduplication complete: ${totalMissing} missing, ${totalAvailable} available, ${totalReady} ready, +${totalEnabled} enabled, -${totalDisabled} disabled`)
 
 		return {
 			serie_id,
 			languages_processed: languagesToProcess,
 			total_missing: totalMissing,
-			total_fillable: totalFillable,
+			total_available: totalAvailable,
+			total_ready: totalReady,
 			chapters_enabled: totalEnabled,
 			chapters_disabled: totalDisabled,
 		}

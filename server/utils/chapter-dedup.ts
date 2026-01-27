@@ -32,7 +32,8 @@ export type DedupLanguageResult = {
 	fillable_chapters: FillableChapterRecord[]
 	stats: {
 		missing_count: number
-		fillable_count: number
+		available_count: number // Secondary chapters that exist for missing numbers
+		ready_count: number // Secondary chapters that are fetched (Success status)
 	}
 	changes: {
 		to_enable: string[] // Chapter IDs to enable
@@ -46,7 +47,8 @@ const EMPTY_DEDUP_RESULT: DedupLanguageResult = {
 	fillable_chapters: [],
 	stats: {
 		missing_count: 0,
-		fillable_count: 0,
+		available_count: 0,
+		ready_count: 0,
 	},
 	changes: { to_enable: [], to_disable: [] },
 }
@@ -157,10 +159,20 @@ export async function deduplicateForLanguage(
 	// Build fillable chapters list: secondary chapters that can fill gaps
 	// Sort by priority so best source comes first
 	const fillableChapters: FillableChapterRecord[] = []
+	const availableChapterNumbers = new Set<number>() // Any secondary chapter that exists
+	const readyChapterNumbers = new Set<number>() // Secondary chapters with Success status
 
 	for (const missing of missingChapters) {
-		const secondaryMatches = secondaryChapters
-			.filter(c => c.chapter_number === missing && c.page_fetch_status === "Success")
+		// All secondary chapters for this missing number (regardless of status)
+		const allSecondaryMatches = secondaryChapters.filter(c => c.chapter_number === missing)
+
+		if (allSecondaryMatches.length > 0) {
+			availableChapterNumbers.add(missing)
+		}
+
+		// Only chapters with Success status are "ready"
+		const readyMatches = allSecondaryMatches
+			.filter(c => c.page_fetch_status === "Success")
 			.sort((a, b) => {
 				const aPriority = sourcePriorityMap.get(a.source_id)
 				const bPriority = sourcePriorityMap.get(b.source_id)
@@ -171,7 +183,11 @@ export async function deduplicateForLanguage(
 				return aPriority.source_priority - bPriority.source_priority
 			})
 
-		for (const match of secondaryMatches) {
+		if (readyMatches.length > 0) {
+			readyChapterNumbers.add(missing)
+		}
+
+		for (const match of readyMatches) {
 			fillableChapters.push({
 				chapter_number: missing,
 				chapter_id: match.id,
@@ -180,9 +196,7 @@ export async function deduplicateForLanguage(
 		}
 	}
 
-	// Count unique chapter numbers that are fillable
-	const fillableCount = new Set(fillableChapters.map(f => f.chapter_number)).size
-	log(`  Fillable from secondary: ${fillableCount} chapters`)
+	log(`  Available from secondary: ${availableChapterNumbers.size}, Ready: ${readyChapterNumbers.size}`)
 
 	// Determine which chapters to enable/disable
 	const toEnable: string[] = []
@@ -257,7 +271,8 @@ export async function deduplicateForLanguage(
 		fillable_chapters: fillableChapters,
 		stats: {
 			missing_count: missingChapters.length,
-			fillable_count: fillableCount,
+			available_count: availableChapterNumbers.size,
+			ready_count: readyChapterNumbers.size,
 		},
 		changes: {
 			to_enable: toEnable,
@@ -294,7 +309,8 @@ export async function persistDedupResults(
 		const availabilityData = {
 			missing_chapters: result.missing_chapters,
 			missing_count: result.stats.missing_count,
-			fillable_count: result.stats.fillable_count,
+			available_count: result.stats.available_count,
+			ready_count: result.stats.ready_count,
 			auto_enabled_count: result.changes.to_enable.length,
 		}
 

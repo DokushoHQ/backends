@@ -25,7 +25,8 @@ export default defineEventHandler(async (event) => {
 			language: true,
 			missing_chapters: true,
 			missing_count: true,
-			fillable_count: true,
+			available_count: true,
+			ready_count: true,
 			auto_enabled_count: true,
 			updated_at: true,
 			fillable_chapters: {
