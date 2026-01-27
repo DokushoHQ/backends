@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { UIChapter } from "#shared/ui/type/chapter"
+
 const route = useRoute()
 const { isAdmin } = await useAuth()
 const { formatRelativeTime } = useFormatters()
@@ -20,16 +22,18 @@ const { data: deletionStatus, refresh: refreshDeletionStatus } = await useFetch(
 )
 
 // Fetch chapter availability (pre-calculated missing chapters)
-const { data: availabilityData, refresh: refreshAvailability } = await useLazyFetch(
+const { data: availabilityData } = await useLazyFetch(
 	`/api/v1/serie/${serieId.value}/availability`,
 )
 
 // Computed values
 const title = computed(() => serie.value?.title ?? "")
 const synopsis = computed(() => serie.value?.synopsis ?? "")
-const chapters = computed(() => chaptersData.value?.chapters ?? [])
+const chapters = computed(() => (chaptersData.value?.chapters ?? []) as unknown as UIChapter[])
 const enabledChapters = computed(() => chapters.value.filter(c => c.enabled))
-const disabledCount = computed(() => chapters.value.length - enabledChapters.value.length)
+
+// Availability data for ChaptersCard
+const availability = computed(() => availabilityData.value?.availability ?? [])
 
 // Transform chapters for health panel (extract only needed fields)
 interface ChapterHealthItem {
@@ -66,41 +70,6 @@ const chaptersForHealth = computed<ChapterHealthItem[]>(() =>
 const unacknowledgedRemovedCount = computed(() =>
 	chapters.value.filter(c => c.source_removed_at !== null && c.source_removal_acknowledged_at === null).length,
 )
-
-// Get pre-calculated missing chapters from availability data
-const missingChapters = computed(() => {
-	const availability = availabilityData.value?.availability ?? []
-	// Combine missing chapters from all languages
-	const allMissing = new Set<number>()
-	for (const a of availability) {
-		const missing = a.missing_chapters as number[]
-		for (const m of missing) {
-			allMissing.add(m)
-		}
-	}
-	return [...allMissing].sort((a, b) => a - b)
-})
-
-// Create combined list with chapters and missing markers
-type ChapterData = typeof chapters.value[number]
-type ChapterItem
-	= | { type: "chapter", data: ChapterData }
-		| { type: "missing", chapterNumber: number }
-
-const allItems = computed(() => {
-	const items: ChapterItem[] = [
-		...chapters.value.map(c => ({ type: "chapter" as const, data: c })),
-		...missingChapters.value.map((n: number) => ({ type: "missing" as const, chapterNumber: n })),
-	]
-
-	items.sort((a, b) => {
-		const aNum = a.type === "chapter" ? (a.data.chapter_number ?? 0) : a.chapterNumber
-		const bNum = b.type === "chapter" ? (b.data.chapter_number ?? 0) : b.chapterNumber
-		return bNum - aNum
-	})
-
-	return items
-})
 
 // Health percentage for stat card
 const healthPercent = computed(() => {
@@ -322,12 +291,10 @@ useHead({
 
 					<!-- Chapters Card -->
 					<SeriesChaptersCard
-						:items="allItems"
+						:chapters="chapters"
+						:availability="availability"
 						:is-admin="isAdmin"
 						:serie-id="serieId"
-						:enabled-count="enabledChapters.length"
-						:disabled-count="disabledCount"
-						:missing-count="missingChapters.length"
 						:loading="chaptersStatus === 'pending'"
 						@chapters-deleted="refreshChapters"
 						@chapters-acknowledged="refreshChapters"

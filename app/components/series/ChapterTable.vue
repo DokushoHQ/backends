@@ -25,8 +25,7 @@ function getStatusBadge(status: PageFetchStatus) {
 }
 
 const props = defineProps<{
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	items: Array<{ type: "chapter", data: any } | { type: "missing", chapterNumber: number }>
+	items: UIChapterItem[]
 	isAdmin: boolean
 	serieId: string
 }>()
@@ -47,14 +46,13 @@ const deleteDialogOpen = ref(false)
 const viewerOpen = ref(false)
 const viewerChapter = ref<UIChapter | null>(null)
 
-// Filters
+// Filters (language is now handled by parent tabs)
 const sourceFilter = ref("all")
 const groupFilter = ref("all")
-const languageFilter = ref("all")
 const statusFilter = ref("all")
 const sourceAvailabilityFilter = ref("all")
 
-// Extract chapters only
+// Extract chapters only (items should only contain chapters now, no missing markers)
 const chapters = computed(() =>
 	props.items.filter((item): item is { type: "chapter", data: UIChapter } => item.type === "chapter"),
 )
@@ -63,20 +61,17 @@ const chapters = computed(() =>
 const filterOptions = computed(() => {
 	const sources = new Map<string, string>()
 	const groups = new Map<string, string>()
-	const languages = new Set<string>()
 
 	for (const { data: chapter } of chapters.value) {
 		sources.set(chapter.source.external_id, chapter.source.name)
 		for (const group of chapter.groups) {
 			groups.set(group.id, group.name)
 		}
-		languages.add(chapter.language)
 	}
 
 	return {
 		sources: Array.from(sources.entries()).sort((a, b) => a[1].localeCompare(b[1])),
 		groups: Array.from(groups.entries()).sort((a, b) => a[1].localeCompare(b[1])),
-		languages: Array.from(languages).sort(),
 	}
 })
 
@@ -88,13 +83,10 @@ function getSourceAvailabilityStatus(chapter: UIChapter): "available" | "removed
 	return chapter.source_removal_acknowledged_at ? "removed-acknowledged" : "removed-unacknowledged"
 }
 
-// Filter items
+// Filter items (no language filter, no missing markers)
 const filteredItems = computed(() => {
 	return props.items.filter((item) => {
-		if (item.type === "missing") {
-			// Show missing chapters only if no filters are active
-			return sourceFilter.value === "all" && groupFilter.value === "all" && languageFilter.value === "all" && statusFilter.value === "all" && sourceAvailabilityFilter.value === "all"
-		}
+		if (item.type === "missing") return false // Skip missing markers
 
 		const chapter = item.data
 
@@ -106,10 +98,6 @@ const filteredItems = computed(() => {
 			return false
 		}
 		if (groupFilter.value !== "all" && groupFilter.value !== "none" && !chapter.groups.some((g: { id: string }) => g.id === groupFilter.value)) {
-			return false
-		}
-
-		if (languageFilter.value !== "all" && chapter.language !== languageFilter.value) {
 			return false
 		}
 
@@ -142,7 +130,7 @@ const someSelected = computed(() =>
 )
 
 const hasActiveFilters = computed(() =>
-	sourceFilter.value !== "all" || groupFilter.value !== "all" || languageFilter.value !== "all" || statusFilter.value !== "all" || sourceAvailabilityFilter.value !== "all",
+	sourceFilter.value !== "all" || groupFilter.value !== "all" || statusFilter.value !== "all" || sourceAvailabilityFilter.value !== "all",
 )
 
 // Selected chapters that can be deleted (have source_removed_at set)
@@ -175,7 +163,6 @@ const selectedAcknowledgeableChapters = computed(() => {
 function clearFilters() {
 	sourceFilter.value = "all"
 	groupFilter.value = "all"
-	languageFilter.value = "all"
 	statusFilter.value = "all"
 	sourceAvailabilityFilter.value = "all"
 }
@@ -332,12 +319,6 @@ const groupFilterItems = computed(() => [
 	...filterOptions.value.groups.map(([id, name]) => ({ label: name, value: id })),
 ])
 
-// Language filter items
-const languageFilterItems = computed(() => [
-	{ label: "All", value: "all" },
-	...filterOptions.value.languages.map(lang => ({ label: lang, value: lang })),
-])
-
 // Status filter items (admin only)
 const statusFilterItems = [
 	{ label: "All Status", value: "all" },
@@ -471,15 +452,6 @@ const columns = computed<TableColumn<UIChapterItem>[]>(() => {
 			},
 		},
 		{
-			id: "language",
-			header: "Language",
-			cell: ({ row }) => {
-				if (row.original.type === "missing") return null
-				const chapter = (row.original as { type: "chapter", data: UIChapter }).data
-				return h(resolveComponent("UBadge"), { variant: "outline" }, () => chapter.language)
-			},
-		},
-		{
 			id: "uploaded",
 			header: "Uploaded",
 			cell: ({ row }) => {
@@ -550,14 +522,6 @@ const columns = computed<TableColumn<UIChapterItem>[]>(() => {
 			<USelectMenu
 				v-model="groupFilter"
 				:items="groupFilterItems"
-				value-key="value"
-				class="w-35"
-				size="sm"
-			/>
-
-			<USelectMenu
-				v-model="languageFilter"
-				:items="languageFilterItems"
 				value-key="value"
 				class="w-35"
 				size="sm"
