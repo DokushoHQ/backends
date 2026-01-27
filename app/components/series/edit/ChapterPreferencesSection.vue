@@ -19,6 +19,7 @@ const emit = defineEmits<{
 const toast = useToast()
 const isPending = ref(false)
 const languageOverridesExpanded = ref(false)
+const unsplitOverridesExpanded = ref(false)
 
 // Languages available in the system
 const LANGUAGES = ["En", "Fr", "Jp", "JpRo", "Ko", "KoRo", "ZhHk", "Zh"] as const
@@ -26,10 +27,16 @@ const LANGUAGES = ["En", "Fr", "Jp", "JpRo", "Ko", "KoRo", "ZhHk", "Zh"] as cons
 // Fetch chapter preferences
 const { data: preferenceData, refresh: refreshPreference } = await useFetch(`/api/v1/serie/${props.serieId}/chapter-preference`)
 
-// Local state for editing
+// Local state for editing - Secondary Fallback
 const localFallbackDefault = ref(preferenceData.value?.preference?.use_secondary_fallback_default ?? true)
 const localFallbackOverrides = ref<Record<string, boolean | undefined>>({
 	...preferenceData.value?.preference?.use_secondary_fallback,
+})
+
+// Local state for editing - Prefer Unsplit
+const localUnsplitDefault = ref(preferenceData.value?.preference?.prefer_unsplit_default ?? true)
+const localUnsplitOverrides = ref<Record<string, boolean | undefined>>({
+	...preferenceData.value?.preference?.prefer_unsplit,
 })
 
 // Watch for preference data changes
@@ -37,6 +44,8 @@ watch(preferenceData, (newData) => {
 	if (newData?.preference) {
 		localFallbackDefault.value = newData.preference.use_secondary_fallback_default
 		localFallbackOverrides.value = { ...newData.preference.use_secondary_fallback }
+		localUnsplitDefault.value = newData.preference.prefer_unsplit_default
+		localUnsplitOverrides.value = { ...newData.preference.prefer_unsplit }
 	}
 })
 
@@ -52,15 +61,21 @@ const sortedSources = computed(() => {
 // Check if there are any changes to save
 const hasPreferenceChanges = computed(() => {
 	const original = preferenceData.value?.preference
-	if (!original) return localFallbackDefault.value !== true
+	if (!original) {
+		return localFallbackDefault.value !== true || localUnsplitDefault.value !== true
+	}
 
 	if (localFallbackDefault.value !== original.use_secondary_fallback_default) return true
+	if (localUnsplitDefault.value !== original.prefer_unsplit_default) return true
 
-	const origOverrides = original.use_secondary_fallback as Record<string, boolean | undefined>
+	const origFallbackOverrides = original.use_secondary_fallback as Record<string, boolean | undefined>
 	for (const lang of LANGUAGES) {
-		const origVal = origOverrides[lang]
-		const localVal = localFallbackOverrides.value[lang]
-		if (origVal !== localVal) return true
+		if (origFallbackOverrides[lang] !== localFallbackOverrides.value[lang]) return true
+	}
+
+	const origUnsplitOverrides = original.prefer_unsplit as Record<string, boolean | undefined>
+	for (const lang of LANGUAGES) {
+		if (origUnsplitOverrides[lang] !== localUnsplitOverrides.value[lang]) return true
 	}
 
 	return false
@@ -76,6 +91,10 @@ async function savePreferences() {
 				use_secondary_fallback_default: localFallbackDefault.value,
 				use_secondary_fallback: Object.fromEntries(
 					Object.entries(localFallbackOverrides.value).filter(([_, v]) => v !== undefined),
+				),
+				prefer_unsplit_default: localUnsplitDefault.value,
+				prefer_unsplit: Object.fromEntries(
+					Object.entries(localUnsplitOverrides.value).filter(([_, v]) => v !== undefined),
 				),
 			},
 		})
@@ -100,15 +119,15 @@ async function savePreferences() {
 	}
 }
 
-// Get override status text for a language
-function getOverrideText(lang: string) {
+// Get override status text for a language (for fallback)
+function getFallbackOverrideText(lang: string) {
 	const val = localFallbackOverrides.value[lang]
 	if (val === undefined) return "Use default"
 	return val ? "Enabled" : "Disabled"
 }
 
-// Cycle through override states: undefined -> true -> false -> undefined
-function cycleOverride(lang: string) {
+// Cycle through fallback override states: undefined -> true -> false -> undefined
+function cycleFallbackOverride(lang: string) {
 	const current = localFallbackOverrides.value[lang]
 	if (current === undefined) {
 		localFallbackOverrides.value[lang] = true
@@ -118,6 +137,27 @@ function cycleOverride(lang: string) {
 	}
 	else {
 		localFallbackOverrides.value[lang] = undefined
+	}
+}
+
+// Get override status text for a language (for unsplit)
+function getUnsplitOverrideText(lang: string) {
+	const val = localUnsplitOverrides.value[lang]
+	if (val === undefined) return "Use default"
+	return val ? "Enabled" : "Disabled"
+}
+
+// Cycle through unsplit override states: undefined -> true -> false -> undefined
+function cycleUnsplitOverride(lang: string) {
+	const current = localUnsplitOverrides.value[lang]
+	if (current === undefined) {
+		localUnsplitOverrides.value[lang] = true
+	}
+	else if (current === true) {
+		localUnsplitOverrides.value[lang] = false
+	}
+	else {
+		localUnsplitOverrides.value[lang] = undefined
 	}
 }
 
@@ -247,7 +287,7 @@ async function moveSourceDown(sourceId: string) {
 						</p>
 					</div>
 
-					<!-- Language Overrides -->
+					<!-- Language Overrides for Secondary Fallback -->
 					<div class="setting-block">
 						<button
 							class="expand-header"
@@ -281,9 +321,72 @@ async function moveSourceDown(sourceId: string) {
 										'disabled': localFallbackOverrides[lang] === false,
 									}"
 									:disabled="isPending"
-									@click="cycleOverride(lang)"
+									@click="cycleFallbackOverride(lang)"
 								>
-									{{ getOverrideText(lang) }}
+									{{ getFallbackOverrideText(lang) }}
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<!-- Prefer Unsplit Toggle -->
+					<div class="setting-block">
+						<div class="setting-header">
+							<h3>Prefer Unsplit Chapters</h3>
+							<button
+								class="toggle-button"
+								:class="{ active: localUnsplitDefault }"
+								:disabled="isPending"
+								@click="localUnsplitDefault = !localUnsplitDefault"
+							>
+								<span class="toggle-track">
+									<span class="toggle-thumb" />
+								</span>
+								<span class="toggle-label">{{ localUnsplitDefault ? 'On' : 'Off' }}</span>
+							</button>
+						</div>
+						<p class="setting-description">
+							When enabled, whole chapters (Ch 1) take priority over split versions (Ch 1.1, 1.2, 1.3) even from secondary sources
+						</p>
+					</div>
+
+					<!-- Language Overrides for Prefer Unsplit -->
+					<div class="setting-block">
+						<button
+							class="expand-header"
+							@click="unsplitOverridesExpanded = !unsplitOverridesExpanded"
+						>
+							<span class="expand-label">Unsplit Language Overrides</span>
+							<UIcon
+								:name="unsplitOverridesExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+								class="expand-icon"
+							/>
+						</button>
+						<p class="setting-description">
+							Override the prefer unsplit setting for specific languages. Click to cycle: Use default → Enabled → Disabled
+						</p>
+
+						<div
+							v-if="unsplitOverridesExpanded"
+							class="overrides-list"
+						>
+							<div
+								v-for="lang in LANGUAGES"
+								:key="lang"
+								class="override-item"
+							>
+								<span class="override-lang">{{ lang }}</span>
+								<button
+									class="override-toggle"
+									:class="{
+										'use-default': localUnsplitOverrides[lang] === undefined,
+										'enabled': localUnsplitOverrides[lang] === true,
+										'disabled': localUnsplitOverrides[lang] === false,
+									}"
+									:disabled="isPending"
+									@click="cycleUnsplitOverride(lang)"
+								>
+									{{ getUnsplitOverrideText(lang) }}
 								</button>
 							</div>
 						</div>

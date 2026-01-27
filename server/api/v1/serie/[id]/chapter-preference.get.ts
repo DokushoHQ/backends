@@ -15,6 +15,8 @@ export default defineEventHandler(async (event) => {
 		preference: preference ?? {
 			use_secondary_fallback: {},
 			use_secondary_fallback_default: true,
+			prefer_unsplit: {},
+			prefer_unsplit_default: true,
 			notify_on_new_gaps: false,
 			notify_on_gap_filled: false,
 		},

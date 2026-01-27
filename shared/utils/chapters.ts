@@ -1,4 +1,24 @@
 /**
+ * Check if a chapter is a split (has decimal part like .1, .2, .3, .4).
+ * Split chapters are sub-divisions of a whole chapter.
+ * Supplementary chapters (.5 and above) are NOT considered splits.
+ */
+export function isSplitChapter(chapterNumber: number): boolean {
+	const decimal = chapterNumber % 1
+	// Split chapters: .1, .2, .3, .4 (NOT .5 which is supplementary)
+	// Use epsilon comparison for floating point safety
+	return decimal > 0.001 && decimal < 0.49
+}
+
+/**
+ * Get the base (floor) chapter number.
+ * E.g., 1.3 → 1, 5.0 → 5, 10.5 → 10
+ */
+export function getBaseChapterNumber(chapterNumber: number): number {
+	return Math.floor(chapterNumber)
+}
+
+/**
  * Result of chapter number assignment for a single chapter.
  */
 export interface ChapterNumberResult {

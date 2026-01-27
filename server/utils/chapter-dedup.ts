@@ -1,6 +1,73 @@
-import { calculateMissingChapters } from "../../shared/utils/chapters"
+import { calculateMissingChapters, getBaseChapterNumber, isSplitChapter } from "../../shared/utils/chapters"
 import { db, type Language, type PageFetchStatus } from "./db"
 import type { LanguageBooleanMap } from "./prisma-json.d"
+
+/** Coverage info for a base chapter number from a single source */
+type ChapterCoverage = {
+	hasWhole: boolean // Has chapter N exactly (no decimal)
+	splits: number[] // Has N.1, N.2, etc.
+	chapters: ChapterInfo[] // All chapters for this base number
+}
+
+/**
+ * Check if a chapter number is a whole number (no decimal).
+ */
+function isWholeChapter(chapterNumber: number): boolean {
+	return chapterNumber === Math.floor(chapterNumber)
+}
+
+/**
+ * Group chapters by their base (floor) number.
+ * Returns a map of baseNumber → coverage info.
+ * Note: Supplementary chapters (.5+) are tracked in chapters[] but don't affect hasWhole/splits.
+ */
+function groupByBaseNumber(chapters: ChapterInfo[]): Map<number, ChapterCoverage> {
+	const map = new Map<number, ChapterCoverage>()
+
+	for (const c of chapters) {
+		const base = getBaseChapterNumber(c.chapter_number)
+		const existing = map.get(base) || { hasWhole: false, splits: [], chapters: [] }
+
+		if (isWholeChapter(c.chapter_number)) {
+			// Whole chapter (no decimal at all, e.g., 1, 2, 3)
+			existing.hasWhole = true
+		}
+		else if (isSplitChapter(c.chapter_number)) {
+			// Split chapter (.1-.4)
+			existing.splits.push(c.chapter_number)
+		}
+		// Supplementary chapters (.5+) are tracked in chapters[] but don't affect coverage
+
+		existing.chapters.push(c)
+		map.set(base, existing)
+	}
+
+	return map
+}
+
+/**
+ * Get user preference for preferring unsplit chapters for a specific language.
+ */
+async function getPreferUnsplitPreference(
+	serieId: string,
+	language: Language,
+): Promise<boolean> {
+	const pref = await db.serieChapterPreference.findUnique({
+		where: { serie_id: serieId },
+		select: {
+			prefer_unsplit: true,
+			prefer_unsplit_default: true,
+		},
+	})
+
+	if (!pref) {
+		// No preferences set, use default (true = prefer unsplit)
+		return true
+	}
+
+	const langMap = pref.prefer_unsplit as LanguageBooleanMap
+	return langMap[language] ?? pref.prefer_unsplit_default
+}
 
 /** Chapter info used internally during deduplication */
 type ChapterInfo = {
@@ -44,6 +111,7 @@ export type DedupLanguageResult = {
 	changes: {
 		to_enable: string[] // Chapter IDs to enable
 		to_disable: string[] // Chapter IDs to disable
+		primary_to_disable: string[] // Primary chapter IDs to disable (for unsplit preference)
 	}
 }
 
@@ -56,7 +124,7 @@ const EMPTY_DEDUP_RESULT: DedupLanguageResult = {
 		available_count: 0,
 		ready_count: 0,
 	},
-	changes: { to_enable: [], to_disable: [] },
+	changes: { to_enable: [], to_disable: [], primary_to_disable: [] },
 }
 
 // ============================================================================
@@ -277,6 +345,87 @@ export async function deduplicateForLanguage(
 		}
 	}
 
+	// ============================================================================
+	// Split/Unsplit Chapter Preference Logic
+	// ============================================================================
+	// After standard dedup, apply split/unsplit preference:
+	// When preferUnsplit is true, whole chapters take priority over splits,
+	// even if the whole chapter is from a secondary source.
+
+	const primaryToDisable: string[] = []
+	const preferUnsplit = await getPreferUnsplitPreference(serieId, language)
+
+	if (preferUnsplit && secondaryChapters.length > 0) {
+		log(`  Prefer unsplit: checking for split→whole replacements`)
+
+		// Group chapters by base number for both primary and secondary
+		const primaryByBase = groupByBaseNumber(primaryChapters)
+		const secondaryByBase = groupByBaseNumber(secondaryChapters)
+
+		// Get all unique base chapter numbers from both sources
+		const allBaseNumbers = new Set([
+			...primaryByBase.keys(),
+			...secondaryByBase.keys(),
+		])
+
+		for (const baseNum of allBaseNumbers) {
+			const primaryCoverage = primaryByBase.get(baseNum)
+			const secondaryCoverage = secondaryByBase.get(baseNum)
+
+			// Check if primary has a whole chapter (available)
+			// A whole chapter is one where chapter_number === baseNum exactly (no decimal)
+			const primaryHasWhole = primaryCoverage?.hasWhole
+				&& primaryCoverage.chapters.some(c =>
+					isWholeChapter(c.chapter_number) && isPrimaryChapterAvailable(c),
+				)
+
+			// Check if primary only has splits (no whole chapter available)
+			const primaryHasSplitsOnly = !primaryHasWhole
+				&& primaryCoverage
+				&& primaryCoverage.splits.length > 0
+				&& primaryCoverage.chapters.some(c =>
+					isSplitChapter(c.chapter_number) && isPrimaryChapterAvailable(c),
+				)
+
+			// Check if secondary has a whole chapter (doesn't need to be "Success" - user prefers unsplit)
+			// We accept any status except Failed/PermanentlyFailed since user explicitly wants whole chapters
+			const secondaryWholeChapter = secondaryCoverage?.chapters.find(c =>
+				isWholeChapter(c.chapter_number)
+				&& c.chapter_number === baseNum
+				&& c.page_fetch_status !== "Failed"
+				&& c.page_fetch_status !== "PermanentlyFailed",
+			)
+			const secondaryHasWhole = !!secondaryWholeChapter
+
+			// CASE: Primary has splits only, secondary has whole → prefer secondary whole
+			if (primaryHasSplitsOnly && secondaryHasWhole) {
+				// Enable the secondary whole chapter if not already enabled/marked
+				if (!enabledChapterNumbers.has(baseNum)) {
+					if (!secondaryWholeChapter!.enabled && !toEnable.includes(secondaryWholeChapter!.id)) {
+						toEnable.push(secondaryWholeChapter!.id)
+						log(`  Enabling unsplit: Ch ${baseNum} from secondary (overrides primary splits)`)
+					}
+					enabledChapterNumbers.add(baseNum)
+				}
+
+				// Disable primary splits
+				for (const pri of primaryCoverage?.chapters || []) {
+					if (isSplitChapter(pri.chapter_number) && pri.enabled && !primaryToDisable.includes(pri.id)) {
+						primaryToDisable.push(pri.id)
+						log(`  Disabling split: Ch ${pri.chapter_number} (whole exists in secondary)`)
+					}
+				}
+
+				// Disable secondary splits too (if any)
+				for (const sec of secondaryCoverage?.chapters || []) {
+					if (isSplitChapter(sec.chapter_number) && sec.enabled && !toDisable.includes(sec.id)) {
+						toDisable.push(sec.id)
+					}
+				}
+			}
+		}
+	}
+
 	return {
 		missing_chapters: missingChapters,
 		fillable_chapters: fillableChapters,
@@ -288,6 +437,7 @@ export async function deduplicateForLanguage(
 		changes: {
 			to_enable: toEnable,
 			to_disable: toDisable,
+			primary_to_disable: primaryToDisable,
 		},
 	}
 }
@@ -299,7 +449,7 @@ export async function persistDedupResults(
 	serieId: string,
 	language: Language,
 	result: DedupLanguageResult,
-): Promise<{ enabled: number, disabled: number }> {
+): Promise<{ enabled: number, disabled: number, primary_disabled: number }> {
 	return db.$transaction(async (tx) => {
 		// Apply enable/disable changes
 		if (result.changes.to_enable.length > 0) {
@@ -309,9 +459,15 @@ export async function persistDedupResults(
 			})
 		}
 
-		if (result.changes.to_disable.length > 0) {
+		// Combine secondary and primary chapters to disable
+		const allToDisable = [
+			...result.changes.to_disable,
+			...result.changes.primary_to_disable,
+		]
+
+		if (allToDisable.length > 0) {
 			await tx.chapter.updateMany({
-				where: { id: { in: result.changes.to_disable } },
+				where: { id: { in: allToDisable } },
 				data: { enabled: false },
 			})
 		}
@@ -357,6 +513,7 @@ export async function persistDedupResults(
 		return {
 			enabled: result.changes.to_enable.length,
 			disabled: result.changes.to_disable.length,
+			primary_disabled: result.changes.primary_to_disable.length,
 		}
 	})
 }
@@ -464,6 +621,9 @@ function selectBestChapter(
  *
  * When multiple chapters have the same (source_id, chapter_number, language),
  * automatically enable the "best" one and disable others.
+ *
+ * Also handles unsplit preference: when both whole chapters and splits exist
+ * from the same source (different scanlation groups), prefer whole chapters.
  */
 export async function dedupSameSourceChapters(
 	serieId: string,
@@ -489,6 +649,56 @@ export async function dedupSameSourceChapters(
 		return { changes: { to_enable: [], to_disable: [] }, duplicates_processed: 0 }
 	}
 
+	const toEnable: string[] = []
+	const toDisable: string[] = []
+
+	// ============================================================================
+	// Phase 1: Unsplit preference - prefer whole chapters over splits within same source
+	// ============================================================================
+	// When a source has both Ch 19 (whole) and Ch 19.1, 19.2 (splits) from different groups,
+	// the unsplit preference should disable the splits.
+
+	const preferUnsplit = await getPreferUnsplitPreference(serieId, language)
+
+	if (preferUnsplit) {
+		// Group chapters by base number to find whole+split conflicts
+		const chaptersByBase = new Map<number, ChapterWithGroups[]>()
+		for (const c of chapters) {
+			const base = getBaseChapterNumber(c.chapter_number)
+			const list = chaptersByBase.get(base) || []
+			list.push(c)
+			chaptersByBase.set(base, list)
+		}
+
+		for (const [baseNum, chaptersForBase] of chaptersByBase) {
+			// Find enabled whole chapters and enabled splits for this base number
+			const enabledWholes = chaptersForBase.filter(c =>
+				c.enabled
+				&& isWholeChapter(c.chapter_number)
+				&& c.page_fetch_status !== "Failed"
+				&& c.page_fetch_status !== "PermanentlyFailed",
+			)
+			const enabledSplits = chaptersForBase.filter(c =>
+				c.enabled && isSplitChapter(c.chapter_number),
+			)
+
+			// If we have both whole and splits enabled, disable the splits
+			if (enabledWholes.length > 0 && enabledSplits.length > 0) {
+				log(`  Same-source unsplit: Ch ${baseNum} has whole and splits, disabling splits`)
+				for (const split of enabledSplits) {
+					if (!toDisable.includes(split.id)) {
+						toDisable.push(split.id)
+						log(`    Disabling split ${split.chapter_number} (${split.groups.map(g => g.name).join(", ") || "no group"})`)
+					}
+				}
+			}
+		}
+	}
+
+	// ============================================================================
+	// Phase 2: Standard same-source dedup - multiple uploads of same chapter number
+	// ============================================================================
+
 	// Group chapters by chapter_number
 	const chaptersByNumber = new Map<number, ChapterWithGroups[]>()
 	for (const c of chapters) {
@@ -505,37 +715,44 @@ export async function dedupSameSourceChapters(
 		}
 	}
 
-	if (duplicateNumbers.length === 0) {
+	if (duplicateNumbers.length === 0 && toDisable.length === 0) {
 		return { changes: { to_enable: [], to_disable: [] }, duplicates_processed: 0 }
 	}
 
-	log(`  Same-source: found ${duplicateNumbers.length} chapter numbers with duplicates`)
+	if (duplicateNumbers.length > 0) {
+		log(`  Same-source: found ${duplicateNumbers.length} chapter numbers with duplicates`)
+	}
 
 	// Get group preferences and chapter counts for selection
 	const groupPrefs = await getGroupPreferences(serieId, language)
 	const groupCounts = await getGroupChapterCounts(serieId, sourceId, language)
 
-	const toEnable: string[] = []
-	const toDisable: string[] = []
-
 	for (const num of duplicateNumbers) {
 		const duplicates = chaptersByNumber.get(num)!
-		const best = selectBestChapter(duplicates, groupPrefs, groupCounts)
 
-		for (const chapter of duplicates) {
-			if (chapter.id === best.id) {
-				// This is the selected best - ensure it's enabled
-				if (!chapter.enabled) {
-					toEnable.push(chapter.id)
-					log(`    Ch ${num}: enabling ${chapter.groups.map(g => g.name).join(", ") || "no group"}`)
-				}
-			}
-			else {
-				// Not the best - ensure it's disabled
-				if (chapter.enabled) {
-					toDisable.push(chapter.id)
-					log(`    Ch ${num}: disabling ${chapter.groups.map(g => g.name).join(", ") || "no group"}`)
-				}
+		// Only process if at least one duplicate is enabled
+		// This respects cross-source dedup decisions (e.g., unsplit preference disabled all splits)
+		// Also exclude chapters already marked for disable in phase 1
+		const enabledDuplicates = duplicates.filter(c => c.enabled && !toDisable.includes(c.id))
+		if (enabledDuplicates.length === 0) {
+			// All duplicates disabled (likely by cross-source dedup or phase 1), skip this chapter number
+			continue
+		}
+
+		// If only one enabled duplicate, nothing to deduplicate
+		if (enabledDuplicates.length === 1) {
+			continue
+		}
+
+		// Select best among ENABLED duplicates only
+		// This respects disabled state (from cross-source dedup or user)
+		const best = selectBestChapter(enabledDuplicates, groupPrefs, groupCounts)
+
+		for (const chapter of enabledDuplicates) {
+			if (chapter.id !== best.id) {
+				// Not the best - disable it
+				toDisable.push(chapter.id)
+				log(`    Ch ${num}: disabling ${chapter.groups.map(g => g.name).join(", ") || "no group"}`)
 			}
 		}
 	}

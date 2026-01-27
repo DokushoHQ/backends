@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PageFetchStatus, UIChapter, UIChapterItem } from "#shared/ui/type/chapter"
+import { isSplitChapter } from "#shared/utils/chapters"
 
 const { formatRelativeTime } = useFormatters()
 
@@ -153,35 +154,104 @@ type ChapterGroup = {
 	chapterNumber: number
 	language: string
 	primary: UIChapter | null // The enabled chapter (or first if none enabled)
-	duplicates: UIChapter[] // Other versions (disabled)
+	duplicates: UIChapter[] // Other versions (disabled or splits collapsed under whole)
+	hasSplitsCollapsed?: boolean // True if this group has splits collapsed under a whole chapter
+}
+
+/**
+ * Check if a chapter number is a whole number (no decimal).
+ */
+function isWholeChapter(chapterNumber: number): boolean {
+	return chapterNumber === Math.floor(chapterNumber)
+}
+
+/**
+ * Get the base (floor) chapter number.
+ */
+function getBaseChapterNumber(chapterNumber: number): number {
+	return Math.floor(chapterNumber)
 }
 
 const groupedChapters = computed<ChapterGroup[]>(() => {
-	const groups = new Map<string, { chapters: UIChapter[] }>()
+	// Step 1: Group all chapters by exact (chapter_number, language)
+	const exactGroups = new Map<string, { chapters: UIChapter[] }>()
 
-	// Group all chapters by (chapter_number, language)
 	for (const { data: chapter } of chapters.value) {
 		if (!passesFilters(chapter)) continue
 
 		const key = `${chapter.chapter_number}-${chapter.language}`
-		if (!groups.has(key)) {
-			groups.set(key, { chapters: [] })
+		if (!exactGroups.has(key)) {
+			exactGroups.set(key, { chapters: [] })
 		}
-		groups.get(key)!.chapters.push(chapter)
+		exactGroups.get(key)!.chapters.push(chapter)
 	}
 
-	// Convert to array and determine primary vs duplicates
+	// Step 2: Identify base numbers that have BOTH a whole chapter AND splits
+	// For these, we'll collapse splits under the whole
+	const baseNumbersWithWhole = new Map<string, boolean>() // key: "base-language" -> hasWhole
+
+	for (const key of exactGroups.keys()) {
+		const [numStr, lang] = key.split("-")
+		const num = parseFloat(numStr!)
+		const base = getBaseChapterNumber(num)
+		const baseKey = `${base}-${lang}`
+
+		if (isWholeChapter(num)) {
+			baseNumbersWithWhole.set(baseKey, true)
+		}
+	}
+
+	// Step 3: Build result groups
+	// - If a whole chapter exists for a base number, collapse splits under it
+	// - Otherwise, keep chapters as separate groups (current behavior)
 	const result: ChapterGroup[] = []
-	for (const [key, group] of groups) {
-		// Sort: enabled first (using original data, not optimistic state), then by date_upload desc
-		// Using chapter.enabled instead of getEnabled() keeps row positions stable during optimistic updates
+	const processedSplits = new Set<string>() // Track split keys that were collapsed
+
+	for (const [key, group] of exactGroups) {
+		const [numStr, lang] = key.split("-")
+		const num = parseFloat(numStr!)
+		const base = getBaseChapterNumber(num)
+		const baseKey = `${base}-${lang}`
+
+		// If this is a split and the whole exists, skip it (will be added to whole's duplicates)
+		if (isSplitChapter(num) && baseNumbersWithWhole.get(baseKey)) {
+			processedSplits.add(key)
+			continue
+		}
+
+		// Sort: enabled first, then by date_upload desc
 		const sorted = [...group.chapters].sort((a, b) => {
 			if (a.enabled !== b.enabled) return b.enabled ? 1 : -1
 			return new Date(b.date_upload).getTime() - new Date(a.date_upload).getTime()
 		})
 
 		const primary = sorted[0] || null
-		const duplicates = sorted.slice(1)
+		let duplicates = sorted.slice(1)
+		let hasSplitsCollapsed = false
+
+		// If this is a whole chapter, add splits to duplicates
+		if (primary && isWholeChapter(num) && baseNumbersWithWhole.get(baseKey)) {
+			// Find all splits for this base number
+			const splits: UIChapter[] = []
+			for (const [splitKey, splitGroup] of exactGroups) {
+				const [splitNumStr, splitLang] = splitKey.split("-")
+				const splitNum = parseFloat(splitNumStr!)
+				if (splitLang === lang && isSplitChapter(splitNum) && getBaseChapterNumber(splitNum) === base) {
+					splits.push(...splitGroup.chapters)
+				}
+			}
+
+			if (splits.length > 0) {
+				// Sort splits by chapter number ascending, then enabled first
+				splits.sort((a, b) => {
+					if (a.chapter_number !== b.chapter_number) return a.chapter_number - b.chapter_number
+					if (a.enabled !== b.enabled) return b.enabled ? 1 : -1
+					return new Date(b.date_upload).getTime() - new Date(a.date_upload).getTime()
+				})
+				duplicates = [...duplicates, ...splits]
+				hasSplitsCollapsed = true
+			}
+		}
 
 		if (primary) {
 			result.push({
@@ -190,6 +260,7 @@ const groupedChapters = computed<ChapterGroup[]>(() => {
 				language: primary.language,
 				primary,
 				duplicates,
+				hasSplitsCollapsed,
 			})
 		}
 	}
@@ -682,9 +753,28 @@ const sourceAvailabilityFilterItems = [
 										class="h-3 w-3 text-muted-foreground"
 										title="Removed from source (acknowledged)"
 									/>
-									<!-- Duplicate count badge -->
+									<!-- Split chapter indicator -->
+									<UIcon
+										v-if="isSplitChapter(group.primary.chapter_number)"
+										name="i-lucide-split"
+										class="h-3 w-3 text-orange-400"
+										title="Split chapter (sub-division of whole chapter)"
+									/>
+									<!-- Splits collapsed badge (orange) -->
 									<span
-										v-if="group.duplicates.length > 0"
+										v-if="group.hasSplitsCollapsed"
+										class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20"
+										:title="`${group.duplicates.length} split chapters collapsed`"
+									>
+										<UIcon
+											name="i-lucide-git-merge"
+											class="h-3 w-3"
+										/>
+										{{ group.duplicates.length + 1 }}
+									</span>
+									<!-- Duplicate count badge (purple) - only show if not splits collapsed -->
+									<span
+										v-else-if="group.duplicates.length > 0"
 										class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20"
 									>
 										<UIcon
@@ -899,18 +989,27 @@ const sourceAvailabilityFilterItems = [
 
 								<!-- Chapter number (dimmed, shows it's a duplicate) -->
 								<td class="px-4 py-2">
-									<span
-										:class="[
-											'text-sm text-muted-foreground',
-											isUnacknowledgedRemoved(dup) && 'opacity-50 line-through',
-										]"
-									>
+									<div class="flex items-center gap-1">
+										<span
+											:class="[
+												'text-sm text-muted-foreground',
+												isUnacknowledgedRemoved(dup) && 'opacity-50 line-through',
+											]"
+										>
+											<UIcon
+												name="i-lucide-corner-down-right"
+												class="h-3 w-3 mr-1 inline"
+											/>
+											Ch. {{ dup.chapter_number }}
+										</span>
+										<!-- Split chapter indicator -->
 										<UIcon
-											name="i-lucide-corner-down-right"
-											class="h-3 w-3 mr-1 inline"
+											v-if="isSplitChapter(dup.chapter_number)"
+											name="i-lucide-split"
+											class="h-3 w-3 text-orange-400"
+											title="Split chapter (sub-division of whole chapter)"
 										/>
-										Ch. {{ dup.chapter_number }}
-									</span>
+									</div>
 								</td>
 
 								<!-- Title -->

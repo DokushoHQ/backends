@@ -93,6 +93,7 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 		let totalReady = 0
 		let totalEnabled = 0
 		let totalDisabled = 0
+		let totalPrimaryDisabled = 0
 
 		// Phase 1: Cross-source deduplication
 		log("Phase 1: Cross-source deduplication")
@@ -110,13 +111,14 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 			)
 
 			// Persist results to database
-			const { enabled, disabled } = await persistDedupResults(serie_id, language, result)
+			const { enabled, disabled, primary_disabled } = await persistDedupResults(serie_id, language, result)
 
 			totalMissing += result.stats.missing_count
 			totalAvailable += result.stats.available_count
 			totalReady += result.stats.ready_count
 			totalEnabled += enabled
 			totalDisabled += disabled
+			totalPrimaryDisabled += primary_disabled
 
 			// Update progress (Phase 1: 10-50%)
 			const progress = 10 + Math.floor(((i + 1) / languagesToProcess.length) * 40)
@@ -154,7 +156,7 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDedupJobData, ChapterDedup
 
 		await job.updateProgress(100)
 		log(`Deduplication complete:`)
-		log(`  Cross-source: ${totalMissing} missing, ${totalAvailable} available, ${totalReady} ready, +${totalEnabled} enabled, -${totalDisabled} disabled`)
+		log(`  Cross-source: ${totalMissing} missing, ${totalAvailable} available, ${totalReady} ready, +${totalEnabled} enabled, -${totalDisabled} secondary disabled, -${totalPrimaryDisabled} primary disabled (unsplit)`)
 		log(`  Same-source: ${sameSourceDuplicatesProcessed} duplicates processed, +${sameSourceEnabled} enabled, -${sameSourceDisabled} disabled`)
 
 		return {
