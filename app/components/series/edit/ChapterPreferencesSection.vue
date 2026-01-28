@@ -22,6 +22,18 @@ const isPending = ref(false)
 // Languages available in the system
 const LANGUAGES = ["En", "Fr", "Jp", "JpRo", "Ko", "KoRo", "ZhHk", "Zh"] as const
 
+// Display labels for languages (shorter, distinct)
+const LANGUAGE_LABELS: Record<string, string> = {
+	En: "EN",
+	Fr: "FR",
+	Jp: "JP",
+	JpRo: "JP·R",
+	Ko: "KO",
+	KoRo: "KO·R",
+	ZhHk: "HK",
+	Zh: "ZH",
+}
+
 // Fetch chapter preferences
 const { data: preferenceData, refresh: refreshPreference } = await useFetch(`/api/v1/serie/${props.serieId}/chapter-preference`)
 
@@ -283,7 +295,7 @@ async function moveSourceDown(sourceId: string) {
 							:key="lang"
 							class="matrix-cell matrix-col-header"
 						>
-							{{ lang.toUpperCase().slice(0, 2) }}
+							{{ LANGUAGE_LABELS[lang] }}
 						</div>
 					</div>
 					<!-- Fallback row -->
@@ -491,8 +503,8 @@ async function moveSourceDown(sourceId: string) {
 }
 
 .matrix {
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: 5rem repeat(8, 1fr);
 	background: var(--ui-border);
 	gap: 1px;
 	border-radius: 0.25rem;
@@ -500,37 +512,35 @@ async function moveSourceDown(sourceId: string) {
 }
 
 .matrix-row {
-	display: flex;
-	gap: 1px;
+	display: contents;
 }
 
 .matrix-cell {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding: 0.375rem;
+	padding: 0.5rem 0.375rem;
 	background: var(--ui-bg-elevated);
 	font-family: inherit;
 	font-size: var(--font-size-xs);
 	font-weight: 600;
-	min-width: 2rem;
-	min-height: 1.75rem;
+	min-height: 2rem;
 }
 
 .matrix-corner {
 	background: var(--ui-bg);
-	min-width: 5rem;
 }
 
 .matrix-col-header,
 .matrix-row-header {
 	color: var(--ui-text-muted);
 	background: var(--ui-bg-muted);
-	letter-spacing: 0.05em;
+	letter-spacing: 0.02em;
 }
 
 .matrix-row-header {
-	min-width: 5rem;
+	justify-content: flex-start;
+	padding-left: 0.75rem;
 	cursor: help;
 }
 
