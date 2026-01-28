@@ -231,15 +231,19 @@ async function moveSourceDown(sourceId: string) {
 </script>
 
 <template>
-	<section
+	<UiPanel
 		v-if="sources.length > 1"
-		class="panel"
+		header-muted
 	>
-		<div class="panel-header">
-			<span class="panel-title">FALLBACK MATRIX</span>
-		</div>
-
-		<div class="panel-body">
+		<template #header>
+			<div class="header-row">
+				<div class="header-title">
+					<div class="led active" />
+					<span>FALLBACK MATRIX</span>
+				</div>
+			</div>
+		</template>
+		<div class="content">
 			<!-- Toggle defaults -->
 			<div class="defaults">
 				<div class="default-row">
@@ -425,32 +429,30 @@ async function moveSourceDown(sourceId: string) {
 				</button>
 			</div>
 		</div>
-	</section>
+	</UiPanel>
 </template>
 
 <style scoped>
-.panel {
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.375rem;
-	overflow: hidden;
+/* Header */
+.header-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
 }
 
-.panel-header {
-	padding: 0.75rem 1rem;
-	border-bottom: 1px solid var(--ui-border);
-}
-
-.panel-title {
-	font-family: inherit;
+.header-title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
 	font-size: var(--font-size-sm);
 	font-weight: 600;
 	color: var(--ui-text-muted);
-	letter-spacing: 0.1em;
+	letter-spacing: 0.05em;
 }
 
-.panel-body {
-	padding: 1rem;
+/* Content layout */
+.content {
 	display: flex;
 	flex-direction: column;
 	gap: 1.25rem;

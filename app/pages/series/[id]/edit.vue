@@ -45,9 +45,15 @@ async function handleRefresh() {
 					:back-to="`/series/${serieId}`"
 				>
 					<template #right>
-						<button class="btn btn-secondary" :disabled="isRefreshing" @click="handleRefresh">
-							<UIcon :name="isRefreshing ? 'i-lucide-loader-2' : 'i-lucide-refresh-cw'"
-								:class="['btn-icon', { 'spin': isRefreshing }]" />
+						<button
+							class="btn btn-secondary"
+							:disabled="isRefreshing"
+							@click="handleRefresh"
+						>
+							<UIcon
+								:name="isRefreshing ? 'i-lucide-loader-2' : 'i-lucide-refresh-cw'"
+								:class="['btn-icon', { spin: isRefreshing }]"
+							/>
 							<span class="btn-label">Refresh</span>
 						</button>
 					</template>
@@ -56,7 +62,10 @@ async function handleRefresh() {
 
 			<template #body>
 				<!-- Loading state -->
-				<div v-if="pending" class="loading-state">
+				<div
+					v-if="pending"
+					class="loading-state"
+				>
 					<div class="loading-indicator">
 						<div class="led active pulse" />
 						<span class="loading-text">LOADING DATA...</span>
@@ -64,16 +73,27 @@ async function handleRefresh() {
 				</div>
 
 				<!-- Error state -->
-				<div v-else-if="error" class="error-state">
+				<div
+					v-else-if="error"
+					class="error-state"
+				>
 					<div class="error-panel">
 						<div class="error-header">
 							<div class="led error" />
 							<span>SYSTEM ERROR</span>
 						</div>
 						<div class="error-body">
-							<p class="error-message">{{ error.message }}</p>
-							<button class="btn btn-secondary" @click="refresh()">
-								<UIcon name="i-lucide-refresh-cw" class="btn-icon" />
+							<p class="error-message">
+								{{ error.message }}
+							</p>
+							<button
+								class="btn btn-secondary"
+								@click="refresh()"
+							>
+								<UIcon
+									name="i-lucide-refresh-cw"
+									class="btn-icon"
+								/>
 								Retry
 							</button>
 						</div>
@@ -81,36 +101,56 @@ async function handleRefresh() {
 				</div>
 
 				<!-- Main content -->
-				<div v-else-if="serie" class="page-content">
+				<div
+					v-else-if="serie"
+					class="page-content"
+				>
 					<!-- Identity Section: Cover + Title + Synopsis -->
 					<section class="content-section identity-section">
 						<div class="identity-grid">
 							<!-- Cover Column -->
-							<SeriesEditCoverSection :serie="serie" class="cover-column" @updated="handleRefresh" />
+							<SeriesEditCoverSection
+								:serie="serie"
+								class="cover-column"
+								@updated="handleRefresh"
+							/>
 
 							<!-- Identity Text Column -->
 							<div class="identity-text">
-								<SeriesEditTitleSection :serie="serie" @updated="handleRefresh" />
-								<SeriesEditSynopsisSection :serie="serie" @updated="handleRefresh" />
+								<SeriesEditTitleSection
+									:serie="serie"
+									@updated="handleRefresh"
+								/>
+								<SeriesEditSynopsisSection
+									:serie="serie"
+									@updated="handleRefresh"
+								/>
 							</div>
 						</div>
 					</section>
 
 					<!-- Chapter Engine Section -->
 					<section class="content-section">
-						<div class="section-header">
-							<span>CHAPTER ENGINE</span>
-						</div>
+						<UiSectionHeader title="CHAPTER ENGINE" />
 						<div class="engine-grid">
-							<SeriesEditChapterPreferencesSection :serie-id="serieId" :sources="serie.sources"
-								@updated="handleRefresh" />
+							<SeriesEditChapterPreferencesSection
+								:serie-id="serieId"
+								:sources="serie.sources"
+								@updated="handleRefresh"
+							/>
 
-							<SeriesEditGroupPreferencesSection :serie-id="serieId" @updated="handleRefresh" />
+							<SeriesEditGroupPreferencesSection
+								:serie-id="serieId"
+								@updated="handleRefresh"
+							/>
 						</div>
 					</section>
 
 					<!-- Override Registry Section -->
-					<SeriesEditChapterOverridesSection :serie-id="serieId" @updated="handleRefresh" />
+					<SeriesEditChapterOverridesSection
+						:serie-id="serieId"
+						@updated="handleRefresh"
+					/>
 				</div>
 			</template>
 		</UDashboardPanel>
@@ -118,11 +158,6 @@ async function handleRefresh() {
 </template>
 
 <style scoped>
-/* Page uses monospace font */
-.edit-page {
-	font-family: 'JetBrains Mono', ui-monospace, monospace;
-}
-
 /* Loading State */
 .loading-state {
 	display: flex;
@@ -230,13 +265,6 @@ async function handleRefresh() {
 	flex-direction: column;
 	gap: 1.5rem;
 	width: 100%;
-	padding: 1rem;
-}
-
-@media (min-width: 768px) {
-	.page-content {
-		padding: 1.5rem;
-	}
 }
 
 /* Sections */
@@ -244,29 +272,6 @@ async function handleRefresh() {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
-}
-
-.section-header {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	font-size: var(--font-size-xs);
-	font-weight: 600;
-	color: var(--ui-text-muted);
-	text-transform: uppercase;
-	letter-spacing: 0.1em;
-}
-
-.section-header::before {
-	content: "──";
-	color: var(--ui-text-dimmed);
-}
-
-.section-header::after {
-	content: "";
-	flex: 1;
-	height: 1px;
-	background: linear-gradient(90deg, var(--ui-text-dimmed), transparent);
 }
 
 /* Identity Section */

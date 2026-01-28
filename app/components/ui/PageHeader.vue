@@ -32,7 +32,10 @@ defineProps<{
 				:to="backTo"
 				class="back-btn"
 			>
-				<UIcon name="i-lucide-chevron-left" class="back-icon" />
+				<UIcon
+					name="i-lucide-chevron-left"
+					class="back-icon"
+				/>
 			</NuxtLink>
 
 			<!-- Breadcrumb mode -->
@@ -42,11 +45,21 @@ defineProps<{
 			/>
 
 			<!-- Title mode -->
-			<div v-else class="title-block">
-				<h1 class="page-title">{{ title }}</h1>
+			<div
+				v-else
+				class="title-block"
+			>
+				<h1 class="page-title">
+					{{ title }}
+				</h1>
 				<!-- Custom description slot or prop -->
 				<slot name="description">
-					<p v-if="description" class="page-description">{{ description }}</p>
+					<p
+						v-if="description"
+						class="page-description"
+					>
+						{{ description }}
+					</p>
 				</slot>
 			</div>
 		</div>

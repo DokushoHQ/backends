@@ -219,184 +219,173 @@ async function resetAll() {
 </script>
 
 <template>
-	<div
+	<UiPanel
 		v-if="availableLanguages.length > 0"
-		class="panel"
+		header-muted
 	>
-		<!-- Panel Header -->
-		<div class="panel-header">
-			<div class="panel-title">
-				<div class="led active" />
-				<span>GROUP CONTROL</span>
-			</div>
-			<button
-				v-if="prioritizedGroups.length > 0"
-				class="btn btn-danger"
-				:disabled="isPending"
-				@click="resetAll"
-			>
-				<UIcon
-					v-if="isPending"
-					name="i-lucide-loader-2"
-					class="btn-icon spin"
-				/>
-				<template v-else>
+		<template #header>
+			<div class="header-row">
+				<div class="header-title">
+					<div class="led active" />
+					<span>GROUP CONTROL</span>
+				</div>
+				<button
+					v-if="prioritizedGroups.length > 0"
+					class="btn btn-danger"
+					:disabled="isPending"
+					@click="resetAll"
+				>
 					<UIcon
-						name="i-lucide-rotate-ccw"
-						class="btn-icon"
+						v-if="isPending"
+						name="i-lucide-loader-2"
+						class="btn-icon spin"
 					/>
-					<span class="btn-label">RESET</span>
-				</template>
-			</button>
-		</div>
-
-		<!-- Language Tabs -->
-		<div class="lang-tabs">
-			<button
-				v-for="lang in availableLanguages"
-				:key="lang"
-				class="lang-tab"
-				:class="{ active: activeLanguage === lang }"
-				@click="activeLanguage = lang"
-			>
-				{{ lang.toUpperCase() }}
-			</button>
-		</div>
-
-		<!-- Panel Body -->
-		<div class="panel-body">
-			<!-- Empty state -->
-			<div
-				v-if="allGroups.length === 0"
-				class="empty"
-			>
-				<div class="led" />
-				<span class="empty-text">NO GROUPS AVAILABLE</span>
+					<template v-else>
+						<UIcon
+							name="i-lucide-rotate-ccw"
+							class="btn-icon"
+						/>
+						<span class="btn-label">RESET</span>
+					</template>
+				</button>
 			</div>
+		</template>
 
-			<template v-else>
-				<!-- Two-column layout -->
-				<div class="groups-grid">
-					<!-- Prioritized Column -->
-					<div class="groups-column">
-						<div class="column-header">
-							<span class="column-title">PRIORITIZED</span>
-							<span class="column-count">{{ prioritizedGroups.length }}</span>
-						</div>
+		<template #tabs>
+			<!-- Language Tabs -->
+			<div class="lang-tabs">
+				<button
+					v-for="lang in availableLanguages"
+					:key="lang"
+					class="lang-tab"
+					:class="{ active: activeLanguage === lang }"
+					@click="activeLanguage = lang"
+				>
+					{{ lang.toUpperCase() }}
+				</button>
+			</div>
+		</template>
 
-						<div
-							v-if="prioritizedGroups.length === 0"
-							class="column-empty"
-						>
-							<span class="empty-hint">Click [+] to add groups</span>
-						</div>
+		<!-- Panel Body Content -->
+		<!-- Empty state -->
+		<div
+			v-if="allGroups.length === 0"
+			class="empty"
+		>
+			<div class="led" />
+			<span class="empty-text">NO GROUPS AVAILABLE</span>
+		</div>
 
-						<draggable
-							v-else
-							v-model="prioritizedGroups"
-							item-key="group_id"
-							handle=".grip"
-							ghost-class="group-ghost"
-							drag-class="group-drag"
-							class="groups-list"
-							:disabled="isPending"
-							@end="onDragEnd"
-						>
-							<template #item="{ element: group, index }">
-								<div class="group-row prioritized">
-									<div class="grip">
-										<span class="grip-dots">⋮⋮</span>
-									</div>
-									<div class="group-rank">
-										{{ index + 1 }}.
-									</div>
-									<div class="group-info">
-										<span class="group-name">{{ group.name }}</span>
-										<span class="group-chapters">[{{ group.chapter_count }}]</span>
-									</div>
-									<button
-										class="action-btn remove"
-										:disabled="isPending"
-										title="Remove from priority"
-										@click="deprioritize(group)"
-									>
-										<span class="action-icon">×</span>
-									</button>
-								</div>
-							</template>
-						</draggable>
+		<template v-else>
+			<!-- Two-column layout -->
+			<div class="groups-grid">
+				<!-- Prioritized Column -->
+				<div class="groups-column">
+					<div class="column-header">
+						<span class="column-title">PRIORITIZED</span>
+						<span class="column-count">{{ prioritizedGroups.length }}</span>
 					</div>
 
-					<!-- Available Column -->
-					<div class="groups-column">
-						<div class="column-header">
-							<span class="column-title">AVAILABLE</span>
-							<span class="column-count">{{ automaticGroups.length }}</span>
-						</div>
+					<div
+						v-if="prioritizedGroups.length === 0"
+						class="column-empty"
+					>
+						<span class="empty-hint">Click [+] to add groups</span>
+					</div>
 
-						<div
-							v-if="automaticGroups.length === 0"
-							class="column-empty"
-						>
-							<span class="empty-hint">All groups prioritized</span>
-						</div>
-
-						<div
-							v-else
-							class="groups-list"
-						>
-							<div
-								v-for="group in automaticGroups"
-								:key="group.group_id"
-								class="group-row available"
-							>
-								<span class="bullet">•</span>
+					<draggable
+						v-else
+						v-model="prioritizedGroups"
+						item-key="group_id"
+						handle=".grip"
+						ghost-class="group-ghost"
+						drag-class="group-drag"
+						class="groups-list"
+						:disabled="isPending"
+						@end="onDragEnd"
+					>
+						<template #item="{ element: group, index }">
+							<div class="group-row prioritized">
+								<div class="grip">
+									<span class="grip-dots">⋮⋮</span>
+								</div>
+								<div class="group-rank">
+									{{ index + 1 }}.
+								</div>
 								<div class="group-info">
 									<span class="group-name">{{ group.name }}</span>
 									<span class="group-chapters">[{{ group.chapter_count }}]</span>
 								</div>
 								<button
-									class="action-btn add"
+									class="action-btn remove"
 									:disabled="isPending"
-									title="Add to priority"
-									@click="prioritize(group)"
+									title="Remove from priority"
+									@click="deprioritize(group)"
 								>
-									<span class="action-icon">+</span>
+									<span class="action-icon">×</span>
 								</button>
 							</div>
+						</template>
+					</draggable>
+				</div>
+
+				<!-- Available Column -->
+				<div class="groups-column">
+					<div class="column-header">
+						<span class="column-title">AVAILABLE</span>
+						<span class="column-count">{{ automaticGroups.length }}</span>
+					</div>
+
+					<div
+						v-if="automaticGroups.length === 0"
+						class="column-empty"
+					>
+						<span class="empty-hint">All groups prioritized</span>
+					</div>
+
+					<div
+						v-else
+						class="groups-list"
+					>
+						<div
+							v-for="group in automaticGroups"
+							:key="group.group_id"
+							class="group-row available"
+						>
+							<span class="bullet">•</span>
+							<div class="group-info">
+								<span class="group-name">{{ group.name }}</span>
+								<span class="group-chapters">[{{ group.chapter_count }}]</span>
+							</div>
+							<button
+								class="action-btn add"
+								:disabled="isPending"
+								title="Add to priority"
+								@click="prioritize(group)"
+							>
+								<span class="action-icon">+</span>
+							</button>
 						</div>
 					</div>
 				</div>
-			</template>
-		</div>
-	</div>
+			</div>
+		</template>
+	</UiPanel>
 </template>
 
 <style scoped>
-/* Command Center Panel */
-.panel {
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.375rem;
-	overflow: hidden;
-}
-
-/* Panel Header */
-.panel-header {
+/* Header Row */
+.header-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 0.75rem;
-	padding: 0.625rem 0.875rem;
-	background: var(--ui-bg-muted);
-	border-bottom: 1px solid var(--ui-border);
 }
 
-.panel-title {
+.header-title {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	font-family: inherit;
 	font-size: var(--font-size-sm);
 	font-weight: 600;
 	color: var(--ui-text-muted);
@@ -426,8 +415,6 @@ async function resetAll() {
 	flex-wrap: wrap;
 	gap: 0;
 	padding: 0;
-	background: var(--ui-bg);
-	border-bottom: 1px solid var(--ui-border);
 }
 
 .lang-tab {
@@ -453,11 +440,6 @@ async function resetAll() {
 	color: var(--ui-primary);
 	background: var(--ui-bg-elevated);
 	border-bottom-color: var(--ui-primary);
-}
-
-/* Panel Body */
-.panel-body {
-	padding: 0.875rem;
 }
 
 /* Button Styles */

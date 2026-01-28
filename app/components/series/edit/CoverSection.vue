@@ -227,10 +227,10 @@ async function uploadCover(url: string) {
 					class="btn-icon"
 				/>
 				<span>{{
-					uploadStatus === 'idle' ? 'UPLOAD' :
-					uploadStatus === 'uploading' ? 'SENDING...' :
-					uploadStatus === 'processing' ? 'PROCESSING...' :
-					uploadStatus === 'completed' ? 'DONE' : 'FAILED'
+					uploadStatus === 'idle' ? 'UPLOAD'
+					: uploadStatus === 'uploading' ? 'SENDING...'
+						: uploadStatus === 'processing' ? 'PROCESSING...'
+							: uploadStatus === 'completed' ? 'DONE' : 'FAILED'
 				}}</span>
 			</button>
 			<p
@@ -257,7 +257,6 @@ async function uploadCover(url: string) {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
-	font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 /* Cover Frame with Brackets */

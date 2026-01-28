@@ -152,16 +152,12 @@ function formatChapterTitle(override: typeof filteredOverrides.value[number]): s
 </script>
 
 <template>
-	<section
+	<UiPanel
 		v-if="overrideData && overrideData.total_count > 0"
-		class="section"
+		title="OVERRIDE REGISTRY"
+		header-muted
 	>
-		<!-- Section Header -->
-		<div class="section-header">
-			<span>OVERRIDE REGISTRY</span>
-		</div>
-
-		<div class="panel">
+		<template #header>
 			<!-- Stats Bar -->
 			<div class="stats-bar">
 				<div class="stats-group">
@@ -199,7 +195,9 @@ function formatChapterTitle(override: typeof filteredOverrides.value[number]): s
 					</template>
 				</button>
 			</div>
+		</template>
 
+		<template #tabs>
 			<!-- Language Tabs -->
 			<div class="lang-tabs">
 				<button
@@ -213,165 +211,123 @@ function formatChapterTitle(override: typeof filteredOverrides.value[number]): s
 					<span class="lang-count">{{ (overrideData.count_by_language as Record<string, number>)[lang] }}</span>
 				</button>
 			</div>
+		</template>
 
-			<!-- Panel Body -->
-			<div class="panel-body">
-				<!-- Reset Language Button -->
-				<div
-					v-if="filteredOverrides.length > 0"
-					class="language-actions"
+		<!-- Panel Body Content -->
+		<div class="content">
+			<!-- Reset Language Button -->
+			<div
+				v-if="filteredOverrides.length > 0"
+				class="language-actions"
+			>
+				<button
+					class="btn btn-secondary"
+					:disabled="isPending"
+					@click="resetLanguage"
 				>
-					<button
-						class="btn btn-secondary"
-						:disabled="isPending"
-						@click="resetLanguage"
+					<UIcon
+						name="i-lucide-rotate-ccw"
+						class="btn-icon"
+					/>
+					<span>Reset {{ activeLanguage?.toUpperCase() }} overrides</span>
+				</button>
+			</div>
+
+			<!-- Overrides Table -->
+			<div class="overrides-table">
+				<!-- Enabled Section -->
+				<template v-if="enabledOverrides.length > 0">
+					<div class="table-header enabled">
+						<div class="led led-success" />
+						<span class="table-title">ENABLED</span>
+						<span class="table-count">{{ enabledOverrides.length }}</span>
+					</div>
+
+					<div
+						v-for="override in enabledOverrides"
+						:key="override.id"
+						class="override-row"
 					>
-						<UIcon
-							name="i-lucide-rotate-ccw"
-							class="btn-icon"
-						/>
-						<span>Reset {{ activeLanguage?.toUpperCase() }} overrides</span>
-					</button>
-				</div>
-
-				<!-- Overrides Table -->
-				<div class="overrides-table">
-					<!-- Enabled Section -->
-					<template v-if="enabledOverrides.length > 0">
-						<div class="table-header enabled">
-							<div class="led led-success" />
-							<span class="table-title">ENABLED</span>
-							<span class="table-count">{{ enabledOverrides.length }}</span>
+						<div class="override-status enabled">
+							<span class="status-icon">+</span>
 						</div>
-
-						<div
-							v-for="override in enabledOverrides"
-							:key="override.id"
-							class="override-row"
-						>
-							<div class="override-status enabled">
-								<span class="status-icon">+</span>
-							</div>
-							<div class="override-info">
-								<span class="override-chapter">{{ formatChapterTitle(override) }}</span>
-								<span class="override-separator">────</span>
-								<span class="override-source">{{ override.source_name }}</span>
-								<span
-									v-if="override.groups.length > 0"
-									class="override-groups"
-								>
-									[{{ override.groups.join(", ") }}]
-								</span>
-							</div>
-							<button
-								class="action-btn reset"
-								:disabled="isPending"
-								title="Reset to auto-managed"
-								@click="resetChapter(override.id, override.chapter_number)"
+						<div class="override-info">
+							<span class="override-chapter">{{ formatChapterTitle(override) }}</span>
+							<span class="override-separator">────</span>
+							<span class="override-source">{{ override.source_name }}</span>
+							<span
+								v-if="override.groups.length > 0"
+								class="override-groups"
 							>
-								<UIcon
-									name="i-lucide-rotate-ccw"
-									class="action-icon"
-								/>
-							</button>
+								[{{ override.groups.join(", ") }}]
+							</span>
 						</div>
-					</template>
-
-					<!-- Disabled Section -->
-					<template v-if="disabledOverrides.length > 0">
-						<div class="table-header disabled">
-							<div class="led led-error" />
-							<span class="table-title">DISABLED</span>
-							<span class="table-count">{{ disabledOverrides.length }}</span>
-						</div>
-
-						<div
-							v-for="override in disabledOverrides"
-							:key="override.id"
-							class="override-row"
+						<button
+							class="action-btn reset"
+							:disabled="isPending"
+							title="Reset to auto-managed"
+							@click="resetChapter(override.id, override.chapter_number)"
 						>
-							<div class="override-status disabled">
-								<span class="status-icon">−</span>
-							</div>
-							<div class="override-info">
-								<span class="override-chapter">{{ formatChapterTitle(override) }}</span>
-								<span class="override-separator">────</span>
-								<span class="override-source">{{ override.source_name }}</span>
-								<span
-									v-if="override.groups.length > 0"
-									class="override-groups"
-								>
-									[{{ override.groups.join(", ") }}]
-								</span>
-							</div>
-							<button
-								class="action-btn reset"
-								:disabled="isPending"
-								title="Reset to auto-managed"
-								@click="resetChapter(override.id, override.chapter_number)"
-							>
-								<UIcon
-									name="i-lucide-rotate-ccw"
-									class="action-icon"
-								/>
-							</button>
+							<UIcon
+								name="i-lucide-rotate-ccw"
+								class="action-icon"
+							/>
+						</button>
+					</div>
+				</template>
+
+				<!-- Disabled Section -->
+				<template v-if="disabledOverrides.length > 0">
+					<div class="table-header disabled">
+						<div class="led led-error" />
+						<span class="table-title">DISABLED</span>
+						<span class="table-count">{{ disabledOverrides.length }}</span>
+					</div>
+
+					<div
+						v-for="override in disabledOverrides"
+						:key="override.id"
+						class="override-row"
+					>
+						<div class="override-status disabled">
+							<span class="status-icon">−</span>
 						</div>
-					</template>
-				</div>
+						<div class="override-info">
+							<span class="override-chapter">{{ formatChapterTitle(override) }}</span>
+							<span class="override-separator">────</span>
+							<span class="override-source">{{ override.source_name }}</span>
+							<span
+								v-if="override.groups.length > 0"
+								class="override-groups"
+							>
+								[{{ override.groups.join(", ") }}]
+							</span>
+						</div>
+						<button
+							class="action-btn reset"
+							:disabled="isPending"
+							title="Reset to auto-managed"
+							@click="resetChapter(override.id, override.chapter_number)"
+						>
+							<UIcon
+								name="i-lucide-rotate-ccw"
+								class="action-icon"
+							/>
+						</button>
+					</div>
+				</template>
 			</div>
 		</div>
-	</section>
+	</UiPanel>
 </template>
 
 <style scoped>
-/* Section Header */
-.section {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-}
-
-.section-header {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	font-family: inherit;
-	font-size: var(--font-size-sm);
-	font-weight: 600;
-	color: var(--ui-text-muted);
-	text-transform: uppercase;
-	letter-spacing: 0.1em;
-}
-
-.section-header::before {
-	content: "──";
-	color: var(--ui-text-dimmed);
-}
-
-.section-header::after {
-	content: "";
-	flex: 1;
-	height: 1px;
-	background: linear-gradient(90deg, var(--ui-text-dimmed), transparent);
-}
-
-/* Panel */
-.panel {
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.375rem;
-	overflow: hidden;
-}
-
 /* Stats Bar */
 .stats-bar {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	padding: 0.625rem 0.875rem;
-	background: var(--ui-bg-muted);
-	border-bottom: 1px solid var(--ui-border);
 }
 
 .stats-group {
@@ -423,8 +379,6 @@ function formatChapterTitle(override: typeof filteredOverrides.value[number]): s
 	flex-wrap: wrap;
 	gap: 0;
 	padding: 0;
-	background: var(--ui-bg);
-	border-bottom: 1px solid var(--ui-border);
 }
 
 .lang-tab {
@@ -472,9 +426,8 @@ function formatChapterTitle(override: typeof filteredOverrides.value[number]): s
 	color: var(--ui-warning);
 }
 
-/* Panel Body */
-.panel-body {
-	padding: 0.875rem;
+/* Content layout */
+.content {
 	display: flex;
 	flex-direction: column;
 	gap: 0.875rem;

@@ -24,10 +24,19 @@ function truncateLabel(label: string): string {
 </script>
 
 <template>
-	<nav class="breadcrumb" aria-label="Breadcrumb">
-		<template v-for="(item, idx) in items" :key="idx">
+	<nav
+		class="breadcrumb"
+		aria-label="Breadcrumb"
+	>
+		<template
+			v-for="(item, idx) in items"
+			:key="idx"
+		>
 			<!-- Separator (except for first item) -->
-			<span v-if="idx > 0" class="crumb-sep">/</span>
+			<span
+				v-if="idx > 0"
+				class="crumb-sep"
+			>/</span>
 
 			<!-- Link item -->
 			<NuxtLink

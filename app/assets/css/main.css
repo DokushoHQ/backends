@@ -1,3 +1,6 @@
+/* Import JetBrains Mono font for monospace styling */
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
 @import "tailwindcss";
 @import "@nuxt/ui";
 
@@ -10,13 +13,18 @@
 
 :root {
 	/* Typography scale (shared across all themes) */
-	--font-size-xs: 0.75rem;      /* 12px - badges, small text */
-	--font-size-sm: 0.8125rem;    /* 13px - labels, meta text */
-	--font-size-base: 0.875rem;   /* 14px - body text, descriptions */
-	--font-size-md: 0.9375rem;    /* 15px - preview titles */
-	--font-size-lg: 1.0625rem;    /* 17px - card titles */
-	--font-size-xl: 1.25rem;      /* 20px - section headings */
-	--font-size-2xl: 1.5rem;      /* 24px - stat values, large headings */
+	--font-size-xs: 0.75rem; /* 12px - badges, small text */
+	--font-size-sm: 0.8125rem; /* 13px - labels, meta text */
+	--font-size-base: 0.875rem; /* 14px - body text, descriptions */
+	--font-size-md: 0.9375rem; /* 15px - preview titles */
+	--font-size-lg: 1.0625rem; /* 17px - card titles */
+	--font-size-xl: 1.25rem; /* 20px - section headings */
+	--font-size-2xl: 1.5rem; /* 24px - stat values, large headings */
+
+	/* Font families */
+	--font-body: ui-sans-serif, system-ui, sans-serif;
+	--font-mono:
+		ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 @layer base {
@@ -25,6 +33,6 @@
 	}
 	body {
 		@apply bg-(--ui-bg) text-(--ui-text);
+		font-family: var(--font-body);
 	}
 }
-

@@ -90,9 +90,7 @@ async function setTitle(value: string) {
 <template>
 	<div class="title-section">
 		<!-- Header with rule and lock toggle -->
-		<div class="field-header">
-			<span class="field-label">TITLE</span>
-			<div class="field-rule" />
+		<UiSectionHeader title="TITLE">
 			<button
 				class="lock-btn"
 				:class="{ locked: isLocked }"
@@ -105,7 +103,7 @@ async function setTitle(value: string) {
 				/>
 				<span>{{ isLocked ? 'LOCKED' : 'AUTO' }}</span>
 			</button>
-		</div>
+		</UiSectionHeader>
 
 		<!-- Current value display -->
 		<div
@@ -221,28 +219,6 @@ async function setTitle(value: string) {
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
-}
-
-/* Field header with rule */
-.field-header {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-}
-
-.field-label {
-	font-family: inherit;
-	font-size: var(--font-size-xs);
-	font-weight: 600;
-	color: var(--ui-text-muted);
-	letter-spacing: 0.1em;
-	flex-shrink: 0;
-}
-
-.field-rule {
-	flex: 1;
-	height: 1px;
-	background: linear-gradient(90deg, var(--ui-text-dimmed), transparent);
 }
 
 .lock-btn {
