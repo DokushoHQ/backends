@@ -78,7 +78,8 @@ const { collapsed, mobileOpen, toggle, closeMobile } = useSidebar()
 		4px 0 16px -4px color-mix(in oklch, var(--ui-text) 5%, transparent);
 }
 
-.sidebar.collapsed {
+.sidebar.collapsed,
+:global(html.sidebar-collapsed) .sidebar {
 	width: var(--sidebar-collapsed-width);
 }
 
@@ -92,9 +93,10 @@ const { collapsed, mobileOpen, toggle, closeMobile } = useSidebar()
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
-	padding: 1.25rem 1rem;
-	border-bottom: 1px solid color-mix(in oklch, var(--ui-border) 50%, transparent);
-	min-height: 4rem;
+	/* Logo is 1.75rem vs nav icons 1.25rem, reduce padding by 0.25rem to center */
+	padding: 0.5rem 0.5rem 0.5rem 1.125rem;
+	border-bottom: 1px solid var(--ui-border);
+	min-height: 3.5rem;
 }
 
 .sidebar-logo {
@@ -122,12 +124,5 @@ const { collapsed, mobileOpen, toggle, closeMobile } = useSidebar()
 .sidebar-title.collapsed-title {
 	opacity: 0;
 	width: 0;
-}
-
-/* Collapsed nav item centering */
-.sidebar.collapsed :deep(.nav-item) {
-	justify-content: center;
-	padding: 0.625rem;
-	margin: 0.125rem 0.375rem;
 }
 </style>

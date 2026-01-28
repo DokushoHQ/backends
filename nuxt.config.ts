@@ -13,6 +13,11 @@ export default defineNuxtConfig({
 					// Must match STORAGE_KEY and DEFAULT_THEME in useTheme.ts
 					innerHTML: `(function(){var t=localStorage.getItem('dokusho-theme')||'default';document.documentElement.classList.add('theme-'+t)})()`,
 				},
+				{
+					// Prevent sidebar flash by applying collapsed class before render
+					// Must match STORAGE_KEY in useSidebar.ts
+					innerHTML: `(function(){if(localStorage.getItem('dokusho-sidebar-collapsed')==='true')document.documentElement.classList.add('sidebar-collapsed')})()`,
+				},
 			],
 		},
 	},

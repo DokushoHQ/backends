@@ -32,7 +32,7 @@
 
 	/* Sidebar dimensions */
 	--sidebar-width: 15rem; /* 240px expanded */
-	--sidebar-collapsed-width: 4.5rem; /* 72px collapsed */
+	--sidebar-collapsed-width: 4rem; /* 64px - matches icon center position */
 	--sidebar-mobile-width: 18rem; /* 288px mobile drawer */
 }
 

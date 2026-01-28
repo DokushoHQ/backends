@@ -1,6 +1,12 @@
 const STORAGE_KEY = "dokusho-sidebar-collapsed"
 const MOBILE_BREAKPOINT = 768
 
+function updateHtmlClass(collapsed: boolean) {
+	if (import.meta.client) {
+		document.documentElement.classList.toggle("sidebar-collapsed", collapsed)
+	}
+}
+
 export function useSidebar() {
 	const collapsed = useState<boolean>("sidebar-collapsed", () => false)
 	const mobileOpen = useState<boolean>("sidebar-mobile-open", () => false)
@@ -10,6 +16,7 @@ export function useSidebar() {
 		collapsed.value = !collapsed.value
 		if (import.meta.client) {
 			localStorage.setItem(STORAGE_KEY, String(collapsed.value))
+			updateHtmlClass(collapsed.value)
 		}
 	}
 
@@ -17,6 +24,7 @@ export function useSidebar() {
 		collapsed.value = value
 		if (import.meta.client) {
 			localStorage.setItem(STORAGE_KEY, String(value))
+			updateHtmlClass(value)
 		}
 	}
 
@@ -36,7 +44,7 @@ export function useSidebar() {
 
 	function init() {
 		if (import.meta.client) {
-			// Restore collapsed state from localStorage
+			// Sync Vue state with localStorage (HTML class already applied by head script)
 			const stored = localStorage.getItem(STORAGE_KEY)
 			if (stored !== null) {
 				collapsed.value = stored === "true"

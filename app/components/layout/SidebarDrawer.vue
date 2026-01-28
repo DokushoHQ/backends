@@ -131,9 +131,9 @@ function handleBackdropClick() {
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
-	padding: 1.25rem 1rem;
-	border-bottom: 1px solid color-mix(in oklch, var(--ui-border) 50%, transparent);
-	min-height: 4rem;
+	padding: 0.5rem 1rem;
+	border-bottom: 1px solid var(--ui-border);
+	min-height: 3.5rem;
 }
 
 .drawer-logo {
@@ -156,7 +156,7 @@ function handleBackdropClick() {
 }
 
 .drawer-footer {
-	border-top: 1px solid color-mix(in oklch, var(--ui-border) 50%, transparent);
+	border-top: 1px solid var(--ui-border);
 }
 
 /* Transition animations */
