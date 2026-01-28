@@ -45,3 +45,15 @@
 		font-family: var(--font-body);
 	}
 }
+
+/* Hide sidebar text immediately when collapsed (before Vue hydration) */
+html.sidebar-collapsed .sidebar-title,
+html.sidebar-collapsed .nav-label,
+html.sidebar-collapsed .user-info,
+html.sidebar-collapsed .footer-btn-label,
+html.sidebar-collapsed .theme-btn-label {
+	opacity: 0;
+	visibility: hidden;
+	width: 0;
+	overflow: hidden;
+}

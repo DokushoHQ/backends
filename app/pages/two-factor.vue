@@ -183,103 +183,89 @@ function copyBackupCodes() {
 		}, 2000)
 	}
 }
+
+const cardTitle = computed(() => {
+	if (mode.value === "setup") {
+		if (setupStage.value === "backup") return "Save Your Backup Codes"
+		return "Set Up Two-Factor Authentication"
+	}
+	return "Two-Factor Verification"
+})
+
+const cardSubtitle = computed(() => {
+	if (mode.value === "verify" && !useBackupCode.value) {
+		return "Enter the code from your authenticator app"
+	}
+	if (mode.value === "verify" && useBackupCode.value) {
+		return "Enter one of your backup codes"
+	}
+	if (setupStage.value === "backup") {
+		return "Store these codes safely - you'll need them if you lose access to your authenticator"
+	}
+	if (setupStage.value === "qrcode") {
+		return "Scan the QR code with your authenticator app"
+	}
+	return "Secure your account with two-factor authentication"
+})
+
+const cardAccentColor = computed(() => {
+	if (setupStage.value === "backup") return "warning" as const
+	return "primary" as const
+})
 </script>
 
 <template>
-	<div class="flex min-h-screen items-center justify-center bg-background p-4">
-		<!-- Loading state while checking mode -->
-		<div
-			v-if="!initialCheckDone"
-			class="flex items-center justify-center"
-		>
-			<UIcon
-				name="i-lucide-loader-2"
-				class="size-8 animate-spin text-muted-foreground"
-			/>
-		</div>
+	<div class="auth-page">
+		<AuthBackground />
+		<div class="auth-page__container">
+			<!-- Loading state while checking mode -->
+			<div
+				v-if="!initialCheckDone"
+				class="auth-page__loading"
+			>
+				<UIcon
+					name="i-lucide-loader-2"
+					class="size-8 animate-spin"
+				/>
+			</div>
 
-		<UCard
-			v-else
-			class="w-full max-w-md"
-		>
-			<template #header>
-				<div class="text-center">
-					<div class="flex justify-center mb-4">
-						<UIcon
-							name="i-lucide-shield-check"
-							class="h-12 w-12"
-						/>
-					</div>
-					<h1 class="text-2xl font-semibold">
-						{{ mode === "setup" ? "Set Up Two-Factor Authentication" : "Two-Factor Verification" }}
-					</h1>
-					<p
-						v-if="mode === 'verify' && !useBackupCode"
-						class="text-sm text-muted-foreground mt-1"
-					>
-						Enter the code from your authenticator app
-					</p>
-					<p
-						v-else-if="mode === 'verify' && useBackupCode"
-						class="text-sm text-muted-foreground mt-1"
-					>
-						Enter one of your backup codes
-					</p>
-					<p
-						v-else-if="setupStage === 'backup'"
-						class="text-sm text-muted-foreground mt-1"
-					>
-						Save your backup codes
-					</p>
-					<p
-						v-else-if="setupStage === 'qrcode'"
-						class="text-sm text-muted-foreground mt-1"
-					>
-						Scan the QR code with your authenticator app
-					</p>
-					<p
-						v-else
-						class="text-sm text-muted-foreground mt-1"
-					>
-						Secure your account with two-factor authentication
-					</p>
-				</div>
-			</template>
-
-			<div class="space-y-4">
-				<div
+			<AuthCard
+				v-else
+				icon="i-lucide-shield-check"
+				:title="cardTitle"
+				:subtitle="cardSubtitle"
+				:accent-color="cardAccentColor"
+			>
+				<AuthMessage
 					v-if="error"
-					class="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+					type="error"
+					class="auth-page__message"
 				>
 					{{ error }}
-				</div>
+				</AuthMessage>
 
 				<!-- Setup Mode - Password Stage -->
 				<template v-if="mode === 'setup' && setupStage === 'password'">
-					<p class="text-center text-sm text-muted-foreground">
-						Enter your password to set up two-factor authentication
-					</p>
-
 					<form
-						class="space-y-4"
+						class="auth-page__form"
 						@submit.prevent="initSetup"
 					>
-						<UFormField label="Password">
-							<UInput
-								v-model="password"
-								type="password"
-								placeholder="Enter your password"
-								class="w-full"
-								autocomplete="current-password"
-							/>
-						</UFormField>
-						<UButton
+						<AuthInput
+							v-model="password"
+							type="password"
+							label="Password"
+							placeholder="Enter your password"
+							autocomplete="current-password"
+							required
+						/>
+
+						<AuthButton
 							type="submit"
 							block
 							:loading="loading"
 						>
 							Continue
-						</UButton>
+						</AuthButton>
 					</form>
 				</template>
 
@@ -287,152 +273,245 @@ function copyBackupCodes() {
 				<template v-if="mode === 'setup' && setupStage === 'qrcode'">
 					<div
 						v-if="loading"
-						class="flex items-center justify-center py-8"
+						class="auth-page__loading-inline"
 					>
 						<UIcon
 							name="i-lucide-loader-2"
-							class="size-6 animate-spin text-muted-foreground"
+							class="size-6 animate-spin"
 						/>
 					</div>
 
 					<template v-else-if="qrCodeDataUrl">
-						<div class="flex justify-center">
+						<div class="auth-page__qr-wrapper">
 							<img
 								:src="qrCodeDataUrl"
 								alt="2FA QR Code"
-								class="rounded-lg border"
+								class="auth-page__qr-code"
 							>
 						</div>
 
-						<p class="text-center text-sm text-muted-foreground">
+						<p class="auth-page__hint">
 							Scan this QR code with Google Authenticator, Authy, or any TOTP app
 						</p>
 
 						<form
-							class="space-y-4"
+							class="auth-page__form"
 							@submit.prevent="verifySetup"
 						>
-							<UFormField label="Verification Code">
-								<UInput
-									v-model="setupCode"
-									type="text"
-									inputmode="numeric"
-									pattern="[0-9]*"
-									maxlength="6"
-									placeholder="000000"
-									class="w-full text-center text-2xl tracking-widest"
-									autocomplete="one-time-code"
-								/>
-							</UFormField>
-							<UButton
+							<AuthInput
+								v-model="setupCode"
+								type="text"
+								inputmode="numeric"
+								:pattern="'[0-9]*'"
+								:maxlength="6"
+								label="Verification Code"
+								placeholder="000000"
+								autocomplete="one-time-code"
+								centered
+								large
+								required
+							/>
+
+							<AuthButton
 								type="submit"
 								block
 								:loading="loading"
 							>
-								Verify & Enable 2FA
-							</UButton>
+								Verify &amp; Enable 2FA
+							</AuthButton>
 						</form>
 					</template>
 				</template>
 
 				<!-- Setup Mode - Backup Codes Stage -->
 				<template v-if="mode === 'setup' && setupStage === 'backup' && backupCodes">
-					<div class="rounded-md bg-warning/10 p-4 text-sm">
-						<div class="flex items-start gap-3">
-							<UIcon
-								name="i-lucide-alert-triangle"
-								class="h-5 w-5 text-warning shrink-0 mt-0.5"
-							/>
-							<div>
-								<p class="font-medium text-warning-foreground">
-									Save your backup codes
-								</p>
-								<p class="mt-1 text-muted-foreground">
-									Store these codes in a safe place. You can use them to access your account if you lose your authenticator device.
-								</p>
-							</div>
-						</div>
-					</div>
+					<AuthMessage type="warning">
+						Store these codes in a safe place. You can use them to access your account if you lose your authenticator device.
+					</AuthMessage>
 
-					<div class="grid grid-cols-2 gap-2 p-4 bg-muted rounded-lg font-mono text-sm">
+					<div class="auth-page__backup-codes">
 						<span
 							v-for="code in backupCodes"
 							:key="code"
-							class="text-center"
+							class="auth-page__backup-code"
 						>
 							{{ code }}
 						</span>
 					</div>
 
-					<div class="flex justify-center gap-2">
-						<UButton
+					<div class="auth-page__backup-actions">
+						<AuthButton
 							variant="outline"
 							@click="copyBackupCodes"
 						>
-							<UIcon
-								:name="copied ? 'i-lucide-check' : 'i-lucide-copy'"
-								class="h-4 w-4 mr-2"
-							/>
+							<template #icon>
+								<UIcon
+									:name="copied ? 'i-lucide-check' : 'i-lucide-copy'"
+									class="size-4"
+								/>
+							</template>
 							{{ copied ? 'Copied!' : 'Copy Codes' }}
-						</UButton>
-						<UButton @click="finishSetup">
+						</AuthButton>
+						<AuthButton @click="finishSetup">
 							I've Saved My Codes
-						</UButton>
+						</AuthButton>
 					</div>
 				</template>
 
 				<!-- Verify Mode -->
 				<template v-if="mode === 'verify'">
 					<form
-						class="space-y-4"
+						class="auth-page__form"
 						@submit.prevent="verifyLogin"
 					>
 						<!-- TOTP Code Input -->
 						<template v-if="!useBackupCode">
-							<UFormField label="Authentication Code">
-								<UInput
-									v-model="verifyCode"
-									type="text"
-									inputmode="numeric"
-									pattern="[0-9]*"
-									maxlength="6"
-									placeholder="000000"
-									class="w-full text-center text-2xl tracking-widest"
-									autocomplete="one-time-code"
-								/>
-							</UFormField>
+							<AuthInput
+								v-model="verifyCode"
+								type="text"
+								inputmode="numeric"
+								:pattern="'[0-9]*'"
+								:maxlength="6"
+								label="Authentication Code"
+								placeholder="000000"
+								autocomplete="one-time-code"
+								centered
+								large
+								required
+							/>
 						</template>
 
 						<!-- Backup Code Input -->
 						<template v-else>
-							<UFormField label="Backup Code">
-								<UInput
-									v-model="backupCodeInput"
-									type="text"
-									placeholder="Enter backup code"
-									class="w-full text-center text-lg tracking-wider"
-								/>
-							</UFormField>
+							<AuthInput
+								v-model="backupCodeInput"
+								type="text"
+								label="Backup Code"
+								placeholder="Enter backup code"
+								centered
+								required
+							/>
 						</template>
 
-						<UButton
+						<AuthButton
 							type="submit"
 							block
 							:loading="loading"
 						>
 							Verify
-						</UButton>
+						</AuthButton>
 					</form>
 
 					<button
 						type="button"
-						class="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+						class="auth-page__toggle-link"
 						@click="toggleBackupCode"
 					>
 						{{ useBackupCode ? 'Use authenticator app instead' : 'Lost your authenticator? Use a backup code' }}
 					</button>
 				</template>
-			</div>
-		</UCard>
+			</AuthCard>
+		</div>
 	</div>
 </template>
+
+<style scoped>
+.auth-page {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+}
+
+.auth-page__container {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+}
+
+.auth-page__loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ui-text-muted);
+}
+
+.auth-page__loading-inline {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2rem 0;
+	color: var(--ui-text-muted);
+}
+
+.auth-page__message {
+	margin-bottom: 1rem;
+}
+
+.auth-page__form {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.auth-page__qr-wrapper {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 1rem;
+}
+
+.auth-page__qr-code {
+	border-radius: 0.5rem;
+	border: 1px solid var(--ui-border);
+	background: white;
+}
+
+.auth-page__hint {
+	text-align: center;
+	font-size: 0.8125rem;
+	color: var(--ui-text-muted);
+	margin-bottom: 1.5rem;
+}
+
+.auth-page__backup-codes {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 0.5rem;
+	padding: 1rem;
+	margin: 1rem 0;
+	background: var(--ui-bg-muted);
+	border-radius: 0.5rem;
+}
+
+.auth-page__backup-code {
+	font-family: var(--font-mono);
+	font-size: 0.875rem;
+	text-align: center;
+	color: var(--ui-text);
+	padding: 0.25rem;
+}
+
+.auth-page__backup-actions {
+	display: flex;
+	justify-content: center;
+	gap: 0.75rem;
+}
+
+.auth-page__toggle-link {
+	width: 100%;
+	margin-top: 1rem;
+	padding: 0;
+	font-size: 0.8125rem;
+	color: var(--ui-text-muted);
+	background: none;
+	border: none;
+	cursor: pointer;
+	text-align: center;
+	transition: color 0.15s ease;
+}
+
+.auth-page__toggle-link:hover {
+	color: var(--ui-text);
+}
+</style>

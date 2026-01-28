@@ -159,6 +159,7 @@ const emit = defineEmits<{
 
 .user-info.collapsed-info {
 	opacity: 0;
+	visibility: hidden;
 }
 
 .user-name {
@@ -190,6 +191,7 @@ const emit = defineEmits<{
 
 .footer-btn-label.collapsed-label {
 	opacity: 0;
+	visibility: hidden;
 	width: 0;
 	overflow: hidden;
 }

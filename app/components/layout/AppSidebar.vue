@@ -80,8 +80,9 @@ const { collapsed, mobileOpen, toggle, closeMobile } = useSidebar()
 }
 
 .sidebar.collapsed,
-:global(html.sidebar-collapsed) .sidebar {
+:global(html.sidebar-collapsed .sidebar) {
 	width: var(--sidebar-collapsed-width);
+	overflow: hidden;
 }
 
 @media (max-width: 767px) {
@@ -124,6 +125,7 @@ const { collapsed, mobileOpen, toggle, closeMobile } = useSidebar()
 
 .sidebar-title.collapsed-title {
 	opacity: 0;
+	visibility: hidden;
 	width: 0;
 }
 </style>

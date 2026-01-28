@@ -54,6 +54,9 @@ const verificationEmail = ref("")
 const resendLoading = ref(false)
 const resendSuccess = ref(false)
 
+// Tab state
+const activeTab = ref<"login" | "signup">("login")
+
 async function handleEmailLogin() {
 	error.value = null
 	loading.value = true
@@ -159,264 +162,307 @@ function resetVerificationState() {
 </script>
 
 <template>
-	<div class="flex min-h-screen items-center justify-center bg-background p-4">
-		<UCard class="w-full max-w-md">
-			<template #header>
-				<div class="text-center">
-					<div class="flex justify-center mb-4">
-						<img
-							src="/favicon.png"
-							alt="Tsundoku"
-							class="h-12 w-12 rounded-lg"
-						>
-					</div>
-					<h1 class="text-2xl font-semibold">
-						Welcome to Tsundoku
-					</h1>
-					<p class="text-sm text-muted-foreground">
-						{{ signupEnabled ? 'Sign in or create an account to access the dashboard' : 'Sign in to access the dashboard' }}
-					</p>
-				</div>
-			</template>
-
-			<div class="space-y-4">
-				<div
+	<div class="auth-page">
+		<AuthBackground />
+		<div class="auth-page__container">
+			<AuthCard
+				icon="i-lucide-book-open"
+				title="Welcome to Tsundoku"
+				:subtitle="signupEnabled ? 'Sign in or create an account to access the dashboard' : 'Sign in to access the dashboard'"
+			>
+				<!-- Error message -->
+				<AuthMessage
 					v-if="error"
-					class="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+					type="error"
+					class="auth-page__message"
 				>
 					{{ error }}
-				</div>
+				</AuthMessage>
 
 				<!-- Email verification required -->
 				<template v-if="verificationRequired">
-					<div class="space-y-4">
-						<div class="rounded-md bg-warning/10 p-4">
-							<div class="flex items-start gap-3">
-								<UIcon
-									name="i-lucide-mail-warning"
-									class="h-5 w-5 text-warning mt-0.5"
-								/>
-								<div>
-									<p class="font-medium text-warning">
-										Email verification required
-									</p>
-									<p class="text-sm text-muted-foreground mt-1">
-										Please check your email ({{ verificationEmail }}) and click the verification link before signing in.
-									</p>
-								</div>
-							</div>
-						</div>
+					<AuthMessage
+						type="warning"
+						title="Email verification required"
+						class="auth-page__message"
+					>
+						Please check your email ({{ verificationEmail }}) and click the verification link before signing in.
+					</AuthMessage>
 
-						<div
-							v-if="resendSuccess"
-							class="rounded-md bg-green-500/10 p-3 text-sm text-green-600 dark:text-green-400"
-						>
-							Verification email sent! Check your inbox.
-						</div>
+					<AuthMessage
+						v-if="resendSuccess"
+						type="success"
+						class="auth-page__message"
+					>
+						Verification email sent! Check your inbox.
+					</AuthMessage>
 
-						<UButton
-							block
+					<div class="auth-page__actions">
+						<AuthButton
 							variant="outline"
+							block
 							:loading="resendLoading"
 							@click="handleResendVerification"
 						>
-							<UIcon
-								name="i-lucide-mail"
-								class="h-4 w-4 mr-2"
-							/>
+							<template #icon>
+								<UIcon
+									name="i-lucide-mail"
+									class="size-4"
+								/>
+							</template>
 							Resend verification email
-						</UButton>
+						</AuthButton>
 
-						<UButton
-							block
+						<AuthButton
 							variant="ghost"
+							block
 							@click="resetVerificationState"
 						>
 							Try a different email
-						</UButton>
+						</AuthButton>
 					</div>
 				</template>
 
-				<!-- Password auth with signup enabled: show tabs -->
-				<UTabs
-					v-else-if="passwordEnabled && signupEnabled"
-					:items="[
-						{ label: 'Login', slot: 'login' },
-						{ label: 'Sign Up', slot: 'signup' },
-					]"
-					class="w-full"
-				>
-					<template #login>
-						<form
-							class="space-y-4 mt-4"
-							@submit.prevent="handleEmailLogin"
-						>
-							<div
-								v-if="lastUsedEmail"
-								class="flex items-center gap-2 text-sm text-muted-foreground"
-							>
-								<UIcon
-									name="i-lucide-history"
-									class="h-4 w-4"
-								/>
-								<span>Last signed in with email</span>
-							</div>
-							<UFormField label="Email">
-								<UInput
-									v-model="email"
-									type="email"
-									placeholder="you@example.com"
-									required
-									class="w-full"
-								/>
-							</UFormField>
-							<UFormField label="Password">
-								<UInput
-									v-model="password"
-									type="password"
-									required
-									class="w-full"
-								/>
-							</UFormField>
-							<div class="text-right">
-								<NuxtLink
-									to="/forgot-password"
-									class="text-sm text-muted-foreground hover:text-foreground transition-colors"
-								>
-									Forgot password?
-								</NuxtLink>
-							</div>
-							<UButton
-								type="submit"
-								block
-								:loading="loading"
-							>
-								Sign in
-							</UButton>
-						</form>
-					</template>
-
-					<template #signup>
-						<form
-							class="space-y-4 mt-4"
-							@submit.prevent="handleSignUp"
-						>
-							<UFormField label="Name">
-								<UInput
-									v-model="name"
-									type="text"
-									placeholder="Your name"
-									required
-									class="w-full"
-								/>
-							</UFormField>
-							<UFormField label="Email">
-								<UInput
-									v-model="email"
-									type="email"
-									placeholder="you@example.com"
-									required
-									class="w-full"
-								/>
-							</UFormField>
-							<UFormField label="Password">
-								<UInput
-									v-model="password"
-									type="password"
-									placeholder="Min 8 characters"
-									required
-									minlength="8"
-									class="w-full"
-								/>
-							</UFormField>
-							<UButton
-								type="submit"
-								block
-								:loading="loading"
-							>
-								Create account
-							</UButton>
-						</form>
-					</template>
-				</UTabs>
-
-				<!-- Password auth with signup disabled: show login form only -->
-				<form
-					v-else-if="passwordEnabled && !signupEnabled"
-					class="space-y-4"
-					@submit.prevent="handleEmailLogin"
-				>
+				<!-- Auth forms -->
+				<template v-else>
+					<!-- Tab switcher for signup enabled -->
 					<div
-						v-if="lastUsedEmail"
-						class="flex items-center gap-2 text-sm text-muted-foreground"
+						v-if="passwordEnabled && signupEnabled"
+						class="auth-page__tabs"
 					>
-						<UIcon
-							name="i-lucide-history"
-							class="h-4 w-4"
-						/>
-						<span>Last signed in with email</span>
+						<button
+							class="auth-page__tab"
+							:class="{ 'auth-page__tab--active': activeTab === 'login' }"
+							type="button"
+							@click="activeTab = 'login'"
+						>
+							Login
+						</button>
+						<button
+							class="auth-page__tab"
+							:class="{ 'auth-page__tab--active': activeTab === 'signup' }"
+							type="button"
+							@click="activeTab = 'signup'"
+						>
+							Sign Up
+						</button>
 					</div>
-					<UFormField label="Email">
-						<UInput
+
+					<!-- Login form -->
+					<form
+						v-if="passwordEnabled && (activeTab === 'login' || !signupEnabled)"
+						class="auth-page__form"
+						@submit.prevent="handleEmailLogin"
+					>
+						<div
+							v-if="lastUsedEmail"
+							class="auth-page__last-used"
+						>
+							<UIcon
+								name="i-lucide-history"
+								class="size-4"
+							/>
+							<span>Last signed in with email</span>
+						</div>
+
+						<AuthInput
 							v-model="email"
 							type="email"
+							label="Email"
 							placeholder="you@example.com"
+							autocomplete="email"
 							required
-							class="w-full"
 						/>
-					</UFormField>
-					<UFormField label="Password">
-						<UInput
+
+						<AuthInput
 							v-model="password"
 							type="password"
+							label="Password"
+							autocomplete="current-password"
 							required
-							class="w-full"
 						/>
-					</UFormField>
-					<div class="text-right">
-						<NuxtLink
-							to="/forgot-password"
-							class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+
+						<div class="auth-page__forgot">
+							<NuxtLink
+								to="/forgot-password"
+								class="auth-page__link"
+							>
+								Forgot password?
+							</NuxtLink>
+						</div>
+
+						<AuthButton
+							type="submit"
+							block
+							:loading="loading"
 						>
-							Forgot password?
-						</NuxtLink>
-					</div>
-					<UButton
-						type="submit"
-						block
-						:loading="loading"
-					>
-						Sign in
-					</UButton>
-				</form>
+							Sign in
+						</AuthButton>
+					</form>
 
-				<template v-if="oidcProviderId">
-					<USeparator
-						v-if="passwordEnabled"
-						label="Or continue with"
-					/>
-
-					<div
-						v-if="lastUsedOidc"
-						class="flex items-center gap-2 text-sm text-muted-foreground"
+					<!-- Signup form -->
+					<form
+						v-if="passwordEnabled && signupEnabled && activeTab === 'signup'"
+						class="auth-page__form"
+						@submit.prevent="handleSignUp"
 					>
-						<UIcon
-							name="i-lucide-history"
-							class="h-4 w-4"
+						<AuthInput
+							v-model="name"
+							type="text"
+							label="Name"
+							placeholder="Your name"
+							autocomplete="name"
+							required
 						/>
-						<span>Last signed in with {{ oidcProviderName }}</span>
-					</div>
 
-					<UButton
-						variant="outline"
-						block
-						:loading="oauthLoading"
-						@click="handleOAuthLogin"
-					>
-						Sign in with {{ oidcProviderName }}
-					</UButton>
+						<AuthInput
+							v-model="email"
+							type="email"
+							label="Email"
+							placeholder="you@example.com"
+							autocomplete="email"
+							required
+						/>
+
+						<AuthInput
+							v-model="password"
+							type="password"
+							label="Password"
+							placeholder="Min 8 characters"
+							autocomplete="new-password"
+							:minlength="8"
+							required
+						/>
+
+						<AuthButton
+							type="submit"
+							block
+							:loading="loading"
+						>
+							Create account
+						</AuthButton>
+					</form>
+
+					<!-- OIDC login -->
+					<template v-if="oidcProviderId">
+						<AuthDivider
+							v-if="passwordEnabled"
+							label="Or continue with"
+						/>
+
+						<div
+							v-if="lastUsedOidc"
+							class="auth-page__last-used"
+						>
+							<UIcon
+								name="i-lucide-history"
+								class="size-4"
+							/>
+							<span>Last signed in with {{ oidcProviderName }}</span>
+						</div>
+
+						<AuthButton
+							variant="outline"
+							block
+							:loading="oauthLoading"
+							@click="handleOAuthLogin"
+						>
+							Sign in with {{ oidcProviderName }}
+						</AuthButton>
+					</template>
 				</template>
-			</div>
-		</UCard>
+			</AuthCard>
+		</div>
 	</div>
 </template>
+
+<style scoped>
+.auth-page {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+}
+
+.auth-page__container {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+}
+
+.auth-page__message {
+	margin-bottom: 1rem;
+}
+
+.auth-page__actions {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.auth-page__tabs {
+	display: flex;
+	gap: 0.25rem;
+	padding: 0.25rem;
+	background: var(--ui-bg-muted);
+	border-radius: 0.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.auth-page__tab {
+	flex: 1;
+	padding: 0.625rem 1rem;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--ui-text-muted);
+	background: transparent;
+	border: none;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	transition:
+		color 0.15s ease,
+		background-color 0.15s ease;
+}
+
+.auth-page__tab:hover {
+	color: var(--ui-text);
+}
+
+.auth-page__tab--active {
+	color: var(--ui-text);
+	background: var(--ui-bg-elevated);
+	box-shadow: 0 1px 2px color-mix(in oklch, var(--ui-text) 5%, transparent);
+}
+
+.auth-page__form {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.auth-page__last-used {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.8125rem;
+	color: var(--ui-text-muted);
+}
+
+.auth-page__forgot {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: -0.5rem;
+}
+
+.auth-page__link {
+	font-size: 0.8125rem;
+	color: var(--ui-text-muted);
+	text-decoration: none;
+	transition: color 0.15s ease;
+}
+
+.auth-page__link:hover {
+	color: var(--ui-text);
+}
+</style>

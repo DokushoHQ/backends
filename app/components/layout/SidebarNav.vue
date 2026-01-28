@@ -105,6 +105,7 @@ const emit = defineEmits<{
 
 .nav-label.collapsed-label {
 	opacity: 0;
+	visibility: hidden;
 	width: 0;
 }
 

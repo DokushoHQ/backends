@@ -105,14 +105,14 @@ defineShortcuts({
 }
 
 .main-content.sidebar-collapsed,
-:global(html.sidebar-collapsed) .main-content {
+:global(html.sidebar-collapsed .main-content) {
 	margin-left: var(--sidebar-collapsed-width);
 }
 
 @media (max-width: 767px) {
 	.main-content,
 	.main-content.sidebar-collapsed,
-	:global(html.sidebar-collapsed) .main-content {
+	:global(html.sidebar-collapsed .main-content) {
 		margin-left: 0;
 	}
 }
