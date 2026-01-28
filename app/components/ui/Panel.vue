@@ -64,13 +64,17 @@ defineProps<{
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
+	height: 100%;
 }
 
 /* Panel Container */
 .panel {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.375rem;
+	border-radius: var(--radius-panel);
 	overflow: hidden;
 }
 
@@ -108,6 +112,7 @@ defineProps<{
 
 /* Panel Body */
 .panel-body {
+	flex: 1;
 	padding: 1rem;
 }
 

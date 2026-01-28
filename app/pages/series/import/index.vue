@@ -163,7 +163,7 @@ onMounted(() => {
 	padding: 1.25rem;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	text-align: left;
 	cursor: pointer;
 	transition: all 0.15s ease;
@@ -186,7 +186,7 @@ onMounted(() => {
 	justify-content: center;
 	width: 3rem;
 	height: 3rem;
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	flex-shrink: 0;
 }
 
@@ -246,7 +246,7 @@ onMounted(() => {
 	padding: 1rem 1.25rem;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 }
 
 .cart-info {

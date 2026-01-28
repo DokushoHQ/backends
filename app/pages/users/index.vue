@@ -238,7 +238,7 @@ function formatDate(date: Date | string): string {
 	padding: 1rem;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	text-decoration: none;
 	transition: all 0.2s ease;
 }

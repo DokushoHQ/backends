@@ -108,7 +108,7 @@ const colorModeOptions = [
 	padding: 0.75rem;
 	background: var(--ui-bg-elevated);
 	border: 2px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	cursor: pointer;
 	transition: all 0.15s ease;
 	text-align: left;

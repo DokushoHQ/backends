@@ -66,13 +66,18 @@ defineProps<Props>()
 	display: block;
 	text-decoration: none;
 	cursor: pointer;
+	border-radius: var(--radius-card);
+	transition: box-shadow 0.25s ease;
+}
+
+.series-card:hover {
+	box-shadow:
+		0 12px 28px -8px color-mix(in oklch, var(--ui-text) 15%, transparent),
+		0 4px 12px -4px color-mix(in oklch, var(--ui-text) 8%, transparent);
 }
 
 .series-card:hover :deep(.series-card-base) {
 	transform: translateY(-6px) scale(1.02);
-	box-shadow:
-		0 12px 28px -8px color-mix(in oklch, var(--ui-text) 15%, transparent),
-		0 4px 12px -4px color-mix(in oklch, var(--ui-text) 8%, transparent);
 }
 
 .series-card:active :deep(.series-card-base) {

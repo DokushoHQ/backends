@@ -233,7 +233,7 @@ function selectSource(source: { id: string }) {
 	padding-right: 2.5rem;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 }
 
 .disclaimer-close {
@@ -430,7 +430,7 @@ function selectSource(source: { id: string }) {
 	padding: 1.25rem;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	text-align: center;
 	cursor: pointer;
 	transition: all 0.15s ease;

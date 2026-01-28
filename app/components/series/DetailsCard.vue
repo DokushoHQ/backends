@@ -13,16 +13,18 @@ defineProps<{
 </script>
 
 <template>
-	<div class="details-card">
-		<div class="card-header">
-			<h3 class="card-title">
-				<UIcon
-					name="i-lucide-book-open"
-					class="title-icon"
-				/>
-				Details
-			</h3>
-		</div>
+	<UiPanel>
+		<template #header>
+			<div class="card-header">
+				<h3 class="card-title">
+					<UIcon
+						name="i-lucide-book-open"
+						class="title-icon"
+					/>
+					Details
+				</h3>
+			</div>
+		</template>
 
 		<div class="info-grid">
 			<div class="info-item">
@@ -108,25 +110,16 @@ defineProps<{
 				</NuxtLink>
 			</div>
 		</div>
-	</div>
+	</UiPanel>
 </template>
 
 <style scoped>
-.details-card {
-	display: flex;
-	flex-direction: column;
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
-	overflow: hidden;
-}
-
 .card-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 1rem;
-	border-bottom: 1px solid var(--ui-border-muted);
+	width: 100%;
+	min-height: 1.5rem;
 }
 
 .card-title {
@@ -150,7 +143,6 @@ defineProps<{
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
 	gap: 1rem;
-	padding: 1rem;
 }
 
 .info-item {
@@ -196,8 +188,9 @@ defineProps<{
 	background: var(--ui-bg-muted);
 }
 
-/* Genres Section */
+/* Genres Section - breaks out of panel body padding */
 .genres-section {
+	margin: 1rem -1rem -1rem;
 	padding: 1rem;
 	border-top: 1px solid var(--ui-border-muted);
 }

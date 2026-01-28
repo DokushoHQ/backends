@@ -354,7 +354,7 @@ function formatChapterNumber(chapter: typeof props.chapters[0]) {
 	box-sizing: border-box;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 1rem;
+	border-radius: var(--radius-card);
 	overflow: hidden;
 }
 

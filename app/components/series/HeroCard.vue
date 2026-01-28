@@ -120,7 +120,7 @@ const showArtists = computed(() => {
 	padding: 1.5rem;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 }
 
 @media (min-width: 768px) {

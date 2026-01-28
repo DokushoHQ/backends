@@ -68,7 +68,6 @@ withDefaults(defineProps<Props>(), {
 
 <style scoped>
 .series-card-base {
-	--card-radius: 0.5rem;
 	--card-cut: 0.75rem;
 
 	position: relative;
@@ -76,7 +75,7 @@ withDefaults(defineProps<Props>(), {
 	flex-direction: column;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: var(--card-radius);
+	border-radius: var(--radius-card);
 	overflow: hidden;
 
 	/* Angled corner cut - manga panel style */

@@ -29,17 +29,19 @@ const sortedSources = computed(() => {
 </script>
 
 <template>
-	<div class="sources-card">
-		<div class="card-header">
-			<h3 class="card-title">
-				<UIcon
-					name="i-lucide-external-link"
-					class="title-icon"
-				/>
-				Sources
-			</h3>
-			<span class="card-count">{{ sources?.length ?? 0 }}</span>
-		</div>
+	<UiPanel>
+		<template #header>
+			<div class="card-header">
+				<h3 class="card-title">
+					<UIcon
+						name="i-lucide-external-link"
+						class="title-icon"
+					/>
+					Sources
+				</h3>
+				<span class="card-count">{{ sources?.length ?? 0 }}</span>
+			</div>
+		</template>
 
 		<div
 			v-if="!sources?.length"
@@ -87,25 +89,16 @@ const sortedSources = computed(() => {
 				</div>
 			</a>
 		</div>
-	</div>
+	</UiPanel>
 </template>
 
 <style scoped>
-.sources-card {
-	display: flex;
-	flex-direction: column;
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
-	overflow: hidden;
-}
-
 .card-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 1rem;
-	border-bottom: 1px solid var(--ui-border-muted);
+	width: 100%;
+	min-height: 1.5rem;
 }
 
 .card-title {
@@ -138,8 +131,9 @@ const sortedSources = computed(() => {
 	border-radius: 2rem;
 }
 
-/* Empty section */
+/* Empty section - breaks out of panel body padding */
 .empty-section {
+	margin: -1rem;
 	padding: 2rem 1rem;
 	text-align: center;
 }
@@ -150,10 +144,11 @@ const sortedSources = computed(() => {
 	margin: 0;
 }
 
-/* Sources List */
+/* Sources List - breaks out of panel body padding */
 .sources-list {
 	display: flex;
 	flex-direction: column;
+	margin: -1rem;
 }
 
 .source-item {

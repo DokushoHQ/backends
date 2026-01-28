@@ -12,6 +12,10 @@
 	--font-body: "JetBrains Mono", ui-monospace, monospace;
 	--font-mono: "JetBrains Mono", ui-monospace, monospace;
 
+	/* Border radius - sharper corners for utilitarian look */
+	--radius-panel: 0.25rem;
+	--radius-card: 0.375rem;
+
 	/* Background surfaces - deep dark utilitarian */
 	--ui-bg: oklch(0.15 0.01 260);
 	--ui-bg-elevated: oklch(0.18 0.01 260);
@@ -64,6 +68,10 @@
 	/* Font family - use monospace for entire UI */
 	--font-body: "JetBrains Mono", ui-monospace, monospace;
 	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+	/* Border radius - sharper corners for utilitarian look */
+	--radius-panel: 0.25rem;
+	--radius-card: 0.375rem;
 
 	/* Background surfaces - deep dark utilitarian */
 	--ui-bg: oklch(0.15 0.01 260);

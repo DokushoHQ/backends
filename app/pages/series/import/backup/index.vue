@@ -349,7 +349,7 @@ function handleTryAgain() {
 /* Drop Zone */
 .drop-zone {
 	border: 2px dashed var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	padding: 2.5rem 2rem;
 	text-align: center;
 	cursor: pointer;
