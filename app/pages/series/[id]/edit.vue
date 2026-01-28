@@ -229,7 +229,7 @@ async function handleRefresh() {
 	max-width: 24rem;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-error);
-	border-radius: 0.25rem;
+	border-radius: var(--radius-card);
 	overflow: hidden;
 }
 
@@ -278,7 +278,7 @@ async function handleRefresh() {
 .identity-section {
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.375rem;
+	border-radius: var(--radius-card);
 	padding: 1.25rem;
 }
 

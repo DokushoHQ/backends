@@ -248,17 +248,11 @@ async function moveSourceDown(sourceId: string) {
 			<div class="defaults">
 				<div class="default-row">
 					<span class="default-label">SECONDARY FALLBACK</span>
-					<button
-						class="toggle"
-						:class="{ on: localFallbackDefault }"
+					<UiToggleSwitch
+						v-model="localFallbackDefault"
 						:disabled="isPending"
-						@click="localFallbackDefault = !localFallbackDefault"
-					>
-						<span class="toggle-track">
-							<span class="toggle-thumb" />
-						</span>
-						<span class="toggle-text">{{ localFallbackDefault ? 'ON' : 'OFF' }}</span>
-					</button>
+						show-label
+					/>
 				</div>
 				<p class="default-desc">
 					Fill missing chapters from secondary sources
@@ -266,17 +260,11 @@ async function moveSourceDown(sourceId: string) {
 
 				<div class="default-row">
 					<span class="default-label">PREFER UNSPLIT</span>
-					<button
-						class="toggle"
-						:class="{ on: localUnsplitDefault }"
+					<UiToggleSwitch
+						v-model="localUnsplitDefault"
 						:disabled="isPending"
-						@click="localUnsplitDefault = !localUnsplitDefault"
-					>
-						<span class="toggle-track">
-							<span class="toggle-thumb" />
-						</span>
-						<span class="toggle-text">{{ localUnsplitDefault ? 'ON' : 'OFF' }}</span>
-					</button>
+						show-label
+					/>
 				</div>
 				<p class="default-desc">
 					Prefer whole chapters over split versions
@@ -485,66 +473,6 @@ async function moveSourceDown(sourceId: string) {
 	font-size: var(--font-size-xs);
 	color: var(--ui-text-dimmed);
 	margin: 0 0 0.75rem 0;
-}
-
-/* Toggle */
-.toggle {
-	display: flex;
-	align-items: center;
-	gap: 0.375rem;
-	padding: 0;
-	background: none;
-	border: none;
-	cursor: pointer;
-}
-
-.toggle:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-
-.toggle-track {
-	position: relative;
-	width: 2rem;
-	height: 1rem;
-	background: var(--ui-bg);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.5rem;
-	transition: all 0.2s ease;
-}
-
-.toggle.on .toggle-track {
-	background: color-mix(in oklch, var(--ui-primary) 20%, transparent);
-	border-color: var(--ui-primary);
-}
-
-.toggle-thumb {
-	position: absolute;
-	top: 1px;
-	left: 1px;
-	width: 0.75rem;
-	height: 0.75rem;
-	background: var(--ui-text-dimmed);
-	border-radius: 50%;
-	transition: all 0.2s ease;
-}
-
-.toggle.on .toggle-thumb {
-	left: calc(100% - 0.875rem);
-	background: var(--ui-primary);
-	box-shadow: 0 0 4px color-mix(in oklch, var(--ui-primary) 30%, transparent);
-}
-
-.toggle-text {
-	font-family: inherit;
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	color: var(--ui-text-muted);
-	min-width: 1.5rem;
-}
-
-.toggle.on .toggle-text {
-	color: var(--ui-primary);
 }
 
 /* Matrix section */

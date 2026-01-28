@@ -954,7 +954,7 @@ const sourceAvailabilityFilterItems = [
 								class="px-4 py-3"
 								@click.stop
 							>
-								<USwitch
+								<UiToggleSwitch
 									:model-value="getEnabled(group.primary)"
 									:disabled="isPending"
 									@update:model-value="handleToggleEnabled(group.primary.id, getEnabled(group.primary))"
@@ -1089,7 +1089,7 @@ const sourceAvailabilityFilterItems = [
 									class="px-4 py-2"
 									@click.stop
 								>
-									<USwitch
+									<UiToggleSwitch
 										:model-value="getEnabled(dup)"
 										:disabled="isPending"
 										size="sm"
