@@ -47,10 +47,11 @@ function handleBackdropClick() {
 					</button>
 
 					<div class="drawer-header">
-						<UIcon
-							name="i-lucide-book-open"
+						<img
+							src="/favicon.png"
+							alt="Dokusho"
 							class="drawer-logo"
-						/>
+						>
 						<span class="drawer-title">Dokusho</span>
 					</div>
 
@@ -139,7 +140,7 @@ function handleBackdropClick() {
 .drawer-logo {
 	width: 1.75rem;
 	height: 1.75rem;
-	color: var(--ui-primary);
+	border-radius: 0.25rem;
 	flex-shrink: 0;
 }
 

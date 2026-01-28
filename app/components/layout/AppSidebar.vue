@@ -25,10 +25,11 @@ const { collapsed, mobileOpen, toggle, closeMobile } = useSidebar()
 		:class="{ collapsed }"
 	>
 		<div class="sidebar-header">
-			<UIcon
-				name="i-lucide-book-open"
+			<img
+				src="/favicon.png"
+				alt="Dokusho"
 				class="sidebar-logo"
-			/>
+			>
 			<span
 				class="sidebar-title"
 				:class="{ 'collapsed-title': collapsed }"
@@ -102,7 +103,7 @@ const { collapsed, mobileOpen, toggle, closeMobile } = useSidebar()
 .sidebar-logo {
 	width: 1.75rem;
 	height: 1.75rem;
-	color: var(--ui-primary);
+	border-radius: 0.25rem;
 	flex-shrink: 0;
 	transition: transform 0.2s ease;
 }

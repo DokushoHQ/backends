@@ -132,5 +132,4 @@ const emit = defineEmits<{
 .nav-item:hover .nav-tooltip {
 	opacity: 1;
 }
-
 </style>
