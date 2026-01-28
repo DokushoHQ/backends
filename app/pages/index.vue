@@ -85,7 +85,7 @@ function getIssueLabel(issue: string): string {
 			</template>
 
 			<template #body>
-				<div class="overview-content">
+				<div class="page-content">
 					<!-- Stats Cards -->
 					<UiStatCardGrid :cols="isAdmin ? 4 : 3">
 						<UiStatCard
@@ -396,8 +396,8 @@ function getIssueLabel(issue: string): string {
 </template>
 
 <style scoped>
-/* Overview content */
-.overview-content {
+/* Page content wrapper */
+.page-content {
 	display: flex;
 	flex-direction: column;
 	gap: 1.5rem;

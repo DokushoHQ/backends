@@ -35,7 +35,7 @@ function truncateLabel(label: string): string {
 			<!-- Separator (except for first item) -->
 			<span
 				v-if="idx > 0"
-				class="crumb-sep"
+				class="crumb-sep hide-mobile"
 			>/</span>
 
 			<!-- Link item -->
@@ -43,7 +43,10 @@ function truncateLabel(label: string): string {
 				v-if="item.to"
 				:to="item.to"
 				class="crumb"
-				:class="{ 'crumb-title': idx > 0 && idx < items.length - 1 }"
+				:class="{
+					'crumb-title': idx > 0 && idx < items.length - 1,
+					'hide-mobile': idx < items.length - 1,
+				}"
 			>
 				{{ truncateLabel(item.label).toUpperCase() }}
 			</NuxtLink>
@@ -94,5 +97,16 @@ function truncateLabel(label: string): string {
 .crumb-sep {
 	color: var(--ui-text-dimmed);
 	flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+	.breadcrumb {
+		flex: 1;
+		justify-content: center;
+	}
+
+	.hide-mobile {
+		display: none;
+	}
 }
 </style>

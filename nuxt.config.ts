@@ -4,6 +4,9 @@ export default defineNuxtConfig({
 	devtools: { enabled: true },
 	app: {
 		head: {
+			meta: [
+				{ name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1" },
+			],
 			script: [
 				{
 					// Prevent theme flash by applying theme class before render

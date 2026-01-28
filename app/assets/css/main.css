@@ -29,6 +29,11 @@
 	/* Border radius */
 	--radius-panel: 0.375rem; /* 6px - panels, small cards */
 	--radius-card: 0.75rem; /* 12px - content cards, large cards */
+
+	/* Sidebar dimensions */
+	--sidebar-width: 15rem; /* 240px expanded */
+	--sidebar-collapsed-width: 4.5rem; /* 72px collapsed */
+	--sidebar-mobile-width: 18rem; /* 288px mobile drawer */
 }
 
 @layer base {

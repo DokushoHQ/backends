@@ -108,24 +108,22 @@ const hasChapterIssues = computed(() =>
 					<!-- Main content when there are items -->
 					<template v-else>
 						<!-- Stats overview -->
-						<div class="stats-section">
-							<UiStatCardGrid :cols="5">
-								<UiStatCard
-									:value="pendingDuplicates"
-									label="Duplicates"
-									icon="i-lucide-copy"
-									color="purple"
-								/>
-								<UiStatCard
-									v-for="issue in issueTypes"
-									:key="issue.key"
-									:value="issueCounts[issue.key as keyof typeof issueCounts]"
-									:label="issue.label"
-									:icon="issue.icon"
-									:color="issue.color"
-								/>
-							</UiStatCardGrid>
-						</div>
+						<UiStatCardGrid :cols="5">
+							<UiStatCard
+								:value="pendingDuplicates"
+								label="Duplicates"
+								icon="i-lucide-copy"
+								color="purple"
+							/>
+							<UiStatCard
+								v-for="issue in issueTypes"
+								:key="issue.key"
+								:value="issueCounts[issue.key as keyof typeof issueCounts]"
+								:label="issue.label"
+								:icon="issue.icon"
+								:color="issue.color"
+							/>
+						</UiStatCardGrid>
 
 						<!-- Main sections -->
 						<div class="sections-grid">
@@ -202,7 +200,9 @@ const hasChapterIssues = computed(() =>
 
 <style scoped>
 .attention-content {
-	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
 }
 
 /* Status pill */
@@ -291,11 +291,6 @@ const hasChapterIssues = computed(() =>
 
 .scan-link:hover {
 	background: color-mix(in oklch, var(--color-purple) 20%, transparent);
-}
-
-/* Stats section */
-.stats-section {
-	margin-bottom: 1.5rem;
 }
 
 /* Sections grid */

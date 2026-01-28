@@ -21,11 +21,25 @@ defineProps<{
 	 */
 	backTo?: string
 }>()
+
+const { openMobile } = useSidebar()
 </script>
 
 <template>
 	<header class="page-header">
 		<div class="header-left">
+			<!-- Mobile sidebar toggle -->
+			<button
+				class="mobile-menu-btn"
+				aria-label="Open menu"
+				@click="openMobile"
+			>
+				<UIcon
+					name="i-lucide-menu"
+					class="menu-icon"
+				/>
+			</button>
+
 			<!-- Back button -->
 			<NuxtLink
 				v-if="backTo"
@@ -99,6 +113,44 @@ defineProps<{
 	gap: 0.75rem;
 	min-width: 0;
 	height: 2.5rem;
+}
+
+.mobile-menu-btn {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	background: var(--ui-bg-muted);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
+	color: var(--ui-text-muted);
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: all 0.15s ease;
+}
+
+.mobile-menu-btn:hover {
+	color: var(--ui-text);
+	background: var(--ui-bg-muted);
+}
+
+.menu-icon {
+	width: 1rem;
+	height: 1rem;
+}
+
+@media (max-width: 767px) {
+	.mobile-menu-btn {
+		display: flex;
+	}
+
+	.header-left :deep(.breadcrumb) {
+		position: absolute;
+		left: 50%;
+		transform: translateX(-50%);
+		max-width: 60%;
+	}
 }
 
 .back-btn {
