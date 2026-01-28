@@ -32,7 +32,7 @@ defineProps<Props>()
 				</EText>
 				<EHr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
 				<EText style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0;">
-					This email was sent by Dokusho. If you have any questions, please contact your administrator.
+					This email was sent by Tsundoku. If you have any questions, please contact your administrator.
 				</EText>
 			</EContainer>
 		</EBody>

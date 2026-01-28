@@ -61,7 +61,7 @@ defineProps<{
 	flex-direction: column;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	overflow: hidden;
 }
 

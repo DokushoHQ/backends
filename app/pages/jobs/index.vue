@@ -129,7 +129,7 @@ onUnmounted(() => {
 <template>
 	<UDashboardPanel class="jobs-page">
 		<template #header>
-			<UDashboardNavbar
+			<UiPageHeader
 				title="Job Queues"
 				:description="`${data?.totalJobs.toLocaleString() ?? 0} total jobs`"
 			>
@@ -179,7 +179,7 @@ onUnmounted(() => {
 						</UButton>
 					</div>
 				</template>
-			</UDashboardNavbar>
+			</UiPageHeader>
 			<!-- Redis Info Bar -->
 			<div
 				v-if="redisInfo"

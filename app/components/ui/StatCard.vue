@@ -33,8 +33,9 @@ defineProps<{
 	padding: 0.875rem;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.625rem;
+	border-radius: var(--radius-card);
 	transition: all 0.15s ease;
+	min-width: 0; /* Allow card to shrink in grid */
 }
 
 .stat-card:hover {
@@ -81,9 +82,7 @@ defineProps<{
 	font-size: var(--font-size-sm);
 	font-weight: 500;
 	color: var(--ui-text-muted);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
 	margin-top: 0.125rem;
+	line-height: 1.3;
 }
 </style>

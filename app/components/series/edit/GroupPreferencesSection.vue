@@ -219,49 +219,41 @@ async function resetAll() {
 </script>
 
 <template>
-	<section
+	<UiPanel
 		v-if="availableLanguages.length > 0"
-		class="edit-section"
+		header-muted
 	>
-		<div class="section-header">
-			<div class="section-title">
-				<div class="section-icon">
+		<template #header>
+			<div class="header-row">
+				<div class="header-title">
+					<div class="led active" />
+					<span>GROUP CONTROL</span>
+				</div>
+				<button
+					v-if="prioritizedGroups.length > 0"
+					class="btn btn-danger"
+					:disabled="isPending"
+					@click="resetAll"
+				>
 					<UIcon
-						name="i-lucide-users"
-						class="icon"
+						v-if="isPending"
+						name="i-lucide-loader-2"
+						class="btn-icon spin"
 					/>
-				</div>
-				<div>
-					<h2>Group Preferences</h2>
-					<p>Set scanlation group priority for deduplication</p>
-				</div>
+					<template v-else>
+						<UIcon
+							name="i-lucide-rotate-ccw"
+							class="btn-icon"
+						/>
+						<span class="btn-label">RESET</span>
+					</template>
+				</button>
 			</div>
+		</template>
 
-			<!-- Reset button in header when there are prioritized groups -->
-			<button
-				v-if="prioritizedGroups.length > 0"
-				class="reset-button"
-				:disabled="isPending"
-				@click="resetAll"
-			>
-				<UIcon
-					v-if="isPending"
-					name="i-lucide-loader-2"
-					class="spinner"
-				/>
-				<template v-else>
-					<UIcon
-						name="i-lucide-rotate-ccw"
-						class="btn-icon"
-					/>
-					<span class="reset-text">Reset</span>
-				</template>
-			</button>
-		</div>
-
-		<div class="section-body">
-			<!-- Language tabs -->
-			<div class="language-tabs">
+		<template #tabs>
+			<!-- Language Tabs -->
+			<div class="lang-tabs">
 				<button
 					v-for="lang in availableLanguages"
 					:key="lang"
@@ -269,128 +261,86 @@ async function resetAll() {
 					:class="{ active: activeLanguage === lang }"
 					@click="activeLanguage = lang"
 				>
-					<span class="lang-code">{{ lang.toUpperCase() }}</span>
+					{{ lang.toUpperCase() }}
 				</button>
 			</div>
+		</template>
 
-			<!-- Empty state -->
-			<div
-				v-if="allGroups.length === 0"
-				class="empty-state"
-			>
-				<div class="empty-icon-wrapper">
-					<UIcon
-						name="i-lucide-users-round"
-						class="empty-icon"
-					/>
-				</div>
-				<p class="empty-title">
-					No groups available
-				</p>
-				<p class="empty-desc">
-					This language has no scanlation groups
-				</p>
-			</div>
+		<!-- Panel Body Content -->
+		<!-- Empty state -->
+		<div
+			v-if="allGroups.length === 0"
+			class="empty"
+		>
+			<div class="led" />
+			<span class="empty-text">NO GROUPS AVAILABLE</span>
+		</div>
 
-			<template v-else>
-				<!-- Prioritized groups -->
-				<div class="groups-section">
-					<div class="section-label">
-						<div class="label-badge prioritized">
-							<UIcon
-								name="i-lucide-crown"
-								class="label-icon"
-							/>
-						</div>
-						<span class="label-text">Prioritized</span>
-						<span class="label-count">{{ prioritizedGroups.length }}</span>
+		<template v-else>
+			<!-- Two-column layout -->
+			<div class="groups-grid">
+				<!-- Prioritized Column -->
+				<div class="groups-column">
+					<div class="column-header">
+						<span class="column-title">PRIORITIZED</span>
+						<span class="column-count">{{ prioritizedGroups.length }}</span>
 					</div>
 
 					<div
 						v-if="prioritizedGroups.length === 0"
-						class="empty-section"
+						class="column-empty"
 					>
-						<UIcon
-							name="i-lucide-plus-circle"
-							class="empty-section-icon"
-						/>
-						<p>Click <strong>+</strong> on a group below to prioritize</p>
+						<span class="empty-hint">Click [+] to add groups</span>
 					</div>
 
 					<draggable
 						v-else
 						v-model="prioritizedGroups"
 						item-key="group_id"
-						handle=".drag-handle"
+						handle=".grip"
 						ghost-class="group-ghost"
 						drag-class="group-drag"
-						class="groups-list prioritized-list"
+						class="groups-list"
 						:disabled="isPending"
 						@end="onDragEnd"
 					>
 						<template #item="{ element: group, index }">
-							<div
-								class="group-row prioritized"
-								:style="{ '--stagger': index }"
-							>
-								<div class="drag-handle">
-									<UIcon
-										name="i-lucide-grip-vertical"
-										class="grip-icon"
-									/>
+							<div class="group-row prioritized">
+								<div class="grip">
+									<span class="grip-dots">⋮⋮</span>
 								</div>
-
 								<div class="group-rank">
-									<span class="rank-number">{{ index + 1 }}</span>
+									{{ index + 1 }}.
 								</div>
-
 								<div class="group-info">
 									<span class="group-name">{{ group.name }}</span>
-									<span class="group-meta">
-										<UIcon
-											name="i-lucide-book-open"
-											class="meta-icon"
-										/>
-										{{ group.chapter_count }}
-									</span>
+									<span class="group-chapters">[{{ group.chapter_count }}]</span>
 								</div>
-
-								<div class="group-actions">
-									<button
-										class="action-btn remove"
-										:disabled="isPending"
-										title="Remove from priority list"
-										@click="deprioritize(group)"
-									>
-										<UIcon
-											name="i-lucide-x"
-											class="action-icon"
-										/>
-									</button>
-								</div>
+								<button
+									class="action-btn remove"
+									:disabled="isPending"
+									title="Remove from priority"
+									@click="deprioritize(group)"
+								>
+									<span class="action-icon">×</span>
+								</button>
 							</div>
 						</template>
 					</draggable>
 				</div>
 
-				<!-- Automatic groups -->
-				<div class="groups-section">
-					<div class="section-label">
-						<div class="label-badge automatic">
-							<UIcon
-								name="i-lucide-sparkles"
-								class="label-icon"
-							/>
-						</div>
-						<span class="label-text">Automatic</span>
-						<span class="label-count">{{ automaticGroups.length }}</span>
+				<!-- Available Column -->
+				<div class="groups-column">
+					<div class="column-header">
+						<span class="column-title">AVAILABLE</span>
+						<span class="column-count">{{ automaticGroups.length }}</span>
 					</div>
 
 					<div
 						v-if="automaticGroups.length === 0"
-						class="empty-section minimal"
+						class="column-empty"
 					>
-						<p>All groups are prioritized</p>
+						<span class="empty-hint">All groups prioritized</span>
 					</div>
 
 					<div
@@ -398,123 +348,128 @@ async function resetAll() {
 						class="groups-list"
 					>
 						<div
-							v-for="(group, index) in automaticGroups"
+							v-for="group in automaticGroups"
 							:key="group.group_id"
-							class="group-row automatic"
-							:style="{ '--stagger': index }"
+							class="group-row available"
 						>
+							<span class="bullet">•</span>
 							<div class="group-info">
 								<span class="group-name">{{ group.name }}</span>
-								<span class="group-meta">
-									<UIcon
-										name="i-lucide-book-open"
-										class="meta-icon"
-									/>
-									{{ group.chapter_count }}
-								</span>
+								<span class="group-chapters">[{{ group.chapter_count }}]</span>
 							</div>
-
-							<div class="group-actions">
-								<button
-									class="action-btn add"
-									:disabled="isPending"
-									title="Add to priority list"
-									@click="prioritize(group)"
-								>
-									<UIcon
-										name="i-lucide-plus"
-										class="action-icon"
-									/>
-								</button>
-							</div>
+							<button
+								class="action-btn add"
+								:disabled="isPending"
+								title="Add to priority"
+								@click="prioritize(group)"
+							>
+								<span class="action-icon">+</span>
+							</button>
 						</div>
 					</div>
 				</div>
-			</template>
-		</div>
-	</section>
+			</div>
+		</template>
+	</UiPanel>
 </template>
 
 <style scoped>
-.edit-section {
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
-	overflow: hidden;
-}
-
-/* Section header */
-.section-header {
+/* Header Row */
+.header-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 1rem;
-	padding: 1rem 1.25rem;
-	border-bottom: 1px solid var(--ui-border-muted);
-}
-
-.section-title {
-	display: flex;
-	align-items: center;
 	gap: 0.75rem;
 }
 
-.section-icon {
+.header-title {
 	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: var(--font-size-sm);
+	font-weight: 600;
+	color: var(--ui-text-muted);
+	letter-spacing: 0.05em;
+}
+
+/* LED Indicator */
+.led {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--ui-text-dimmed);
+	box-shadow: 0 0 0 1px var(--ui-border);
+	flex-shrink: 0;
+}
+
+.led.active {
+	background: var(--ui-primary);
+	box-shadow:
+		0 0 6px color-mix(in oklch, var(--ui-primary) 30%, transparent),
+		0 0 0 1px color-mix(in oklch, var(--ui-primary) 60%, transparent);
+}
+
+/* Language Tabs */
+.lang-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0;
+	padding: 0;
+}
+
+.lang-tab {
+	padding: 0.5rem 0.75rem;
+	font-family: inherit;
+	font-size: var(--font-size-sm);
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	color: var(--ui-text-dimmed);
+	background: transparent;
+	border: none;
+	border-bottom: 2px solid transparent;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.lang-tab:hover:not(.active) {
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-muted);
+}
+
+.lang-tab.active {
+	color: var(--ui-primary);
+	background: var(--ui-bg-elevated);
+	border-bottom-color: var(--ui-primary);
+}
+
+/* Button Styles */
+.btn {
+	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 2rem;
-	height: 2rem;
-	background: color-mix(in oklch, var(--ui-info) 15%, transparent);
-	border-radius: 0.375rem;
-}
-
-.section-icon .icon {
-	width: 1rem;
-	height: 1rem;
-	color: var(--ui-info);
-}
-
-.section-title h2 {
-	font-size: var(--font-size-base);
-	font-weight: 600;
-	color: var(--ui-text);
-	margin: 0;
-}
-
-.section-title p {
-	font-size: var(--font-size-xs);
-	color: var(--ui-text-muted);
-	margin: 0;
-}
-
-/* Reset button in header */
-.reset-button {
-	display: flex;
-	align-items: center;
 	gap: 0.375rem;
 	padding: 0.375rem 0.625rem;
+	font-family: inherit;
 	font-size: var(--font-size-xs);
-	font-weight: 500;
-	color: var(--ui-text-muted);
-	background: transparent;
-	border: 1px solid var(--ui-border);
-	border-radius: 0.375rem;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	border-radius: 0.25rem;
 	cursor: pointer;
-	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	transition: all 0.15s ease;
 }
 
-.reset-button:hover:not(:disabled) {
-	color: var(--ui-text);
-	background: var(--ui-bg-muted);
-	border-color: var(--ui-border);
+.btn-danger {
+	color: var(--ui-error);
+	background: transparent;
+	border: 1px solid var(--ui-error);
 }
 
-.reset-button:active:not(:disabled) {
-	transform: scale(0.97);
+.btn-danger:hover:not(:disabled) {
+	background: color-mix(in oklch, var(--ui-error) 15%, transparent);
+	box-shadow: 0 0 8px color-mix(in oklch, var(--ui-error) 30%, transparent);
 }
 
-.reset-button:disabled {
+.btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
@@ -524,436 +479,276 @@ async function resetAll() {
 	height: 0.75rem;
 }
 
-.reset-text {
+.btn-label {
 	display: none;
 }
 
 @media (min-width: 480px) {
-	.reset-text {
+	.btn-label {
 		display: inline;
 	}
 }
 
-.spinner {
-	width: 0.875rem;
-	height: 0.875rem;
-	animation: spin 0.8s linear infinite;
+.spin {
+	animation: spin 1s linear infinite;
 }
 
-/* Section body */
-.section-body {
-	padding: 1rem 1.25rem 1.25rem;
-	display: flex;
-	flex-direction: column;
-	gap: 1.25rem;
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
 }
 
-/* Language tabs */
-.language-tabs {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.375rem;
-	padding: 0.25rem;
-	background: var(--ui-bg);
-	border-radius: 0.5rem;
-	border: 1px solid var(--ui-border-muted);
-}
-
-.lang-tab {
-	position: relative;
-	padding: 0.375rem 0.625rem;
-	font-size: var(--font-size-xs);
-	font-weight: 600;
-	letter-spacing: 0.025em;
-	color: var(--ui-text-muted);
-	background: transparent;
-	border: none;
-	border-radius: 0.375rem;
-	cursor: pointer;
-	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.lang-tab:hover:not(.active) {
-	background: var(--ui-bg-muted);
-	color: var(--ui-text);
-}
-
-.lang-tab.active {
-	color: var(--ui-primary);
-	background: var(--ui-primary-soft);
-	box-shadow: 0 1px 2px color-mix(in oklch, var(--ui-primary) 15%, transparent);
-}
-
-.lang-code {
-	display: block;
-}
-
-/* Empty state */
-.empty-state {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 2.5rem 1rem;
-}
-
-.empty-icon-wrapper {
+/* Empty State */
+.empty {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 3.5rem;
-	height: 3.5rem;
-	background: var(--ui-bg);
-	border: 1px dashed var(--ui-border);
-	border-radius: 50%;
-	margin-bottom: 0.25rem;
+	gap: 0.75rem;
+	padding: 2rem 1rem;
 }
 
-.empty-icon {
-	width: 1.5rem;
-	height: 1.5rem;
-	color: var(--ui-text-muted);
-	opacity: 0.5;
-}
-
-.empty-title {
+.empty-text {
+	font-family: inherit;
 	font-size: var(--font-size-sm);
-	font-weight: 600;
-	color: var(--ui-text);
-	margin: 0;
+	font-weight: 500;
+	color: var(--ui-text-dimmed);
+	letter-spacing: 0.1em;
 }
 
-.empty-desc {
-	font-size: var(--font-size-xs);
-	color: var(--ui-text-muted);
-	margin: 0;
-}
-
-/* Groups section */
-.groups-section {
+/* Groups Grid */
+.groups-grid {
 	display: flex;
 	flex-direction: column;
-	gap: 0.625rem;
+	gap: 1rem;
 }
 
-.section-label {
+@media (min-width: 640px) {
+	.groups-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.875rem;
+	}
+}
+
+/* Groups Column */
+.groups-column {
 	display: flex;
-	align-items: center;
+	flex-direction: column;
 	gap: 0.5rem;
 }
 
-.label-badge {
+.column-header {
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	width: 1.375rem;
-	height: 1.375rem;
-	border-radius: 0.25rem;
+	justify-content: space-between;
+	padding: 0 0.25rem;
 }
 
-.label-badge.prioritized {
-	background: var(--ui-primary-soft);
-}
-
-.label-badge.automatic {
-	background: var(--ui-bg-muted);
-}
-
-.label-badge .label-icon {
-	width: 0.75rem;
-	height: 0.75rem;
-}
-
-.label-badge.prioritized .label-icon {
-	color: var(--ui-primary);
-}
-
-.label-badge.automatic .label-icon {
-	color: var(--ui-text-muted);
-}
-
-.label-text {
+.column-title {
+	font-family: inherit;
 	font-size: var(--font-size-xs);
 	font-weight: 600;
-	color: var(--ui-text);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
+	color: var(--ui-text-muted);
+	letter-spacing: 0.1em;
 }
 
-.label-count {
+.column-title::before {
+	content: "─ ";
+	color: var(--ui-text-dimmed);
+}
+
+.column-count {
+	font-family: inherit;
 	font-size: var(--font-size-xs);
 	font-weight: 500;
 	color: var(--ui-text-dimmed);
-	padding: 0.0625rem 0.375rem;
+	padding: 0.125rem 0.375rem;
 	background: var(--ui-bg);
-	border: 1px solid var(--ui-border-muted);
-	border-radius: 9999px;
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
 }
 
-/* Empty section */
-.empty-section {
+.column-empty {
 	display: flex;
-	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 0.5rem;
-	padding: 1.25rem 1rem;
+	padding: 1.25rem 0.75rem;
 	background: var(--ui-bg);
 	border: 1px dashed var(--ui-border);
-	border-radius: 0.5rem;
+	border-radius: 0.25rem;
 }
 
-.empty-section.minimal {
-	padding: 0.875rem 1rem;
-}
-
-.empty-section-icon {
-	width: 1.25rem;
-	height: 1.25rem;
-	color: var(--ui-text-muted);
-	opacity: 0.4;
-}
-
-.empty-section p {
+.empty-hint {
+	font-family: inherit;
 	font-size: var(--font-size-xs);
-	color: var(--ui-text-muted);
-	margin: 0;
-	text-align: center;
+	color: var(--ui-text-dimmed);
+	letter-spacing: 0.05em;
 }
 
-.empty-section p strong {
-	color: var(--ui-text);
-	font-weight: 600;
-}
-
-/* Groups list */
+/* Groups List */
 .groups-list {
 	display: flex;
 	flex-direction: column;
 	gap: 0.25rem;
-}
-
-.prioritized-list {
 	background: var(--ui-bg);
-	border: 1px solid var(--ui-border-muted);
-	border-radius: 0.5rem;
-	padding: 0.25rem;
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
+	padding: 0.375rem;
 }
 
-/* Group row */
+/* Group Row */
 .group-row {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	gap: 0.375rem;
 	padding: 0.5rem 0.625rem;
-	background: transparent;
-	border-radius: 0.375rem;
-	transition: all 0.15s ease;
-	animation: fadeSlideIn 0.25s ease-out backwards;
-	animation-delay: calc(var(--stagger, 0) * 30ms);
-}
-
-@keyframes fadeSlideIn {
-	from {
-		opacity: 0;
-		transform: translateY(-4px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-.group-row.prioritized {
+	font-family: inherit;
+	font-size: var(--font-size-sm);
 	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border-muted);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
+	transition: all 0.15s ease;
+}
+
+.group-row:hover {
+	border-color: var(--ui-text-dimmed);
 }
 
 .group-row.prioritized:hover {
-	border-color: var(--ui-border);
+	border-color: var(--ui-primary);
+	box-shadow: 0 0 6px color-mix(in oklch, var(--ui-primary) 15%, transparent);
 }
 
-.group-row.automatic {
-	padding: 0.5rem 0.75rem;
-	background: var(--ui-bg);
-	border: 1px solid var(--ui-border-muted);
-	border-radius: 0.5rem;
-}
-
-.group-row.automatic:hover {
-	background: var(--ui-bg-muted);
-	border-color: var(--ui-border);
-}
-
-/* Drag handle */
-.drag-handle {
+/* Grip Handle */
+.grip {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 1.25rem;
+	width: 1rem;
 	cursor: grab;
 	flex-shrink: 0;
-	opacity: 0.4;
-	transition: opacity 0.15s ease;
 }
 
-.group-row:hover .drag-handle {
-	opacity: 0.8;
-}
-
-.drag-handle:active {
+.grip:active {
 	cursor: grabbing;
 }
 
-.grip-icon {
-	width: 0.875rem;
-	height: 0.875rem;
-	color: var(--ui-text-muted);
+.grip-dots {
+	color: var(--ui-text-dimmed);
+	font-size: 0.625rem;
+	letter-spacing: -0.125em;
+	opacity: 0.5;
+	transition: opacity 0.15s ease;
 }
 
-/* Drag states */
+.group-row:hover .grip-dots {
+	opacity: 1;
+	color: var(--ui-primary);
+}
+
+/* Drag States */
 .group-ghost {
 	opacity: 0.3;
-	background: var(--ui-primary-soft) !important;
+	background: color-mix(in oklch, var(--ui-primary) 15%, transparent) !important;
 	border-style: dashed !important;
 }
 
 .group-drag {
 	background: var(--ui-bg-elevated) !important;
 	box-shadow:
-		0 8px 24px -4px rgba(0, 0, 0, 0.12),
-		0 4px 8px -2px rgba(0, 0, 0, 0.08);
+		0 0 12px color-mix(in oklch, var(--ui-primary) 30%, transparent),
+		0 4px 16px rgba(0, 0, 0, 0.2);
 	border-color: var(--ui-primary) !important;
 	z-index: 100;
 }
 
-/* Group rank */
+/* Group Rank */
 .group-rank {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 1.375rem;
-	height: 1.375rem;
+	font-weight: 600;
+	color: var(--ui-primary);
+	min-width: 1.25rem;
 	flex-shrink: 0;
 }
 
-.rank-number {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 1.375rem;
-	height: 1.375rem;
-	font-size: 0.6875rem;
-	font-weight: 700;
-	color: var(--ui-primary);
-	background: var(--ui-primary-soft);
-	border-radius: 0.25rem;
+/* Bullet for Available */
+.bullet {
+	color: var(--ui-text-dimmed);
+	font-weight: 600;
+	min-width: 1rem;
+	flex-shrink: 0;
 }
 
-/* Group info */
+/* Group Info */
 .group-info {
 	flex: 1;
 	display: flex;
 	align-items: center;
-	gap: 0.625rem;
+	gap: 0.5rem;
 	min-width: 0;
 }
 
 .group-name {
 	flex: 1;
-	font-size: var(--font-size-sm);
-	font-weight: 500;
 	color: var(--ui-text);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 
-.group-meta {
-	display: flex;
-	align-items: center;
-	gap: 0.25rem;
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	color: var(--ui-text-muted);
+.group-chapters {
+	color: var(--ui-text-dimmed);
 	flex-shrink: 0;
 }
 
-.meta-icon {
-	width: 0.75rem;
-	height: 0.75rem;
-	opacity: 0.7;
-}
-
-/* Group actions */
-.group-actions {
-	display: flex;
-	gap: 0.25rem;
-	flex-shrink: 0;
-}
-
+/* Action Buttons */
 .action-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 1.5rem;
-	height: 1.5rem;
+	width: 1.375rem;
+	height: 1.375rem;
+	font-family: inherit;
+	font-weight: 700;
 	background: transparent;
-	border: 1px solid transparent;
+	border: 1px solid var(--ui-border);
 	border-radius: 0.25rem;
 	cursor: pointer;
-	opacity: 0.5;
+	flex-shrink: 0;
+	opacity: 0.6;
 	transition: all 0.15s ease;
 }
 
 .group-row:hover .action-btn {
 	opacity: 1;
-	background: var(--ui-bg-muted);
-	border-color: var(--ui-border-muted);
 }
 
 .action-btn:disabled {
-	opacity: 0.2 !important;
+	opacity: 0.3 !important;
 	cursor: not-allowed;
 }
 
+.action-icon {
+	font-size: 0.875rem;
+	line-height: 1;
+}
+
+.action-btn.add {
+	color: var(--ui-success);
+	border-color: var(--ui-success);
+}
+
 .action-btn.add:hover:not(:disabled) {
-	background: var(--ui-primary-soft);
-	border-color: color-mix(in oklch, var(--ui-primary) 30%, transparent);
-	transform: scale(1.05);
+	background: color-mix(in oklch, var(--ui-success) 15%, transparent);
+	box-shadow: 0 0 6px color-mix(in oklch, var(--ui-success) 30%, transparent);
 }
 
-.action-btn.add:hover:not(:disabled) .action-icon {
-	color: var(--ui-primary);
-}
-
-.action-btn.add:active:not(:disabled) {
-	transform: scale(0.95);
+.action-btn.remove {
+	color: var(--ui-error);
+	border-color: var(--ui-error);
 }
 
 .action-btn.remove:hover:not(:disabled) {
-	background: var(--ui-error-soft);
-	border-color: color-mix(in oklch, var(--ui-error) 30%, transparent);
-	transform: scale(1.05);
-}
-
-.action-btn.remove:hover:not(:disabled) .action-icon {
-	color: var(--ui-error);
-}
-
-.action-btn.remove:active:not(:disabled) {
-	transform: scale(0.95);
-}
-
-.action-icon {
-	width: 0.75rem;
-	height: 0.75rem;
-	color: var(--ui-text-muted);
-	transition: color 0.15s ease;
-}
-
-@keyframes spin {
-	from { transform: rotate(0deg); }
-	to { transform: rotate(360deg); }
+	background: color-mix(in oklch, var(--ui-error) 15%, transparent);
+	box-shadow: 0 0 6px color-mix(in oklch, var(--ui-error) 30%, transparent);
 }
 </style>

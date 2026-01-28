@@ -11,6 +11,7 @@ const emit = defineEmits<{
 
 const isPending = ref(false)
 const customTitle = ref(props.serie.title)
+const isSourceListExpanded = ref(false)
 
 // Watch for serie changes to update local state
 watch(() => props.serie.title, (newTitle) => {
@@ -87,276 +88,295 @@ async function setTitle(value: string) {
 </script>
 
 <template>
-	<section class="edit-section">
-		<div class="section-header">
-			<div class="section-title">
-				<div class="section-icon">
-					<UIcon
-						name="i-lucide-type"
-						class="icon"
-					/>
-				</div>
-				<div>
-					<h2>Title</h2>
-					<p>The display name for this series</p>
-				</div>
-			</div>
+	<div class="title-section">
+		<!-- Header with rule and lock toggle -->
+		<UiSectionHeader title="TITLE">
 			<button
-				class="lock-toggle"
+				class="lock-btn"
 				:class="{ locked: isLocked }"
 				:disabled="isPending"
 				@click="toggleLock"
 			>
-				<UIcon
-					:name="isLocked ? 'i-lucide-lock' : 'i-lucide-lock-open'"
-					class="lock-icon"
+				<span
+					class="led"
+					:class="{ active: isLocked }"
 				/>
-				<span>{{ isLocked ? "Locked" : "Auto" }}</span>
+				<span>{{ isLocked ? 'LOCKED' : 'AUTO' }}</span>
 			</button>
+		</UiSectionHeader>
+
+		<!-- Current value display -->
+		<div
+			class="value-display"
+			:class="{ locked: isLocked }"
+		>
+			<span class="value-text">{{ serie.title }}</span>
 		</div>
 
-		<div class="section-body">
-			<!-- Current value -->
-			<div class="current-value">
-				<span class="label">Current</span>
-				<span class="value">{{ serie.title }}</span>
+		<!-- Edit controls (only when locked) -->
+		<template v-if="isLocked">
+			<!-- Expandable source list -->
+			<div
+				v-if="allTitles.length > 0"
+				class="source-list-section"
+			>
+				<button
+					class="expand-btn"
+					@click="isSourceListExpanded = !isSourceListExpanded"
+				>
+					<span class="expand-arrow">{{ isSourceListExpanded ? '\u25BC' : '\u25B8' }}</span>
+					<span>Select from sources</span>
+					<span class="count-badge">{{ allTitles.length }}</span>
+				</button>
+
+				<div
+					v-if="isSourceListExpanded"
+					class="title-list"
+				>
+					<button
+						v-for="title in allTitles"
+						:key="`${title.sourceName}-${title.lang}-${title.value}`"
+						class="title-option"
+						:class="{
+							selected: serie.title === title.value,
+							alternate: title.isAlternate,
+						}"
+						:disabled="isPending"
+						@click="setTitle(title.value)"
+					>
+						<span
+							class="led"
+							:class="{ active: serie.title === title.value }"
+						/>
+						<span class="lang-tag">{{ title.lang.toUpperCase() }}</span>
+						<span
+							v-if="serie.sources.length > 1"
+							class="source-tag"
+						>{{ title.sourceName }}</span>
+						<span class="title-text">{{ title.value }}</span>
+						<span
+							v-if="title.isAlternate"
+							class="alt-tag"
+						>ALT</span>
+					</button>
+				</div>
 			</div>
 
-			<!-- Edit controls (only when locked) -->
-			<template v-if="isLocked">
-				<!-- Available titles -->
-				<div
-					v-if="allTitles.length > 0"
-					class="titles-grid"
+			<!-- Custom input -->
+			<div class="custom-input-section">
+				<button
+					class="expand-btn"
+					:class="{ active: !isSourceListExpanded }"
+					@click="isSourceListExpanded = false"
 				>
-					<span class="label">Available from sources</span>
-					<div class="title-options">
-						<button
-							v-for="title in allTitles"
-							:key="`${title.sourceName}-${title.lang}-${title.value}`"
-							class="title-option"
-							:class="{
-								selected: serie.title === title.value,
-								alternate: title.isAlternate,
-							}"
-							:disabled="isPending"
-							@click="setTitle(title.value)"
-						>
-							<UIcon
-								name="i-lucide-check"
-								class="check-icon"
-								:class="{ visible: serie.title === title.value }"
-							/>
-							<span class="lang-tag">{{ title.lang }}</span>
-							<span
-								v-if="serie.sources.length > 1"
-								class="source-tag"
-							>{{ title.sourceName }}</span>
-							<span class="title-text">{{ title.value }}</span>
-						</button>
-					</div>
-				</div>
+					<span class="expand-arrow">{{ !isSourceListExpanded ? '\u25BC' : '\u25B8' }}</span>
+					<span>Enter custom value</span>
+				</button>
 
-				<!-- Custom input -->
-				<div class="custom-input">
-					<span class="label">Custom title</span>
-					<div class="input-row">
+				<div
+					v-if="!isSourceListExpanded"
+					class="custom-input"
+				>
+					<div class="terminal-wrapper">
+						<span class="terminal-prompt">&gt;</span>
 						<input
 							v-model="customTitle"
 							type="text"
 							placeholder="Enter custom title..."
-							class="text-input"
+							class="terminal-input"
 							:disabled="isPending"
+							@keyup.enter="setTitle(customTitle)"
 						>
-						<button
-							class="set-button"
-							:disabled="isPending || !customTitle || customTitle === serie.title"
-							@click="setTitle(customTitle)"
-						>
-							<UIcon
-								v-if="isPending"
-								name="i-lucide-loader-2"
-								class="spinner"
-							/>
-							<template v-else>
-								Set
-							</template>
-						</button>
 					</div>
+					<button
+						class="set-btn"
+						:disabled="isPending || !customTitle || customTitle === serie.title"
+						@click="setTitle(customTitle)"
+					>
+						<UIcon
+							v-if="isPending"
+							name="i-lucide-loader-2"
+							class="btn-icon spin"
+						/>
+						<span v-else>SET</span>
+					</button>
 				</div>
-			</template>
+			</div>
+		</template>
 
-			<!-- Unlocked hint -->
-			<p
-				v-else
-				class="hint"
-			>
-				Lock this field to set a custom title. When unlocked, the title updates automatically from sources.
-			</p>
-		</div>
-	</section>
+		<!-- Unlocked hint -->
+		<p
+			v-else
+			class="hint"
+		>
+			Lock to set custom title. Auto-updates from sources when unlocked.
+		</p>
+	</div>
 </template>
 
 <style scoped>
-.edit-section {
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
-	overflow: hidden;
-}
-
-/* Section header */
-.section-header {
+.title-section {
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1rem;
-	padding: 1rem 1.25rem;
-	border-bottom: 1px solid var(--ui-border-muted);
-}
-
-.section-title {
-	display: flex;
-	align-items: center;
+	flex-direction: column;
 	gap: 0.75rem;
 }
 
-.section-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 2rem;
-	height: 2rem;
-	background: color-mix(in oklch, var(--ui-info) 15%, transparent);
-	border-radius: 0.375rem;
-}
-
-.section-icon .icon {
-	width: 1rem;
-	height: 1rem;
-	color: var(--ui-info);
-}
-
-.section-title h2 {
-	font-size: var(--font-size-base);
-	font-weight: 600;
-	color: var(--ui-text);
-	margin: 0;
-}
-
-.section-title p {
-	font-size: var(--font-size-xs);
-	color: var(--ui-text-muted);
-	margin: 0;
-}
-
-/* Lock toggle */
-.lock-toggle {
+.lock-btn {
 	display: flex;
 	align-items: center;
 	gap: 0.375rem;
-	padding: 0.375rem 0.75rem;
+	padding: 0.25rem 0.5rem;
+	font-family: inherit;
 	font-size: var(--font-size-xs);
 	font-weight: 500;
 	color: var(--ui-text-muted);
-	background: var(--ui-bg-muted);
+	background: var(--ui-bg);
 	border: 1px solid var(--ui-border);
-	border-radius: 2rem;
+	border-radius: 0.25rem;
 	cursor: pointer;
 	transition: all 0.15s ease;
+	flex-shrink: 0;
 }
 
-.lock-toggle:hover:not(:disabled) {
+.lock-btn:hover:not(:disabled) {
 	border-color: var(--ui-text-muted);
 }
 
-.lock-toggle.locked {
+.lock-btn.locked {
 	color: var(--ui-primary);
-	background: var(--ui-primary-soft);
-	border-color: transparent;
+	border-color: var(--ui-primary);
+	background: color-mix(in oklch, var(--ui-primary) 10%, transparent);
 }
 
-.lock-toggle:disabled {
+.lock-btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
-.lock-icon {
-	width: 0.875rem;
-	height: 0.875rem;
+/* LED indicator */
+.led {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--ui-text-dimmed);
+	flex-shrink: 0;
+	transition: all 0.2s ease;
 }
 
-/* Section body */
-.section-body {
-	padding: 1.25rem;
-	display: flex;
-	flex-direction: column;
-	gap: 1.25rem;
+.led.active {
+	background: var(--ui-primary);
+	box-shadow: 0 0 4px color-mix(in oklch, var(--ui-primary) 30%, transparent);
 }
 
-/* Labels */
-.label {
-	display: block;
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	color: var(--ui-text-muted);
-	text-transform: uppercase;
-	letter-spacing: 0.03em;
-	margin-bottom: 0.5rem;
+/* Value display */
+.value-display {
+	padding: 0.75rem 1rem;
+	background: var(--ui-bg);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
+	transition: all 0.2s ease;
 }
 
-/* Current value */
-.current-value {
-	padding: 0.875rem 1rem;
-	background: var(--ui-bg-muted);
-	border-radius: 0.5rem;
+.value-display.locked {
+	border-color: var(--ui-primary);
+	box-shadow: inset 0 0 12px color-mix(in oklch, var(--ui-primary) 15%, transparent);
 }
 
-.current-value .label {
-	margin-bottom: 0.25rem;
-}
-
-.current-value .value {
+.value-text {
+	font-family: inherit;
 	font-size: var(--font-size-base);
 	font-weight: 500;
 	color: var(--ui-text);
 	word-break: break-word;
 }
 
-/* Title options */
-.titles-grid {
-	padding-top: 0.25rem;
+.value-display.locked .value-text {
+	color: var(--ui-primary);
 }
 
-.title-options {
+/* Expand button */
+.expand-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	padding: 0.5rem 0.75rem;
+	font-family: inherit;
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+	background: var(--ui-bg);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
+	cursor: pointer;
+	text-align: left;
+	transition: all 0.15s ease;
+}
+
+.expand-btn:hover {
+	background: var(--ui-bg-muted);
+	border-color: var(--ui-text-muted);
+}
+
+.expand-arrow {
+	font-size: 0.625rem;
+	color: var(--ui-text-dimmed);
+	width: 0.625rem;
+}
+
+.count-badge {
+	margin-left: auto;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-text-dimmed);
+	padding: 0.125rem 0.375rem;
+	background: var(--ui-bg-muted);
+	border-radius: 0.125rem;
+}
+
+/* Source list section */
+.source-list-section {
 	display: flex;
 	flex-direction: column;
 	gap: 0.5rem;
+}
+
+.title-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	max-height: 16rem;
+	overflow-y: auto;
+	padding: 0.25rem;
+	background: var(--ui-bg);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
 }
 
 .title-option {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	padding: 0.625rem 0.875rem;
+	padding: 0.5rem 0.625rem;
+	font-family: inherit;
 	font-size: var(--font-size-sm);
-	text-align: left;
 	color: var(--ui-text);
-	background: var(--ui-bg);
+	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.5rem;
+	border-radius: 0.25rem;
 	cursor: pointer;
+	text-align: left;
 	transition: all 0.15s ease;
 }
 
 .title-option:hover:not(:disabled) {
-	border-color: var(--ui-text-muted);
 	background: var(--ui-bg-muted);
+	border-color: var(--ui-text-muted);
 }
 
 .title-option.selected {
 	border-color: var(--ui-primary);
-	background: var(--ui-primary-soft);
+	background: color-mix(in oklch, var(--ui-primary) 8%, var(--ui-bg-elevated));
 }
 
 .title-option.alternate {
@@ -368,40 +388,21 @@ async function setTitle(value: string) {
 	cursor: not-allowed;
 }
 
-.check-icon {
-	width: 0.875rem;
-	height: 0.875rem;
-	color: var(--ui-primary);
+.lang-tag {
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-text-muted);
+	padding: 0.125rem 0.375rem;
+	background: var(--ui-bg-muted);
+	border-radius: 0.125rem;
 	flex-shrink: 0;
-	opacity: 0;
 }
 
-.check-icon.visible {
-	opacity: 1;
-}
-
-.lang-tag,
 .source-tag {
 	font-size: var(--font-size-xs);
-	flex-shrink: 0;
-}
-
-.lang-tag {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 2.5rem;
-	padding: 0.125rem 0.375rem;
-	font-weight: 500;
-	color: var(--ui-text-muted);
-	background: var(--ui-bg-muted);
-	border-radius: 0.25rem;
-}
-
-.source-tag {
-	min-width: 9rem;
-	max-width: 9rem;
 	color: var(--ui-text-dimmed);
+	flex-shrink: 0;
+	max-width: 6rem;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -412,71 +413,112 @@ async function setTitle(value: string) {
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-/* Custom input */
+.alt-tag {
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-warning);
+	padding: 0.125rem 0.375rem;
+	background: color-mix(in oklch, var(--ui-warning) 15%, transparent);
+	border-radius: 0.125rem;
+	flex-shrink: 0;
+}
+
+/* Custom input section */
+.custom-input-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
 .custom-input {
-	padding-top: 0.25rem;
-}
-
-.input-row {
 	display: flex;
 	gap: 0.5rem;
 }
 
-.text-input {
+/* Terminal input */
+.terminal-wrapper {
+	position: relative;
 	flex: 1;
-	padding: 0.625rem 0.875rem;
-	font-size: var(--font-size-sm);
-	color: var(--ui-text);
-	background: var(--ui-bg);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.5rem;
-	outline: none;
-	transition: border-color 0.15s ease;
 }
 
-.text-input::placeholder {
+.terminal-prompt {
+	position: absolute;
+	left: 0.625rem;
+	top: 50%;
+	transform: translateY(-50%);
+	font-family: inherit;
+	font-size: var(--font-size-sm);
+	font-weight: 600;
+	color: var(--ui-primary);
+	pointer-events: none;
+	z-index: 1;
+}
+
+.terminal-input {
+	width: 100%;
+	padding: 0.5rem 0.625rem 0.5rem 1.375rem;
+	font-family: inherit;
+	font-size: var(--font-size-sm);
+	color: var(--ui-primary);
+	background: var(--ui-bg);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
+	outline: none;
+	transition: all 0.15s ease;
+}
+
+.terminal-input::placeholder {
 	color: var(--ui-text-dimmed);
 }
 
-.text-input:focus {
+.terminal-input:focus {
 	border-color: var(--ui-primary);
+	box-shadow: 0 0 0 1px color-mix(in oklch, var(--ui-primary) 20%, transparent);
 }
 
-.text-input:disabled {
+.terminal-input:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
-.set-button {
+/* Set button */
+.set-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	min-width: 4rem;
-	padding: 0.625rem 1rem;
-	font-size: var(--font-size-sm);
-	font-weight: 500;
+	padding: 0.5rem 0.75rem;
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
 	color: var(--ui-bg);
 	background: var(--ui-primary);
-	border: none;
-	border-radius: 0.5rem;
+	border: 1px solid var(--ui-primary);
+	border-radius: 0.25rem;
 	cursor: pointer;
-	transition: opacity 0.15s ease;
+	letter-spacing: 0.05em;
+	transition: all 0.15s ease;
 }
 
-.set-button:hover:not(:disabled) {
-	opacity: 0.9;
+.set-btn:hover:not(:disabled) {
+	background: color-mix(in oklch, var(--ui-primary) 85%, white);
+	box-shadow: 0 0 8px color-mix(in oklch, var(--ui-primary) 30%, transparent);
 }
 
-.set-button:disabled {
+.set-btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
-.spinner {
-	width: 1rem;
-	height: 1rem;
+.btn-icon {
+	width: 0.875rem;
+	height: 0.875rem;
+}
+
+.spin {
 	animation: spin 1s linear infinite;
 }
 
@@ -487,9 +529,10 @@ async function setTitle(value: string) {
 
 /* Hint */
 .hint {
-	font-size: var(--font-size-sm);
-	color: var(--ui-text-muted);
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-dimmed);
 	margin: 0;
-	line-height: 1.5;
+	font-style: italic;
 }
 </style>

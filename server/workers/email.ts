@@ -22,7 +22,7 @@ async function sendPasswordResetEmail(
 
 	await sendMail({
 		to,
-		subject: "Reset your Dokusho password",
+		subject: "Reset your Tsundoku password",
 		html,
 	})
 
@@ -74,7 +74,7 @@ async function sendVerificationEmail(
 
 	await sendMail({
 		to,
-		subject: "Verify your Dokusho account",
+		subject: "Verify your Tsundoku account",
 		html,
 	})
 

@@ -31,7 +31,7 @@ onMounted(async () => {
 	<div class="profile-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="My Profile"
 					description="Manage your account settings and API keys"
 				/>

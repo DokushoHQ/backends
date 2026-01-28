@@ -189,7 +189,7 @@ function setPage(newPage: number) {
 	<div class="series-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Series"
 					:description="pageDescription"
 				>
@@ -575,7 +575,7 @@ function setPage(newPage: number) {
 							</UButton>
 						</div>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 			</template>
 
 			<template #body>

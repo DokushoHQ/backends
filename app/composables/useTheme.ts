@@ -18,19 +18,35 @@ const availableThemes: Theme[] = [
 		name: "Old Manga Paper",
 		description: "Warm cream tones inspired by aged manga pages",
 	},
+	{
+		id: "command-center",
+		name: "Command Center",
+		description: "Dark utilitarian control panel with cyan accents",
+	},
 ]
 
 export function useTheme() {
 	const colorMode = useColorMode()
 	const currentTheme = useState<string>("theme", () => DEFAULT_THEME)
+	const isInitialized = useState<boolean>("theme-initialized", () => false)
 
-	// Initialize theme from localStorage on client
+	// Auto-initialize on client when composable is first used
+	if (import.meta.client && !isInitialized.value) {
+		const stored = localStorage.getItem(STORAGE_KEY)
+		if (stored && availableThemes.some(t => t.id === stored)) {
+			currentTheme.value = stored
+		}
+		isInitialized.value = true
+	}
+
+	// Initialize theme from localStorage on client (kept for compatibility)
 	function initTheme() {
-		if (import.meta.client) {
+		if (import.meta.client && !isInitialized.value) {
 			const stored = localStorage.getItem(STORAGE_KEY)
 			if (stored && availableThemes.some(t => t.id === stored)) {
 				currentTheme.value = stored
 			}
+			isInitialized.value = true
 			applyThemeClass()
 		}
 	}
@@ -78,7 +94,7 @@ export function useTheme() {
 
 	return {
 		// Theme
-		currentTheme: readonly(currentTheme),
+		currentTheme: computed(() => currentTheme.value),
 		availableThemes,
 		setTheme,
 		initTheme,

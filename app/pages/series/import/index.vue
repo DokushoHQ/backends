@@ -16,18 +16,11 @@ onMounted(() => {
 	<div class="import-entry-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Import Series"
 					description="Choose how you want to add series"
+					back-to="/series"
 				>
-					<template #leading>
-						<UButton
-							icon="i-lucide-arrow-left"
-							variant="ghost"
-							size="sm"
-							@click="router.push('/series')"
-						/>
-					</template>
 					<template #right>
 						<ImporterSharedCartBadge
 							v-if="cart.cartCount.value > 0"
@@ -35,7 +28,7 @@ onMounted(() => {
 							@click="router.push('/series/import/review')"
 						/>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 			</template>
 
 			<template #body>
@@ -170,7 +163,7 @@ onMounted(() => {
 	padding: 1.25rem;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	text-align: left;
 	cursor: pointer;
 	transition: all 0.15s ease;
@@ -193,7 +186,7 @@ onMounted(() => {
 	justify-content: center;
 	width: 3rem;
 	height: 3rem;
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	flex-shrink: 0;
 }
 
@@ -253,7 +246,7 @@ onMounted(() => {
 	padding: 1rem 1.25rem;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 }
 
 .cart-info {

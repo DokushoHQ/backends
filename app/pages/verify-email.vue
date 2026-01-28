@@ -10,85 +10,91 @@ const error = computed(() => route.query.error as string | undefined)
 // If redirected from signup, there's no error and no special param - show "check email" message
 // We use a "verified" query param to distinguish successful verification from signup redirect
 const verified = computed(() => route.query.verified === "true")
+
+const cardConfig = computed(() => {
+	if (verified.value) {
+		return {
+			icon: "i-lucide-check-circle",
+			title: "Email Verified!",
+			subtitle: "Your email has been verified. You can now log in.",
+			accentColor: "success" as const,
+		}
+	}
+	if (error.value) {
+		return {
+			icon: "i-lucide-x-circle",
+			title: "Verification Failed",
+			subtitle: "This verification link is invalid or has expired.",
+			accentColor: "error" as const,
+		}
+	}
+	return {
+		icon: "i-lucide-mail",
+		title: "Check Your Email",
+		subtitle: "We've sent a verification link to your email address. Click the link to verify your account.",
+		accentColor: "primary" as const,
+	}
+})
 </script>
 
 <template>
-	<div class="flex min-h-screen items-center justify-center bg-background p-4">
-		<UCard class="w-full max-w-md">
-			<!-- Success state - shown after clicking verification link -->
-			<template v-if="verified">
-				<div class="text-center space-y-4">
-					<div class="flex justify-center mb-4">
-						<UIcon
-							name="i-lucide-check-circle"
-							class="h-12 w-12 text-green-600 dark:text-green-400"
-						/>
-					</div>
-					<h1 class="text-2xl font-semibold">
-						Email Verified!
-					</h1>
-					<p class="text-sm text-muted-foreground">
-						Your email has been verified. You can now log in.
-					</p>
-					<UButton
+	<div class="auth-page">
+		<AuthBackground />
+		<div class="auth-page__container">
+			<AuthCard
+				:icon="cardConfig.icon"
+				:title="cardConfig.title"
+				:subtitle="cardConfig.subtitle"
+				:accent-color="cardConfig.accentColor"
+			>
+				<!-- Success state - shown after clicking verification link -->
+				<template v-if="verified">
+					<AuthButton
 						to="/login"
 						block
 					>
 						Go to Login
-					</UButton>
-				</div>
-			</template>
+					</AuthButton>
+				</template>
 
-			<!-- Error state -->
-			<template v-else-if="error">
-				<div class="text-center space-y-4">
-					<div class="flex justify-center mb-4">
-						<UIcon
-							name="i-lucide-x-circle"
-							class="h-12 w-12 text-destructive"
-						/>
-					</div>
-					<h1 class="text-2xl font-semibold">
-						Verification Failed
-					</h1>
-					<p class="text-sm text-muted-foreground">
-						This verification link is invalid or has expired.
-					</p>
-					<UButton
+				<!-- Error state -->
+				<template v-else-if="error">
+					<AuthButton
 						to="/login"
-						block
 						variant="outline"
+						block
 					>
 						Back to Login
-					</UButton>
-				</div>
-			</template>
+					</AuthButton>
+				</template>
 
-			<!-- No token state (direct navigation) -->
-			<template v-else>
-				<div class="text-center space-y-4">
-					<div class="flex justify-center mb-4">
-						<UIcon
-							name="i-lucide-mail"
-							class="h-12 w-12"
-						/>
-					</div>
-					<h1 class="text-2xl font-semibold">
-						Check Your Email
-					</h1>
-					<p class="text-sm text-muted-foreground">
-						We've sent a verification link to your email address.
-						Click the link to verify your account.
-					</p>
-					<UButton
+				<!-- Default state (direct navigation from signup) -->
+				<template v-else>
+					<AuthButton
 						to="/login"
-						block
 						variant="outline"
+						block
 					>
 						Back to Login
-					</UButton>
-				</div>
-			</template>
-		</UCard>
+					</AuthButton>
+				</template>
+			</AuthCard>
+		</div>
 	</div>
 </template>
+
+<style scoped>
+.auth-page {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+}
+
+.auth-page__container {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+}
+</style>

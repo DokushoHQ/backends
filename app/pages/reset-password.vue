@@ -62,137 +62,169 @@ async function handleSubmit() {
 		loading.value = false
 	}
 }
+
+// Compute footer link based on state
+const footerLink = computed(() => {
+	if (!token.value && !tokenError.value) {
+		return { to: "/forgot-password", label: "Request a new password reset", primary: true }
+	}
+	return { to: "/login", label: "Back to login", primary: false }
+})
 </script>
 
 <template>
-	<div class="flex min-h-screen items-center justify-center bg-background p-4">
-		<UCard class="w-full max-w-md">
-			<template #header>
-				<div class="text-center">
-					<div class="flex justify-center mb-4">
-						<UIcon
-							name="i-lucide-lock-keyhole"
-							class="h-12 w-12"
-						/>
-					</div>
-					<h1 class="text-2xl font-semibold">
-						Reset Password
-					</h1>
-					<p class="text-sm text-muted-foreground">
-						{{ success ? 'Your password has been reset' : 'Enter your new password' }}
-					</p>
-				</div>
-			</template>
-
-			<div class="space-y-4">
+	<div class="auth-page">
+		<AuthBackground />
+		<div class="auth-page__container">
+			<AuthCard
+				icon="i-lucide-lock-keyhole"
+				title="Reset Password"
+				:subtitle="success ? 'Your password has been reset' : 'Enter your new password'"
+				:accent-color="success ? 'success' : 'primary'"
+			>
 				<!-- Success State -->
 				<template v-if="success">
-					<div class="rounded-md bg-green-500/10 p-4 text-center">
-						<div class="flex justify-center mb-3">
-							<UIcon
-								name="i-lucide-check-circle"
-								class="h-8 w-8 text-green-600 dark:text-green-400"
-							/>
-						</div>
-						<p class="text-sm font-medium text-green-800 dark:text-green-200">
-							Password reset successful
-						</p>
-						<p class="text-sm text-muted-foreground mt-1">
-							Redirecting to login...
-						</p>
-					</div>
+					<AuthMessage
+						type="success"
+						title="Password reset successful"
+					>
+						Redirecting to login...
+					</AuthMessage>
 				</template>
 
 				<!-- No Token State -->
 				<template v-else-if="!token && !tokenError">
-					<div class="rounded-md bg-warning/10 p-4 text-center">
-						<div class="flex justify-center mb-3">
-							<UIcon
-								name="i-lucide-alert-triangle"
-								class="h-8 w-8 text-warning"
-							/>
-						</div>
-						<p class="text-sm font-medium">
-							Invalid reset link
-						</p>
-						<p class="text-sm text-muted-foreground mt-1">
-							This page requires a valid password reset link.
-						</p>
-					</div>
-
-					<div class="text-center">
-						<NuxtLink
-							to="/forgot-password"
-							class="text-sm text-primary hover:underline"
-						>
-							Request a new password reset
-						</NuxtLink>
-					</div>
+					<AuthMessage
+						type="warning"
+						title="Invalid reset link"
+					>
+						This page requires a valid password reset link.
+					</AuthMessage>
 				</template>
 
 				<!-- Form State -->
 				<template v-else>
-					<div
+					<AuthMessage
 						v-if="error"
-						class="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+						type="error"
+						class="auth-page__message"
 					>
 						{{ error }}
-						<div
+						<NuxtLink
 							v-if="tokenError === 'INVALID_TOKEN'"
-							class="mt-2"
+							to="/forgot-password"
+							class="auth-page__inline-link"
 						>
-							<NuxtLink
-								to="/forgot-password"
-								class="text-primary hover:underline"
-							>
-								Request a new password reset
-							</NuxtLink>
-						</div>
-					</div>
+							Request a new password reset
+						</NuxtLink>
+					</AuthMessage>
 
 					<form
 						v-if="token && !tokenError"
-						class="space-y-4"
+						class="auth-page__form"
 						@submit.prevent="handleSubmit"
 					>
-						<UFormField label="New Password">
-							<UInput
-								v-model="password"
-								type="password"
-								placeholder="Min 8 characters"
-								required
-								minlength="8"
-								class="w-full"
-							/>
-						</UFormField>
-						<UFormField label="Confirm Password">
-							<UInput
-								v-model="confirmPassword"
-								type="password"
-								placeholder="Confirm your password"
-								required
-								class="w-full"
-							/>
-						</UFormField>
-						<UButton
+						<AuthInput
+							v-model="password"
+							type="password"
+							label="New Password"
+							placeholder="Min 8 characters"
+							autocomplete="new-password"
+							:minlength="8"
+							required
+						/>
+
+						<AuthInput
+							v-model="confirmPassword"
+							type="password"
+							label="Confirm Password"
+							placeholder="Confirm your password"
+							autocomplete="new-password"
+							required
+						/>
+
+						<AuthButton
 							type="submit"
 							block
 							:loading="loading"
 						>
 							Reset Password
-						</UButton>
+						</AuthButton>
 					</form>
+				</template>
 
-					<div class="text-center">
+				<template #footer>
+					<div class="auth-page__footer-link">
 						<NuxtLink
-							to="/login"
-							class="text-sm text-muted-foreground hover:text-foreground transition-colors"
+							:to="footerLink.to"
+							class="auth-page__link"
+							:class="{ 'auth-page__link--primary': footerLink.primary }"
 						>
-							Back to login
+							{{ footerLink.label }}
 						</NuxtLink>
 					</div>
 				</template>
-			</div>
-		</UCard>
+			</AuthCard>
+		</div>
 	</div>
 </template>
+
+<style scoped>
+.auth-page {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+}
+
+.auth-page__container {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+}
+
+.auth-page__message {
+	margin-bottom: 1rem;
+}
+
+.auth-page__form {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.auth-page__footer-link {
+	text-align: center;
+}
+
+.auth-page__link {
+	font-size: 0.8125rem;
+	color: var(--ui-text-muted);
+	text-decoration: none;
+	transition: color 0.15s ease;
+}
+
+.auth-page__link:hover {
+	color: var(--ui-text);
+}
+
+.auth-page__link--primary {
+	color: var(--ui-primary);
+}
+
+.auth-page__link--primary:hover {
+	text-decoration: underline;
+}
+
+.auth-page__inline-link {
+	display: block;
+	margin-top: 0.5rem;
+	color: var(--ui-primary);
+	text-decoration: none;
+}
+
+.auth-page__inline-link:hover {
+	text-decoration: underline;
+}
+</style>

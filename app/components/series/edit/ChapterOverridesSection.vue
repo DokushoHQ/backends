@@ -46,6 +46,15 @@ const disabledOverrides = computed(() =>
 	filteredOverrides.value.filter(o => o.manual_override === false),
 )
 
+// Stats
+const totalEnabled = computed(() =>
+	overrideData.value?.overrides?.filter(o => o.manual_override === true).length ?? 0,
+)
+
+const totalDisabled = computed(() =>
+	overrideData.value?.overrides?.filter(o => o.manual_override === false).length ?? 0,
+)
+
 // Reset all overrides for the current language
 async function resetLanguage() {
 	if (isPending.value || !activeLanguage.value) return
@@ -136,55 +145,61 @@ async function resetChapter(chapterId: string, chapterNumber: number) {
 function formatChapterTitle(override: typeof filteredOverrides.value[number]): string {
 	const parts = [`Ch. ${override.chapter_number}`]
 	if (override.title) {
-		parts.push(override.title)
+		parts.push(`"${override.title}"`)
 	}
-	return parts.join(" - ")
+	return parts.join(" ")
 }
 </script>
 
 <template>
-	<section
+	<UiPanel
 		v-if="overrideData && overrideData.total_count > 0"
-		class="edit-section"
+		title="OVERRIDE REGISTRY"
+		header-muted
 	>
-		<div class="section-header">
-			<div class="section-title">
-				<div class="section-icon">
+		<template #header>
+			<!-- Stats Bar -->
+			<div class="stats-bar">
+				<div class="stats-group">
+					<div class="stat">
+						<div class="led led-success" />
+						<span class="stat-label">ENABLED:</span>
+						<span class="stat-value">{{ totalEnabled }}</span>
+					</div>
+					<div class="stat">
+						<div class="led led-error" />
+						<span class="stat-label">DISABLED:</span>
+						<span class="stat-value">{{ totalDisabled }}</span>
+					</div>
+					<div class="stat">
+						<span class="stat-label">TOTAL:</span>
+						<span class="stat-value">{{ overrideData.total_count }}</span>
+					</div>
+				</div>
+				<button
+					class="btn btn-danger"
+					:disabled="isPending"
+					@click="resetAll"
+				>
 					<UIcon
-						name="i-lucide-lock"
-						class="icon"
+						v-if="isPending"
+						name="i-lucide-loader-2"
+						class="btn-icon spin"
 					/>
-				</div>
-				<div>
-					<h2>Manual Overrides</h2>
-					<p>Chapters you've manually enabled or disabled</p>
-				</div>
+					<template v-else>
+						<UIcon
+							name="i-lucide-rotate-ccw"
+							class="btn-icon"
+						/>
+						<span class="btn-label">RESET ALL</span>
+					</template>
+				</button>
 			</div>
+		</template>
 
-			<!-- Reset all button in header -->
-			<button
-				class="reset-button"
-				:disabled="isPending"
-				@click="resetAll"
-			>
-				<UIcon
-					v-if="isPending"
-					name="i-lucide-loader-2"
-					class="spinner"
-				/>
-				<template v-else>
-					<UIcon
-						name="i-lucide-rotate-ccw"
-						class="btn-icon"
-					/>
-					<span class="reset-text">Reset All</span>
-				</template>
-			</button>
-		</div>
-
-		<div class="section-body">
-			<!-- Language tabs -->
-			<div class="language-tabs">
+		<template #tabs>
+			<!-- Language Tabs -->
+			<div class="lang-tabs">
 				<button
 					v-for="lang in availableLanguages"
 					:key="lang"
@@ -196,14 +211,17 @@ function formatChapterTitle(override: typeof filteredOverrides.value[number]): s
 					<span class="lang-count">{{ (overrideData.count_by_language as Record<string, number>)[lang] }}</span>
 				</button>
 			</div>
+		</template>
 
-			<!-- Reset language button -->
+		<!-- Panel Body Content -->
+		<div class="content">
+			<!-- Reset Language Button -->
 			<div
 				v-if="filteredOverrides.length > 0"
 				class="language-actions"
 			>
 				<button
-					class="reset-language-btn"
+					class="btn btn-secondary"
 					:disabled="isPending"
 					@click="resetLanguage"
 				>
@@ -211,209 +229,255 @@ function formatChapterTitle(override: typeof filteredOverrides.value[number]): s
 						name="i-lucide-rotate-ccw"
 						class="btn-icon"
 					/>
-					Reset {{ activeLanguage }} overrides
+					<span>Reset {{ activeLanguage?.toUpperCase() }} overrides</span>
 				</button>
 			</div>
 
-			<!-- Enabled overrides -->
-			<div
-				v-if="enabledOverrides.length > 0"
-				class="overrides-section"
-			>
-				<div class="section-label">
-					<div class="label-badge enabled">
-						<UIcon
-							name="i-lucide-check"
-							class="label-icon"
-						/>
+			<!-- Overrides Table -->
+			<div class="overrides-table">
+				<!-- Enabled Section -->
+				<template v-if="enabledOverrides.length > 0">
+					<div class="table-header enabled">
+						<div class="led led-success" />
+						<span class="table-title">ENABLED</span>
+						<span class="table-count">{{ enabledOverrides.length }}</span>
 					</div>
-					<span class="label-text">Manually Enabled</span>
-					<span class="label-count">{{ enabledOverrides.length }}</span>
-				</div>
 
-				<div class="overrides-list">
 					<div
-						v-for="(override, index) in enabledOverrides"
+						v-for="override in enabledOverrides"
 						:key="override.id"
-						class="override-row enabled"
-						:style="{ '--stagger': index }"
+						class="override-row"
 					>
+						<div class="override-status enabled">
+							<span class="status-icon">+</span>
+						</div>
 						<div class="override-info">
 							<span class="override-chapter">{{ formatChapterTitle(override) }}</span>
-							<span class="override-meta">
-								<span class="meta-source">{{ override.source_name }}</span>
-								<span
-									v-if="override.groups.length > 0"
-									class="meta-groups"
-								>
-									{{ override.groups.join(", ") }}
-								</span>
+							<span class="override-separator">────</span>
+							<span class="override-source">{{ override.source_name }}</span>
+							<span
+								v-if="override.groups.length > 0"
+								class="override-groups"
+							>
+								[{{ override.groups.join(", ") }}]
 							</span>
 						</div>
-						<div class="override-actions">
-							<button
-								class="action-btn reset"
-								:disabled="isPending"
-								title="Reset to auto-managed"
-								@click="resetChapter(override.id, override.chapter_number)"
-							>
-								<UIcon
-									name="i-lucide-rotate-ccw"
-									class="action-icon"
-								/>
-							</button>
-							<div class="override-badge enabled">
-								<UIcon
-									name="i-lucide-check"
-									class="badge-icon"
-								/>
-							</div>
-						</div>
+						<button
+							class="action-btn reset"
+							:disabled="isPending"
+							title="Reset to auto-managed"
+							@click="resetChapter(override.id, override.chapter_number)"
+						>
+							<UIcon
+								name="i-lucide-rotate-ccw"
+								class="action-icon"
+							/>
+						</button>
 					</div>
-				</div>
-			</div>
+				</template>
 
-			<!-- Disabled overrides -->
-			<div
-				v-if="disabledOverrides.length > 0"
-				class="overrides-section"
-			>
-				<div class="section-label">
-					<div class="label-badge disabled">
-						<UIcon
-							name="i-lucide-x"
-							class="label-icon"
-						/>
+				<!-- Disabled Section -->
+				<template v-if="disabledOverrides.length > 0">
+					<div class="table-header disabled">
+						<div class="led led-error" />
+						<span class="table-title">DISABLED</span>
+						<span class="table-count">{{ disabledOverrides.length }}</span>
 					</div>
-					<span class="label-text">Manually Disabled</span>
-					<span class="label-count">{{ disabledOverrides.length }}</span>
-				</div>
 
-				<div class="overrides-list">
 					<div
-						v-for="(override, index) in disabledOverrides"
+						v-for="override in disabledOverrides"
 						:key="override.id"
-						class="override-row disabled"
-						:style="{ '--stagger': index }"
+						class="override-row"
 					>
+						<div class="override-status disabled">
+							<span class="status-icon">−</span>
+						</div>
 						<div class="override-info">
 							<span class="override-chapter">{{ formatChapterTitle(override) }}</span>
-							<span class="override-meta">
-								<span class="meta-source">{{ override.source_name }}</span>
-								<span
-									v-if="override.groups.length > 0"
-									class="meta-groups"
-								>
-									{{ override.groups.join(", ") }}
-								</span>
+							<span class="override-separator">────</span>
+							<span class="override-source">{{ override.source_name }}</span>
+							<span
+								v-if="override.groups.length > 0"
+								class="override-groups"
+							>
+								[{{ override.groups.join(", ") }}]
 							</span>
 						</div>
-						<div class="override-actions">
-							<button
-								class="action-btn reset"
-								:disabled="isPending"
-								title="Reset to auto-managed"
-								@click="resetChapter(override.id, override.chapter_number)"
-							>
-								<UIcon
-									name="i-lucide-rotate-ccw"
-									class="action-icon"
-								/>
-							</button>
-							<div class="override-badge disabled">
-								<UIcon
-									name="i-lucide-x"
-									class="badge-icon"
-								/>
-							</div>
-						</div>
+						<button
+							class="action-btn reset"
+							:disabled="isPending"
+							title="Reset to auto-managed"
+							@click="resetChapter(override.id, override.chapter_number)"
+						>
+							<UIcon
+								name="i-lucide-rotate-ccw"
+								class="action-icon"
+							/>
+						</button>
 					</div>
-				</div>
+				</template>
 			</div>
 		</div>
-	</section>
+	</UiPanel>
 </template>
 
 <style scoped>
-.edit-section {
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
-	overflow: hidden;
-}
-
-/* Section header */
-.section-header {
+/* Stats Bar */
+.stats-bar {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	padding: 1rem 1.25rem;
-	border-bottom: 1px solid var(--ui-border-muted);
 }
 
-.section-title {
+.stats-group {
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
+	gap: 1rem;
+	flex-wrap: wrap;
 }
 
-.section-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 2rem;
-	height: 2rem;
-	background: color-mix(in oklch, var(--ui-warning) 15%, transparent);
-	border-radius: 0.375rem;
-}
-
-.section-icon .icon {
-	width: 1rem;
-	height: 1rem;
-	color: var(--ui-warning);
-}
-
-.section-title h2 {
-	font-size: var(--font-size-base);
-	font-weight: 600;
-	color: var(--ui-text);
-	margin: 0;
-}
-
-.section-title p {
-	font-size: var(--font-size-xs);
-	color: var(--ui-text-muted);
-	margin: 0;
-}
-
-/* Reset button in header */
-.reset-button {
+.stat {
 	display: flex;
 	align-items: center;
 	gap: 0.375rem;
-	padding: 0.375rem 0.625rem;
+	font-family: inherit;
 	font-size: var(--font-size-xs);
-	font-weight: 500;
-	color: var(--ui-text-muted);
-	background: transparent;
-	border: 1px solid var(--ui-border);
-	border-radius: 0.375rem;
-	cursor: pointer;
-	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.reset-button:hover:not(:disabled) {
+.stat-label {
+	color: var(--ui-text-dimmed);
+	letter-spacing: 0.05em;
+}
+
+.stat-value {
+	font-weight: 600;
 	color: var(--ui-text);
+}
+
+/* LED Indicators */
+.led {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.led-success {
+	background: var(--ui-success);
+	box-shadow: 0 0 4px color-mix(in oklch, var(--ui-success) 50%, transparent);
+}
+
+.led-error {
+	background: var(--ui-error);
+	box-shadow: 0 0 4px color-mix(in oklch, var(--ui-error) 50%, transparent);
+}
+
+/* Language Tabs */
+.lang-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0;
+	padding: 0;
+}
+
+.lang-tab {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.5rem 0.75rem;
+	font-family: inherit;
+	font-size: var(--font-size-sm);
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	color: var(--ui-text-dimmed);
+	background: transparent;
+	border: none;
+	border-bottom: 2px solid transparent;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.lang-tab:hover:not(.active) {
+	color: var(--ui-text-muted);
 	background: var(--ui-bg-muted);
-	border-color: var(--ui-border);
 }
 
-.reset-button:active:not(:disabled) {
-	transform: scale(0.97);
+.lang-tab.active {
+	color: var(--ui-warning);
+	background: var(--ui-bg-elevated);
+	border-bottom-color: var(--ui-warning);
 }
 
-.reset-button:disabled {
+.lang-code {
+	display: block;
+}
+
+.lang-count {
+	font-size: 0.5625rem;
+	font-weight: 700;
+	padding: 0.0625rem 0.25rem;
+	background: var(--ui-bg-muted);
+	border-radius: 0.25rem;
+}
+
+.lang-tab.active .lang-count {
+	background: color-mix(in oklch, var(--ui-warning) 20%, transparent);
+	color: var(--ui-warning);
+}
+
+/* Content layout */
+.content {
+	display: flex;
+	flex-direction: column;
+	gap: 0.875rem;
+}
+
+/* Language Actions */
+.language-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+/* Button Styles */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	padding: 0.375rem 0.625rem;
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	border-radius: 0.25rem;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.btn-secondary {
+	color: var(--ui-text-muted);
+	background: var(--ui-bg);
+	border: 1px solid var(--ui-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+	color: var(--ui-text);
+	border-color: var(--ui-text-dimmed);
+}
+
+.btn-danger {
+	color: var(--ui-error);
+	background: transparent;
+	border: 1px solid var(--ui-error);
+}
+
+.btn-danger:hover:not(:disabled) {
+	background: color-mix(in oklch, var(--ui-error) 15%, transparent);
+	box-shadow: 0 0 8px color-mix(in oklch, var(--ui-error) 30%, transparent);
+}
+
+.btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
@@ -423,324 +487,206 @@ function formatChapterTitle(override: typeof filteredOverrides.value[number]): s
 	height: 0.75rem;
 }
 
-.reset-text {
+.btn-label {
 	display: none;
 }
 
 @media (min-width: 480px) {
-	.reset-text {
+	.btn-label {
 		display: inline;
 	}
 }
 
-.spinner {
-	width: 0.875rem;
-	height: 0.875rem;
-	animation: spin 0.8s linear infinite;
-}
-
-/* Section body */
-.section-body {
-	padding: 1rem 1.25rem 1.25rem;
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-}
-
-/* Language tabs */
-.language-tabs {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.375rem;
-	padding: 0.25rem;
-	background: var(--ui-bg);
-	border-radius: 0.5rem;
-	border: 1px solid var(--ui-border-muted);
-}
-
-.lang-tab {
-	position: relative;
-	display: flex;
-	align-items: center;
-	gap: 0.375rem;
-	padding: 0.375rem 0.625rem;
-	font-size: var(--font-size-xs);
-	font-weight: 600;
-	letter-spacing: 0.025em;
-	color: var(--ui-text-muted);
-	background: transparent;
-	border: none;
-	border-radius: 0.375rem;
-	cursor: pointer;
-	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.lang-tab:hover:not(.active) {
-	background: var(--ui-bg-muted);
-	color: var(--ui-text);
-}
-
-.lang-tab.active {
-	color: var(--ui-warning);
-	background: color-mix(in oklch, var(--ui-warning) 15%, transparent);
-	box-shadow: 0 1px 2px color-mix(in oklch, var(--ui-warning) 15%, transparent);
-}
-
-.lang-code {
-	display: block;
-}
-
-.lang-count {
-	font-size: 0.625rem;
-	font-weight: 700;
-	padding: 0.0625rem 0.25rem;
-	background: var(--ui-bg-muted);
-	border-radius: 0.25rem;
-}
-
-.lang-tab.active .lang-count {
-	background: color-mix(in oklch, var(--ui-warning) 25%, transparent);
-	color: var(--ui-warning);
-}
-
-/* Language actions */
-.language-actions {
-	display: flex;
-	justify-content: flex-end;
-}
-
-.reset-language-btn {
-	display: flex;
-	align-items: center;
-	gap: 0.375rem;
-	padding: 0.375rem 0.625rem;
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	color: var(--ui-text-muted);
-	background: var(--ui-bg);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.375rem;
-	cursor: pointer;
-	transition: all 0.15s ease;
-}
-
-.reset-language-btn:hover:not(:disabled) {
-	color: var(--ui-text);
-	background: var(--ui-bg-muted);
-}
-
-.reset-language-btn:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-
-/* Overrides section */
-.overrides-section {
-	display: flex;
-	flex-direction: column;
-	gap: 0.625rem;
-}
-
-.section-label {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-}
-
-.label-badge {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 1.375rem;
-	height: 1.375rem;
-	border-radius: 0.25rem;
-}
-
-.label-badge.enabled {
-	background: var(--ui-success-soft);
-}
-
-.label-badge.disabled {
-	background: var(--ui-error-soft);
-}
-
-.label-badge .label-icon {
-	width: 0.75rem;
-	height: 0.75rem;
-}
-
-.label-badge.enabled .label-icon {
-	color: var(--ui-success);
-}
-
-.label-badge.disabled .label-icon {
-	color: var(--ui-error);
-}
-
-.label-text {
-	font-size: var(--font-size-xs);
-	font-weight: 600;
-	color: var(--ui-text);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-}
-
-.label-count {
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	color: var(--ui-text-dimmed);
-	padding: 0.0625rem 0.375rem;
-	background: var(--ui-bg);
-	border: 1px solid var(--ui-border-muted);
-	border-radius: 9999px;
-}
-
-/* Overrides list */
-.overrides-list {
-	display: flex;
-	flex-direction: column;
-	gap: 0.25rem;
-}
-
-/* Override row */
-.override-row {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	padding: 0.625rem 0.75rem;
-	background: var(--ui-bg);
-	border: 1px solid var(--ui-border-muted);
-	border-radius: 0.5rem;
-	transition: all 0.15s ease;
-	animation: fadeSlideIn 0.25s ease-out backwards;
-	animation-delay: calc(var(--stagger, 0) * 30ms);
-}
-
-@keyframes fadeSlideIn {
-	from {
-		opacity: 0;
-		transform: translateY(-4px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-.override-row:hover {
-	background: var(--ui-bg-muted);
-	border-color: var(--ui-border);
-}
-
-/* Override info */
-.override-info {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	gap: 0.125rem;
-	min-width: 0;
-}
-
-.override-chapter {
-	font-size: var(--font-size-sm);
-	font-weight: 500;
-	color: var(--ui-text);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.override-meta {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	font-size: var(--font-size-xs);
-	color: var(--ui-text-muted);
-}
-
-.meta-source {
-	font-weight: 500;
-}
-
-.meta-groups {
-	opacity: 0.7;
-}
-
-/* Override actions */
-.override-actions {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	flex-shrink: 0;
-}
-
-.action-btn {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 1.5rem;
-	height: 1.5rem;
-	background: var(--ui-bg-muted);
-	border: 1px solid var(--ui-border-muted);
-	border-radius: 0.25rem;
-	cursor: pointer;
-	transition: all 0.15s ease;
-}
-
-.action-btn:hover:not(:disabled) {
-	background: var(--ui-bg-elevated);
-	border-color: var(--ui-border);
-}
-
-.action-btn:active:not(:disabled) {
-	transform: scale(0.95);
-}
-
-.action-btn:disabled {
-	opacity: 0.4;
-	cursor: not-allowed;
-}
-
-.action-icon {
-	width: 0.75rem;
-	height: 0.75rem;
-	color: var(--ui-text-muted);
-}
-
-/* Override badge */
-.override-badge {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 1.5rem;
-	height: 1.5rem;
-	border-radius: 0.375rem;
-	flex-shrink: 0;
-}
-
-.override-badge.enabled {
-	background: var(--ui-success-soft);
-}
-
-.override-badge.disabled {
-	background: var(--ui-error-soft);
-}
-
-.badge-icon {
-	width: 0.875rem;
-	height: 0.875rem;
-}
-
-.override-badge.enabled .badge-icon {
-	color: var(--ui-success);
-}
-
-.override-badge.disabled .badge-icon {
-	color: var(--ui-error);
+.spin {
+	animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
 	from { transform: rotate(0deg); }
 	to { transform: rotate(360deg); }
+}
+
+/* Overrides Table */
+.overrides-table {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	background: var(--ui-bg);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
+	overflow: hidden;
+}
+
+.table-header {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	border-bottom: 1px solid var(--ui-border);
+}
+
+.table-header.enabled {
+	background: color-mix(in oklch, var(--ui-success) 8%, transparent);
+	color: var(--ui-success);
+}
+
+.table-header.disabled {
+	background: color-mix(in oklch, var(--ui-error) 8%, transparent);
+	color: var(--ui-error);
+}
+
+.table-title {
+	flex: 1;
+}
+
+.table-count {
+	font-weight: 500;
+	color: var(--ui-text-dimmed);
+	padding: 0.0625rem 0.375rem;
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
+}
+
+/* Override Row */
+.override-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	font-family: inherit;
+	font-size: var(--font-size-sm);
+	background: var(--ui-bg-elevated);
+	border-bottom: 1px solid var(--ui-border);
+	transition: all 0.15s ease;
+}
+
+.override-row:last-child {
+	border-bottom: none;
+}
+
+.override-row:hover {
+	background: var(--ui-bg-muted);
+}
+
+/* Override Status */
+.override-status {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.25rem;
+	height: 1.25rem;
+	border-radius: 0.25rem;
+	flex-shrink: 0;
+}
+
+.override-status.enabled {
+	background: color-mix(in oklch, var(--ui-success) 15%, transparent);
+	border: 1px solid var(--ui-success);
+}
+
+.override-status.disabled {
+	background: color-mix(in oklch, var(--ui-error) 15%, transparent);
+	border: 1px solid var(--ui-error);
+}
+
+.status-icon {
+	font-weight: 700;
+	font-size: 0.875rem;
+	line-height: 1;
+}
+
+.override-status.enabled .status-icon {
+	color: var(--ui-success);
+}
+
+.override-status.disabled .status-icon {
+	color: var(--ui-error);
+}
+
+/* Override Info */
+.override-info {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.override-chapter {
+	color: var(--ui-text);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.override-separator {
+	color: var(--ui-text-dimmed);
+	flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+	.override-separator {
+		display: none;
+	}
+}
+
+.override-source {
+	color: var(--ui-primary);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.override-groups {
+	color: var(--ui-text-dimmed);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Action Button */
+.action-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.375rem;
+	height: 1.375rem;
+	background: transparent;
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
+	cursor: pointer;
+	flex-shrink: 0;
+	opacity: 0.5;
+	transition: all 0.15s ease;
+}
+
+.override-row:hover .action-btn {
+	opacity: 1;
+}
+
+.action-btn:disabled {
+	opacity: 0.3 !important;
+	cursor: not-allowed;
+}
+
+.action-btn.reset:hover:not(:disabled) {
+	color: var(--ui-warning);
+	border-color: var(--ui-warning);
+	background: color-mix(in oklch, var(--ui-warning) 15%, transparent);
+	box-shadow: 0 0 6px color-mix(in oklch, var(--ui-warning) 30%, transparent);
+}
+
+.action-icon {
+	width: 0.625rem;
+	height: 0.625rem;
+	color: var(--ui-text-muted);
+}
+
+.action-btn:hover:not(:disabled) .action-icon {
+	color: inherit;
 }
 </style>

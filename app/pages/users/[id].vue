@@ -38,22 +38,13 @@ function formatDate(date: Date | string | null): string {
 	<div class="user-detail-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar>
-					<template #title>
-						<UBreadcrumb
-							:items="[
-								{ label: 'Users', to: '/users' },
-								{ label: data?.user.name || data?.user.email || 'User' },
-							]"
-						/>
-					</template>
-					<template #right>
-						<UiBackButton
-							to="/users"
-							label="Back to Users"
-						/>
-					</template>
-				</UDashboardNavbar>
+				<UiPageHeader
+					:items="[
+						{ label: 'Users', to: '/users' },
+						{ label: data?.user.name || data?.user.email || 'User' },
+					]"
+					back-to="/users"
+				/>
 			</template>
 
 			<template #body>
@@ -402,7 +393,7 @@ function formatDate(date: Date | string | null): string {
 	flex-direction: column;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	overflow: hidden;
 }
 
@@ -412,7 +403,7 @@ function formatDate(date: Date | string | null): string {
 	flex-direction: column;
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	overflow: hidden;
 }
 

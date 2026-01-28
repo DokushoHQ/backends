@@ -1,21 +1,39 @@
+/* Import JetBrains Mono font for monospace styling */
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
 @import "tailwindcss";
 @import "@nuxt/ui";
 
 /* Theme imports */
 @import "./themes/default.css";
 @import "./themes/old-manga.css";
+@import "./themes/command-center.css";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
 	/* Typography scale (shared across all themes) */
-	--font-size-xs: 0.75rem;      /* 12px - badges, small text */
-	--font-size-sm: 0.8125rem;    /* 13px - labels, meta text */
-	--font-size-base: 0.875rem;   /* 14px - body text, descriptions */
-	--font-size-md: 0.9375rem;    /* 15px - preview titles */
-	--font-size-lg: 1.0625rem;    /* 17px - card titles */
-	--font-size-xl: 1.25rem;      /* 20px - section headings */
-	--font-size-2xl: 1.5rem;      /* 24px - stat values, large headings */
+	--font-size-xs: 0.75rem; /* 12px - badges, small text */
+	--font-size-sm: 0.8125rem; /* 13px - labels, meta text */
+	--font-size-base: 0.875rem; /* 14px - body text, descriptions */
+	--font-size-md: 0.9375rem; /* 15px - preview titles */
+	--font-size-lg: 1.0625rem; /* 17px - card titles */
+	--font-size-xl: 1.25rem; /* 20px - section headings */
+	--font-size-2xl: 1.5rem; /* 24px - stat values, large headings */
+
+	/* Font families */
+	--font-body: ui-sans-serif, system-ui, sans-serif;
+	--font-mono:
+		ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+	/* Border radius */
+	--radius-panel: 0.375rem; /* 6px - panels, small cards */
+	--radius-card: 0.75rem; /* 12px - content cards, large cards */
+
+	/* Sidebar dimensions */
+	--sidebar-width: 15rem; /* 240px expanded */
+	--sidebar-collapsed-width: 4rem; /* 64px - matches icon center position */
+	--sidebar-mobile-width: 18rem; /* 288px mobile drawer */
 }
 
 @layer base {
@@ -24,6 +42,18 @@
 	}
 	body {
 		@apply bg-(--ui-bg) text-(--ui-text);
+		font-family: var(--font-body);
 	}
 }
 
+/* Hide sidebar text immediately when collapsed (before Vue hydration) */
+html.sidebar-collapsed .sidebar-title,
+html.sidebar-collapsed .nav-label,
+html.sidebar-collapsed .user-info,
+html.sidebar-collapsed .footer-btn-label,
+html.sidebar-collapsed .theme-btn-label {
+	opacity: 0;
+	visibility: hidden;
+	width: 0;
+	overflow: hidden;
+}

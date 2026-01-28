@@ -80,18 +80,11 @@ function handleTryAgain() {
 	<div class="backup-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Import Backup"
 					description="Upload your backup file"
+					back-to="/series/import"
 				>
-					<template #leading>
-						<UButton
-							icon="i-lucide-arrow-left"
-							variant="ghost"
-							size="sm"
-							@click="router.push('/series/import')"
-						/>
-					</template>
 					<template #right>
 						<ImporterSharedCartBadge
 							v-if="cart.cartCount.value > 0"
@@ -99,7 +92,7 @@ function handleTryAgain() {
 							@click="router.push('/series/import/review')"
 						/>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 			</template>
 
 			<template #body>
@@ -356,7 +349,7 @@ function handleTryAgain() {
 /* Drop Zone */
 .drop-zone {
 	border: 2px dashed var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	padding: 2.5rem 2rem;
 	text-align: center;
 	cursor: pointer;

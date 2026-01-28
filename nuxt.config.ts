@@ -4,11 +4,22 @@ export default defineNuxtConfig({
 	devtools: { enabled: true },
 	app: {
 		head: {
+			link: [
+				{ rel: "icon", type: "image/png", href: "/favicon.png" },
+			],
+			meta: [
+				{ name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1" },
+			],
 			script: [
 				{
 					// Prevent theme flash by applying theme class before render
 					// Must match STORAGE_KEY and DEFAULT_THEME in useTheme.ts
 					innerHTML: `(function(){var t=localStorage.getItem('dokusho-theme')||'default';document.documentElement.classList.add('theme-'+t)})()`,
+				},
+				{
+					// Prevent sidebar flash by applying collapsed class before render
+					// Must match STORAGE_KEY in useSidebar.ts
+					innerHTML: `(function(){if(localStorage.getItem('dokusho-sidebar-collapsed')==='true')document.documentElement.classList.add('sidebar-collapsed')})()`,
 				},
 			],
 		},

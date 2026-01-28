@@ -113,18 +113,11 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 	<div class="settings-page">
 		<UDashboardPanel>
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Job Settings"
 					description="Manually trigger background jobs"
-				>
-					<template #left>
-						<UButton
-							variant="ghost"
-							icon="i-lucide-arrow-left"
-							to="/jobs"
-						/>
-					</template>
-				</UDashboardNavbar>
+					back-to="/jobs"
+				/>
 			</template>
 
 			<template #body>

@@ -209,38 +209,30 @@ async function handleDuplicate(input: { name: string, data: unknown, opts?: unkn
 <template>
 	<UDashboardPanel class="queue-page">
 		<template #header>
-			<UDashboardNavbar>
-				<template #title>
-					<UBreadcrumb
-						:items="[
-							{ label: 'Jobs', to: '/jobs' },
-							{ label: data?.queue.displayName ?? queueName },
-						]"
-					/>
-				</template>
+			<UiPageHeader
+				:items="[
+					{ label: 'Jobs', to: '/jobs' },
+					{ label: data?.queue.displayName ?? queueName },
+				]"
+				back-to="/jobs"
+			>
 				<template #right>
-					<div class="flex items-center gap-1.5 sm:gap-2">
-						<UButton
-							:variant="data?.stats?.paused ? 'solid' : 'outline'"
-							:color="data?.stats?.paused ? 'primary' : 'neutral'"
-							size="sm"
-							:loading="queuePausePending"
-							class="shrink-0"
-							@click="toggleQueuePause"
-						>
-							<UIcon
-								:name="data?.stats?.paused ? 'i-lucide-play' : 'i-lucide-pause'"
-								class="h-4 w-4 sm:mr-2"
-							/>
-							<span class="hidden sm:inline">{{ data?.stats?.paused ? "Resume Queue" : "Pause Queue" }}</span>
-						</UButton>
-						<UiBackButton
-							to="/jobs"
-							label="Back to Jobs"
+					<UButton
+						:variant="data?.stats?.paused ? 'solid' : 'outline'"
+						:color="data?.stats?.paused ? 'primary' : 'neutral'"
+						size="sm"
+						:loading="queuePausePending"
+						class="shrink-0"
+						@click="toggleQueuePause"
+					>
+						<UIcon
+							:name="data?.stats?.paused ? 'i-lucide-play' : 'i-lucide-pause'"
+							class="h-4 w-4 sm:mr-2"
 						/>
-					</div>
+						<span class="hidden sm:inline">{{ data?.stats?.paused ? "Resume Queue" : "Pause Queue" }}</span>
+					</UButton>
 				</template>
-			</UDashboardNavbar>
+			</UiPageHeader>
 		</template>
 
 		<template #body>

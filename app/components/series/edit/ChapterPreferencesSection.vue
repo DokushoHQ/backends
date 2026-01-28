@@ -18,11 +18,21 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const isPending = ref(false)
-const languageOverridesExpanded = ref(false)
-const unsplitOverridesExpanded = ref(false)
 
 // Languages available in the system
 const LANGUAGES = ["En", "Fr", "Jp", "JpRo", "Ko", "KoRo", "ZhHk", "Zh"] as const
+
+// Display labels for languages (shorter, distinct)
+const LANGUAGE_LABELS: Record<string, string> = {
+	En: "EN",
+	Fr: "FR",
+	Jp: "JP",
+	JpRo: "JP·R",
+	Ko: "KO",
+	KoRo: "KO·R",
+	ZhHk: "HK",
+	Zh: "ZH",
+}
 
 // Fetch chapter preferences
 const { data: preferenceData, refresh: refreshPreference } = await useFetch(`/api/v1/serie/${props.serieId}/chapter-preference`)
@@ -119,42 +129,32 @@ async function savePreferences() {
 	}
 }
 
-// Get override status text for a language (for fallback)
-function getFallbackOverrideText(lang: string) {
+// Get effective value for a language (override or default)
+function getFallbackEffective(lang: string): boolean {
 	const val = localFallbackOverrides.value[lang]
-	if (val === undefined) return "Use default"
-	return val ? "Enabled" : "Disabled"
+	return val !== undefined ? val : localFallbackDefault.value
 }
 
-// Cycle through fallback override states: undefined -> true -> false -> undefined
+function getUnsplitEffective(lang: string): boolean {
+	const val = localUnsplitOverrides.value[lang]
+	return val !== undefined ? val : localUnsplitDefault.value
+}
+
+// Cycle through override states: undefined -> true -> false -> undefined
 function cycleFallbackOverride(lang: string) {
 	const current = localFallbackOverrides.value[lang]
 	if (current === undefined) {
-		localFallbackOverrides.value[lang] = true
-	}
-	else if (current === true) {
-		localFallbackOverrides.value[lang] = false
+		localFallbackOverrides.value[lang] = !localFallbackDefault.value
 	}
 	else {
 		localFallbackOverrides.value[lang] = undefined
 	}
 }
 
-// Get override status text for a language (for unsplit)
-function getUnsplitOverrideText(lang: string) {
-	const val = localUnsplitOverrides.value[lang]
-	if (val === undefined) return "Use default"
-	return val ? "Enabled" : "Disabled"
-}
-
-// Cycle through unsplit override states: undefined -> true -> false -> undefined
 function cycleUnsplitOverride(lang: string) {
 	const current = localUnsplitOverrides.value[lang]
 	if (current === undefined) {
-		localUnsplitOverrides.value[lang] = true
-	}
-	else if (current === true) {
-		localUnsplitOverrides.value[lang] = false
+		localUnsplitOverrides.value[lang] = !localUnsplitDefault.value
 	}
 	else {
 		localUnsplitOverrides.value[lang] = undefined
@@ -164,7 +164,7 @@ function cycleUnsplitOverride(lang: string) {
 // Move source up in priority
 async function moveSourceUp(sourceId: string) {
 	const idx = sortedSources.value.findIndex(s => s.id === sourceId)
-	if (idx <= 1) return // Can't move primary or first non-primary
+	if (idx <= 1) return
 
 	const source = sortedSources.value[idx]
 	const aboveSource = sortedSources.value[idx - 1]
@@ -243,204 +243,168 @@ async function moveSourceDown(sourceId: string) {
 </script>
 
 <template>
-	<section
+	<UiPanel
 		v-if="sources.length > 1"
-		class="edit-section"
+		header-muted
 	>
-		<div class="section-header">
-			<div class="section-title">
-				<div class="section-icon">
-					<UIcon
-						name="i-lucide-layers"
-						class="icon"
-					/>
-				</div>
-				<div>
-					<h2>Chapter Preferences</h2>
-					<p>Configure how secondary sources fill missing chapters</p>
+		<template #header>
+			<div class="header-row">
+				<div class="header-title">
+					<div class="led active" />
+					<span>FALLBACK MATRIX</span>
 				</div>
 			</div>
-		</div>
+		</template>
+		<div class="content">
+			<!-- Toggle defaults -->
+			<div class="defaults">
+				<div class="default-row">
+					<span class="default-label">SECONDARY FALLBACK</span>
+					<UiToggleSwitch
+						v-model="localFallbackDefault"
+						:disabled="isPending"
+						show-label
+					/>
+				</div>
+				<p class="default-desc">
+					Fill missing chapters from secondary sources
+				</p>
 
-		<div class="section-body">
-			<div class="settings-grid">
-				<!-- Left Column: Fallback Settings -->
-				<div class="settings-column">
-					<!-- Secondary Fallback Toggle -->
-					<div class="setting-block">
-						<div class="setting-header">
-							<h3>Secondary Fallback</h3>
-							<button
-								class="toggle-button"
-								:class="{ active: localFallbackDefault }"
-								:disabled="isPending"
-								@click="localFallbackDefault = !localFallbackDefault"
-							>
-								<span class="toggle-track">
-									<span class="toggle-thumb" />
-								</span>
-								<span class="toggle-label">{{ localFallbackDefault ? 'On' : 'Off' }}</span>
-							</button>
-						</div>
-						<p class="setting-description">
-							When primary source is missing a chapter, use secondary sources to fill the gap
-						</p>
-					</div>
+				<div class="default-row">
+					<span class="default-label">PREFER UNSPLIT</span>
+					<UiToggleSwitch
+						v-model="localUnsplitDefault"
+						:disabled="isPending"
+						show-label
+					/>
+				</div>
+				<p class="default-desc">
+					Prefer whole chapters over split versions
+				</p>
+			</div>
 
-					<!-- Language Overrides for Secondary Fallback -->
-					<div class="setting-block">
-						<button
-							class="expand-header"
-							@click="languageOverridesExpanded = !languageOverridesExpanded"
+			<!-- Matrix grid -->
+			<div class="matrix-section">
+				<span class="matrix-label">LANGUAGE OVERRIDES</span>
+				<div class="matrix">
+					<!-- Header row -->
+					<div class="matrix-row matrix-header">
+						<div class="matrix-cell matrix-corner" />
+						<div
+							v-for="lang in LANGUAGES"
+							:key="lang"
+							class="matrix-cell matrix-col-header"
 						>
-							<span class="expand-label">Language Overrides</span>
-							<UIcon
-								:name="languageOverridesExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-								class="expand-icon"
+							{{ LANGUAGE_LABELS[lang] }}
+						</div>
+					</div>
+					<!-- Fallback row -->
+					<div class="matrix-row">
+						<div
+							class="matrix-cell matrix-row-header"
+							title="Use secondary sources to fill missing chapters"
+						>
+							FALLBACK
+						</div>
+						<button
+							v-for="lang in LANGUAGES"
+							:key="`fb-${lang}`"
+							class="matrix-cell matrix-btn"
+							:class="{
+								active: getFallbackEffective(lang),
+								override: localFallbackOverrides[lang] !== undefined,
+							}"
+							:disabled="isPending"
+							:title="`${lang}: ${localFallbackOverrides[lang] !== undefined ? 'Override' : 'Default'} - ${getFallbackEffective(lang) ? 'Enabled' : 'Disabled'}`"
+							@click="cycleFallbackOverride(lang)"
+						>
+							<span
+								class="led"
+								:class="{ active: getFallbackEffective(lang) }"
 							/>
 						</button>
-						<p class="setting-description">
-							Override the secondary fallback setting for specific languages. Click to cycle: Use default → Enabled → Disabled
-						</p>
-
+					</div>
+					<!-- Unsplit row -->
+					<div class="matrix-row">
 						<div
-							v-if="languageOverridesExpanded"
-							class="overrides-list"
+							class="matrix-cell matrix-row-header"
+							title="Prefer whole chapters over split versions"
 						>
-							<div
-								v-for="lang in LANGUAGES"
-								:key="lang"
-								class="override-item"
-							>
-								<span class="override-lang">{{ lang }}</span>
-								<button
-									class="override-toggle"
-									:class="{
-										'use-default': localFallbackOverrides[lang] === undefined,
-										'enabled': localFallbackOverrides[lang] === true,
-										'disabled': localFallbackOverrides[lang] === false,
-									}"
-									:disabled="isPending"
-									@click="cycleFallbackOverride(lang)"
-								>
-									{{ getFallbackOverrideText(lang) }}
-								</button>
-							</div>
+							UNSPLIT
 						</div>
-					</div>
-
-					<!-- Prefer Unsplit Toggle -->
-					<div class="setting-block">
-						<div class="setting-header">
-							<h3>Prefer Unsplit Chapters</h3>
-							<button
-								class="toggle-button"
-								:class="{ active: localUnsplitDefault }"
-								:disabled="isPending"
-								@click="localUnsplitDefault = !localUnsplitDefault"
-							>
-								<span class="toggle-track">
-									<span class="toggle-thumb" />
-								</span>
-								<span class="toggle-label">{{ localUnsplitDefault ? 'On' : 'Off' }}</span>
-							</button>
-						</div>
-						<p class="setting-description">
-							When enabled, whole chapters (Ch 1) take priority over split versions (Ch 1.1, 1.2, 1.3) even from secondary sources
-						</p>
-					</div>
-
-					<!-- Language Overrides for Prefer Unsplit -->
-					<div class="setting-block">
 						<button
-							class="expand-header"
-							@click="unsplitOverridesExpanded = !unsplitOverridesExpanded"
+							v-for="lang in LANGUAGES"
+							:key="`us-${lang}`"
+							class="matrix-cell matrix-btn"
+							:class="{
+								active: getUnsplitEffective(lang),
+								override: localUnsplitOverrides[lang] !== undefined,
+							}"
+							:disabled="isPending"
+							:title="`${lang}: ${localUnsplitOverrides[lang] !== undefined ? 'Override' : 'Default'} - ${getUnsplitEffective(lang) ? 'Enabled' : 'Disabled'}`"
+							@click="cycleUnsplitOverride(lang)"
 						>
-							<span class="expand-label">Unsplit Language Overrides</span>
-							<UIcon
-								:name="unsplitOverridesExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-								class="expand-icon"
+							<span
+								class="led"
+								:class="{ active: getUnsplitEffective(lang) }"
 							/>
 						</button>
-						<p class="setting-description">
-							Override the prefer unsplit setting for specific languages. Click to cycle: Use default → Enabled → Disabled
-						</p>
-
-						<div
-							v-if="unsplitOverridesExpanded"
-							class="overrides-list"
-						>
-							<div
-								v-for="lang in LANGUAGES"
-								:key="lang"
-								class="override-item"
-							>
-								<span class="override-lang">{{ lang }}</span>
-								<button
-									class="override-toggle"
-									:class="{
-										'use-default': localUnsplitOverrides[lang] === undefined,
-										'enabled': localUnsplitOverrides[lang] === true,
-										'disabled': localUnsplitOverrides[lang] === false,
-									}"
-									:disabled="isPending"
-									@click="cycleUnsplitOverride(lang)"
-								>
-									{{ getUnsplitOverrideText(lang) }}
-								</button>
-							</div>
-						</div>
 					</div>
 				</div>
+				<p class="matrix-hint">
+					Click to toggle override. Circle = uses default.
+				</p>
+			</div>
 
-				<!-- Right Column: Source Priority -->
-				<div class="settings-column">
-					<div class="setting-block">
-						<h3>Source Priority</h3>
-						<p class="setting-description">
-							Order determines which secondary source is preferred when filling gaps
-						</p>
-
-						<div class="sources-list">
+			<!-- Source Priority Queue -->
+			<div class="priority-section">
+				<span class="priority-label">SOURCE PRIORITY QUEUE</span>
+				<div class="priority-list">
+					<div
+						v-for="(source, idx) in sortedSources"
+						:key="source.id"
+						class="priority-item"
+					>
+						<span class="priority-rank">{{ idx + 1 }}</span>
+						<span
+							class="priority-name"
+							:title="source.source.name"
+						>{{ source.source.name }}</span>
+						<div class="priority-bar">
 							<div
-								v-for="(source, idx) in sortedSources"
-								:key="source.id"
-								class="source-row"
-							>
-								<span class="source-rank">{{ idx + 1 }}.</span>
-								<span class="source-name">{{ source.source.name }}</span>
-								<span
-									v-if="source.is_primary"
-									class="primary-badge"
-								>Primary</span>
-								<div
-									v-else
-									class="priority-controls"
+								class="priority-fill"
+								:style="{ width: `${100 - (idx * 15)}%` }"
+							/>
+						</div>
+						<div class="priority-actions">
+							<span
+								v-if="source.is_primary"
+								class="primary-tag"
+							>PRI</span>
+							<template v-else>
+								<button
+									class="priority-btn"
+									:disabled="isPending || idx <= 1"
+									title="Move up"
+									@click="moveSourceUp(source.id)"
 								>
-									<button
-										class="priority-btn"
-										:disabled="isPending || idx <= 1"
-										title="Move up"
-										@click="moveSourceUp(source.id)"
-									>
-										<UIcon
-											name="i-lucide-chevron-up"
-											class="btn-icon"
-										/>
-									</button>
-									<button
-										class="priority-btn"
-										:disabled="isPending || idx >= sortedSources.length - 1"
-										title="Move down"
-										@click="moveSourceDown(source.id)"
-									>
-										<UIcon
-											name="i-lucide-chevron-down"
-											class="btn-icon"
-										/>
-									</button>
-								</div>
-							</div>
+									<UIcon
+										name="i-lucide-chevron-up"
+										class="priority-icon"
+									/>
+								</button>
+								<button
+									class="priority-btn"
+									:disabled="isPending || idx >= sortedSources.length - 1"
+									title="Move down"
+									@click="moveSourceDown(source.id)"
+								>
+									<UIcon
+										name="i-lucide-chevron-down"
+										class="priority-icon"
+									/>
+								</button>
+							</template>
 						</div>
 					</div>
 				</div>
@@ -452,338 +416,269 @@ async function moveSourceDown(sourceId: string) {
 				class="save-row"
 			>
 				<button
-					class="save-button"
+					class="save-btn"
 					:disabled="isPending"
 					@click="savePreferences"
 				>
 					<UIcon
 						v-if="isPending"
 						name="i-lucide-loader-2"
-						class="spinner"
+						class="btn-icon spin"
 					/>
-					<template v-else>
-						Save Preferences
-					</template>
+					<span v-else>SAVE PREFERENCES</span>
 				</button>
 			</div>
 		</div>
-	</section>
+	</UiPanel>
 </template>
 
 <style scoped>
-.edit-section {
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+/* Header */
+.header-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
+.header-title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: var(--font-size-sm);
+	font-weight: 600;
+	color: var(--ui-text-muted);
+	letter-spacing: 0.05em;
+}
+
+/* Content layout */
+.content {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+/* Defaults section */
+.defaults {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.default-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.default-label {
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-text);
+	letter-spacing: 0.05em;
+}
+
+.default-desc {
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-dimmed);
+	margin: 0 0 0.75rem 0;
+}
+
+/* Matrix section */
+.matrix-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.matrix-label {
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-text-muted);
+	letter-spacing: 0.1em;
+}
+
+.matrix {
+	display: grid;
+	grid-template-columns: 5rem repeat(8, 1fr);
+	background: var(--ui-border);
+	gap: 1px;
+	border-radius: 0.25rem;
 	overflow: hidden;
 }
 
-/* Section header */
-.section-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1rem;
-	padding: 1rem 1.25rem;
-	border-bottom: 1px solid var(--ui-border-muted);
+.matrix-row {
+	display: contents;
 }
 
-.section-title {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-}
-
-.section-icon {
+.matrix-cell {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 2rem;
-	height: 2rem;
-	background: color-mix(in oklch, var(--color-purple) 15%, transparent);
-	border-radius: 0.375rem;
-}
-
-.section-icon .icon {
-	width: 1rem;
-	height: 1rem;
-	color: var(--color-purple);
-}
-
-.section-title h2 {
-	font-size: var(--font-size-base);
+	padding: 0.5rem 0.375rem;
+	background: var(--ui-bg-elevated);
+	font-family: inherit;
+	font-size: var(--font-size-xs);
 	font-weight: 600;
-	color: var(--ui-text);
-	margin: 0;
+	min-height: 2rem;
 }
 
-.section-title p {
-	font-size: var(--font-size-xs);
-	color: var(--ui-text-muted);
-	margin: 0;
-}
-
-/* Section body */
-.section-body {
-	padding: 1.25rem;
-	display: flex;
-	flex-direction: column;
-	gap: 1.5rem;
-}
-
-/* Settings grid - two columns on large screens */
-.settings-grid {
-	display: grid;
-	gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-	.settings-grid {
-		grid-template-columns: 1fr 1fr;
-		gap: 2rem;
-	}
-}
-
-.settings-column {
-	display: flex;
-	flex-direction: column;
-	gap: 1.5rem;
-}
-
-/* Setting blocks */
-.setting-block {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-}
-
-.setting-block h3 {
-	font-size: var(--font-size-sm);
-	font-weight: 600;
-	color: var(--ui-text);
-	margin: 0;
-}
-
-.setting-description {
-	font-size: var(--font-size-xs);
-	color: var(--ui-text-muted);
-	margin: 0;
-	line-height: 1.5;
-}
-
-.setting-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1rem;
-}
-
-/* Toggle button */
-.toggle-button {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0;
-	background: none;
-	border: none;
-	cursor: pointer;
-}
-
-.toggle-button:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-
-.toggle-track {
-	position: relative;
-	width: 2.5rem;
-	height: 1.375rem;
-	background: var(--ui-bg-muted);
-	border: 1px solid var(--ui-border);
-	border-radius: 2rem;
-	transition: all 0.2s ease;
-}
-
-.toggle-button.active .toggle-track {
-	background: var(--ui-primary);
-	border-color: var(--ui-primary);
-}
-
-.toggle-thumb {
-	position: absolute;
-	top: 0.125rem;
-	left: 0.125rem;
-	width: 1rem;
-	height: 1rem;
-	background: white;
-	border-radius: 50%;
-	transition: transform 0.2s ease;
-}
-
-.toggle-button.active .toggle-thumb {
-	transform: translateX(1.125rem);
-}
-
-.toggle-label {
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	color: var(--ui-text-muted);
-}
-
-.toggle-button.active .toggle-label {
-	color: var(--ui-primary);
-}
-
-/* Expand header */
-.expand-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	width: 100%;
-	padding: 0.625rem 0.875rem;
-	font-size: var(--font-size-sm);
-	font-weight: 500;
-	color: var(--ui-text);
-	background: var(--ui-bg-muted);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.5rem;
-	cursor: pointer;
-	transition: background-color 0.15s ease;
-}
-
-.expand-header:hover {
-	background: var(--ui-border);
-}
-
-.expand-label {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-}
-
-.expand-icon {
-	width: 1rem;
-	height: 1rem;
-	color: var(--ui-text-muted);
-}
-
-/* Overrides list */
-.overrides-list {
-	display: flex;
-	flex-direction: column;
-	gap: 0.375rem;
-	padding-top: 0.5rem;
-}
-
-.override-item {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 0.5rem 0.75rem;
+.matrix-corner {
 	background: var(--ui-bg);
-	border: 1px solid var(--ui-border-muted);
-	border-radius: 0.375rem;
 }
 
-.override-lang {
-	font-size: var(--font-size-sm);
-	font-weight: 500;
-	color: var(--ui-text);
+.matrix-col-header,
+.matrix-row-header {
+	color: var(--ui-text-muted);
+	background: var(--ui-bg-muted);
+	letter-spacing: 0.02em;
 }
 
-.override-toggle {
-	padding: 0.25rem 0.625rem;
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	border: 1px solid var(--ui-border);
-	border-radius: 2rem;
+.matrix-row-header {
+	justify-content: flex-start;
+	padding-left: 0.75rem;
+	cursor: help;
+}
+
+.matrix-btn {
 	cursor: pointer;
+	border: none;
 	transition: all 0.15s ease;
 }
 
-.override-toggle.use-default {
-	color: var(--ui-text-muted);
+.matrix-btn:hover:not(:disabled) {
 	background: var(--ui-bg-muted);
 }
 
-.override-toggle.enabled {
-	color: var(--ui-success);
-	background: var(--ui-success-soft);
-	border-color: transparent;
-}
-
-.override-toggle.disabled {
-	color: var(--ui-error);
-	background: var(--ui-error-soft);
-	border-color: transparent;
-}
-
-.override-toggle:hover:not(:disabled) {
-	filter: brightness(0.95);
-}
-
-.override-toggle:disabled {
+.matrix-btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
-/* Sources list */
-.sources-list {
+.matrix-btn.override {
+	background: color-mix(in oklch, var(--ui-primary) 10%, var(--ui-bg-elevated));
+}
+
+/* LED */
+.led {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--ui-text-dimmed);
+	transition: all 0.2s ease;
+}
+
+.led.active {
+	background: var(--ui-primary);
+	box-shadow: 0 0 4px color-mix(in oklch, var(--ui-primary) 30%, transparent);
+}
+
+.matrix-hint {
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-dimmed);
+	margin: 0;
+	font-style: italic;
+}
+
+/* Priority section */
+.priority-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.priority-label {
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-text-muted);
+	letter-spacing: 0.1em;
+}
+
+.priority-list {
 	display: flex;
 	flex-direction: column;
 	gap: 0.375rem;
-	margin-top: 0.5rem;
 }
 
-.source-row {
+.priority-item {
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
-	padding: 0.625rem 0.875rem;
+	gap: 0.5rem;
+	padding: 0.5rem 0.625rem;
 	background: var(--ui-bg);
-	border: 1px solid var(--ui-border-muted);
-	border-radius: 0.5rem;
-}
-
-.source-rank {
-	font-size: var(--font-size-sm);
-	font-weight: 600;
-	color: var(--ui-text-muted);
-	min-width: 1.5rem;
-}
-
-.source-name {
-	flex: 1;
-	font-size: var(--font-size-sm);
-	font-weight: 500;
-	color: var(--ui-text);
-}
-
-.primary-badge {
-	display: inline-flex;
-	align-items: center;
-	padding: 0.125rem 0.5rem;
-	font-size: var(--font-size-xs);
-	font-weight: 600;
-	color: var(--ui-primary);
-	background: var(--ui-primary-soft);
+	border: 1px solid var(--ui-border);
 	border-radius: 0.25rem;
 }
 
-.priority-controls {
+.priority-rank {
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-text-muted);
+	min-width: 1rem;
+}
+
+.priority-bar {
+	flex: 1;
+	height: 0.375rem;
+	background: var(--ui-bg-muted);
+	border-radius: 0.125rem;
+	overflow: hidden;
+}
+
+.priority-fill {
+	height: 100%;
+	background: linear-gradient(90deg, var(--ui-primary), var(--ui-primary));
+	border-radius: 0.125rem;
+	transition: width 0.3s ease;
+}
+
+.priority-name {
+	font-family: inherit;
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+	width: 10rem;
+	flex-shrink: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.primary-tag {
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-primary);
+	padding: 0.125rem 0.375rem;
+	background: color-mix(in oklch, var(--ui-primary) 15%, transparent);
+	border-radius: 0.125rem;
+	letter-spacing: 0.05em;
+}
+
+.priority-actions {
 	display: flex;
 	gap: 0.25rem;
+	width: 3.5rem;
+	flex-shrink: 0;
+	justify-content: flex-end;
 }
 
 .priority-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 1.75rem;
-	height: 1.75rem;
+	width: 1.25rem;
+	height: 1.25rem;
 	background: var(--ui-bg-muted);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.375rem;
+	border-radius: 0.25rem;
 	cursor: pointer;
 	transition: all 0.15s ease;
 }
@@ -797,9 +692,9 @@ async function moveSourceDown(sourceId: string) {
 	cursor: not-allowed;
 }
 
-.btn-icon {
-	width: 1rem;
-	height: 1rem;
+.priority-icon {
+	width: 0.75rem;
+	height: 0.75rem;
 	color: var(--ui-text-muted);
 }
 
@@ -808,38 +703,43 @@ async function moveSourceDown(sourceId: string) {
 	display: flex;
 	justify-content: flex-end;
 	padding-top: 0.5rem;
-	border-top: 1px solid var(--ui-border-muted);
+	border-top: 1px solid var(--ui-border);
 }
 
-.save-button {
+.save-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 0.5rem;
-	min-width: 8rem;
-	padding: 0.625rem 1.25rem;
-	font-size: var(--font-size-sm);
-	font-weight: 500;
+	gap: 0.375rem;
+	padding: 0.5rem 1rem;
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
 	color: var(--ui-bg);
 	background: var(--ui-primary);
-	border: none;
-	border-radius: 0.5rem;
+	border: 1px solid var(--ui-primary);
+	border-radius: 0.25rem;
 	cursor: pointer;
-	transition: opacity 0.15s ease;
+	letter-spacing: 0.05em;
+	transition: all 0.15s ease;
 }
 
-.save-button:hover:not(:disabled) {
-	opacity: 0.9;
+.save-btn:hover:not(:disabled) {
+	background: color-mix(in oklch, var(--ui-primary) 85%, white);
+	box-shadow: 0 0 8px color-mix(in oklch, var(--ui-primary) 30%, transparent);
 }
 
-.save-button:disabled {
+.save-btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
-.spinner {
-	width: 1rem;
-	height: 1rem;
+.btn-icon {
+	width: 0.875rem;
+	height: 0.875rem;
+}
+
+.spin {
 	animation: spin 1s linear infinite;
 }
 

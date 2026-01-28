@@ -1,6 +1,9 @@
 <script setup lang="ts">
 const { currentTheme, availableThemes, setTheme, colorModePreference, setColorMode } = useTheme()
 
+// Local computed to ensure reactivity after hydration
+const selectedThemeId = computed(() => currentTheme.value)
+
 const colorModeOptions = [
 	{ label: "Light", value: "light", icon: "i-lucide-sun" },
 	{ label: "Dark", value: "dark", icon: "i-lucide-moon" },
@@ -15,39 +18,65 @@ const colorModeOptions = [
 			<h3 class="section-title">
 				Theme
 			</h3>
-			<div class="theme-grid">
-				<button
-					v-for="theme in availableThemes"
-					:key="theme.id"
-					class="theme-card"
-					:class="{ selected: currentTheme === theme.id }"
-					@click="setTheme(theme.id)"
-				>
-					<div class="theme-preview">
-						<div class="preview-light">
-							<div class="preview-card" />
-							<div class="preview-card" />
-						</div>
-						<div class="preview-dark">
-							<div class="preview-card" />
-							<div class="preview-card" />
-						</div>
-					</div>
-					<div class="theme-info">
-						<span class="theme-name">{{ theme.name }}</span>
-						<span class="theme-description">{{ theme.description }}</span>
-					</div>
-					<div
-						v-if="currentTheme === theme.id"
-						class="selected-indicator"
+			<ClientOnly>
+				<div class="theme-grid">
+					<button
+						v-for="theme in availableThemes"
+						:key="theme.id"
+						class="theme-card"
+						:class="{ selected: selectedThemeId === theme.id }"
+						@click="setTheme(theme.id)"
 					>
-						<UIcon
-							name="i-lucide-check"
-							class="h-4 w-4"
-						/>
+						<div class="theme-preview">
+							<div class="preview-light">
+								<div class="preview-card" />
+								<div class="preview-card" />
+							</div>
+							<div class="preview-dark">
+								<div class="preview-card" />
+								<div class="preview-card" />
+							</div>
+						</div>
+						<div class="theme-info">
+							<span class="theme-name">{{ theme.name }}</span>
+							<span class="theme-description">{{ theme.description }}</span>
+						</div>
+						<div
+							v-if="selectedThemeId === theme.id"
+							class="selected-indicator"
+						>
+							<UIcon
+								name="i-lucide-check"
+								class="h-4 w-4"
+							/>
+						</div>
+					</button>
+				</div>
+				<template #fallback>
+					<div class="theme-grid">
+						<div
+							v-for="theme in availableThemes"
+							:key="theme.id"
+							class="theme-card"
+						>
+							<div class="theme-preview">
+								<div class="preview-light">
+									<div class="preview-card" />
+									<div class="preview-card" />
+								</div>
+								<div class="preview-dark">
+									<div class="preview-card" />
+									<div class="preview-card" />
+								</div>
+							</div>
+							<div class="theme-info">
+								<span class="theme-name">{{ theme.name }}</span>
+								<span class="theme-description">{{ theme.description }}</span>
+							</div>
+						</div>
 					</div>
-				</button>
-			</div>
+				</template>
+			</ClientOnly>
 		</div>
 
 		<!-- Color Mode -->
@@ -108,7 +137,7 @@ const colorModeOptions = [
 	padding: 0.75rem;
 	background: var(--ui-bg-elevated);
 	border: 2px solid var(--ui-border);
-	border-radius: 0.75rem;
+	border-radius: var(--radius-card);
 	cursor: pointer;
 	transition: all 0.15s ease;
 	text-align: left;
