@@ -40,18 +40,11 @@ function selectSource(source: { id: string }) {
 	<div class="source-select-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Select Source"
 					description="Choose a source to browse"
+					back-to="/series/import"
 				>
-					<template #leading>
-						<UButton
-							icon="i-lucide-arrow-left"
-							variant="ghost"
-							size="sm"
-							@click="router.push('/series/import')"
-						/>
-					</template>
 					<template #right>
 						<ImporterSharedCartBadge
 							v-if="cart.cartCount.value > 0"
@@ -59,7 +52,7 @@ function selectSource(source: { id: string }) {
 							@click="router.push('/series/import/review')"
 						/>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 			</template>
 
 			<template #body>

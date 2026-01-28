@@ -109,22 +109,13 @@ useHead({
 	<div class="serie-detail-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar>
-					<template #title>
-						<UBreadcrumb
-							:items="[
-								{ label: 'Series', to: '/series' },
-								{ label: title.length > 30 ? `${title.slice(0, 30)}...` : title },
-							]"
-						/>
-					</template>
-					<template #right>
-						<UiBackButton
-							to="/series"
-							label="Back to Series"
-						/>
-					</template>
-				</UDashboardNavbar>
+				<UiPageHeader
+					:items="[
+						{ label: 'Series', to: '/series' },
+						{ label: title },
+					]"
+					back-to="/series"
+				/>
 			</template>
 
 			<template #body>

@@ -29,7 +29,7 @@ async function triggerSourceRefresh(sourceId: string) {
 	<div class="sources-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Sources"
 					description="Monitor scraper health and manage data sources"
 				>
@@ -51,7 +51,7 @@ async function triggerSourceRefresh(sourceId: string) {
 							<span class="hidden sm:inline">Refresh</span>
 						</UButton>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 			</template>
 
 			<template #body>

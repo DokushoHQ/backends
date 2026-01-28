@@ -39,18 +39,11 @@ async function handleAddToCart() {
 	<div class="urls-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Import URLs"
 					description="Paste URLs or upload a file"
+					back-to="/series/import"
 				>
-					<template #leading>
-						<UButton
-							icon="i-lucide-arrow-left"
-							variant="ghost"
-							size="sm"
-							@click="router.push('/series/import')"
-						/>
-					</template>
 					<template #right>
 						<ImporterSharedCartBadge
 							v-if="cart.cartCount.value > 0"
@@ -58,7 +51,7 @@ async function handleAddToCart() {
 							@click="router.push('/series/import/review')"
 						/>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 			</template>
 
 			<template #body>

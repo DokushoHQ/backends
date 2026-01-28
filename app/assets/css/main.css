@@ -4,6 +4,7 @@
 /* Theme imports */
 @import "./themes/default.css";
 @import "./themes/old-manga.css";
+@import "./themes/command-center.css";
 
 @custom-variant dark (&:is(.dark *));
 

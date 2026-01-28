@@ -18,6 +18,11 @@ const availableThemes: Theme[] = [
 		name: "Old Manga Paper",
 		description: "Warm cream tones inspired by aged manga pages",
 	},
+	{
+		id: "command-center",
+		name: "Command Center",
+		description: "Dark utilitarian control panel with cyan accents",
+	},
 ]
 
 export function useTheme() {

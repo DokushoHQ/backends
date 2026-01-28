@@ -163,34 +163,32 @@ const selectedStatus = computed({
 	<div class="duplicates-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Duplicates"
 					:description="`${pagination.total} pairs to review`"
+					back-to="/attention"
 				>
 					<template #right>
-						<div class="navbar-right">
-							<UiSegmentedControl
-								v-model="selectedStatus"
-								:options="statusOptions"
-								class="desktop-only"
+						<UiSegmentedControl
+							v-model="selectedStatus"
+							:options="statusOptions"
+							class="desktop-only"
+						/>
+						<button
+							class="scan-button"
+							:class="{ scanning: detecting }"
+							:disabled="detecting"
+							@click="startDetection"
+						>
+							<UIcon
+								:name="detecting ? 'i-lucide-loader-2' : 'i-lucide-radar'"
+								class="scan-icon"
+								:class="{ 'animate-spin': detecting }"
 							/>
-							<button
-								class="scan-button"
-								:class="{ scanning: detecting }"
-								:disabled="detecting"
-								@click="startDetection"
-							>
-								<UIcon
-									:name="detecting ? 'i-lucide-loader-2' : 'i-lucide-radar'"
-									class="scan-icon"
-									:class="{ 'animate-spin': detecting }"
-								/>
-								<span class="scan-label">{{ detecting ? 'Scanning' : 'Scan' }}</span>
-							</button>
-							<UiBackButton to="/attention" />
-						</div>
+							<span class="scan-label">{{ detecting ? 'Scanning' : 'Scan' }}</span>
+						</button>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 				<div class="mobile-filter-bar">
 					<UiSegmentedControl
 						v-model="selectedStatus"

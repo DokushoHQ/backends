@@ -133,18 +133,11 @@ function getSourceType(source: SourceItem): "native" | "suwayomi" {
 	<div class="settings-page">
 		<UDashboardPanel>
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Source Settings"
 					description="Configure global source priority and availability"
-				>
-					<template #left>
-						<UButton
-							variant="ghost"
-							icon="i-lucide-arrow-left"
-							to="/sources"
-						/>
-					</template>
-				</UDashboardNavbar>
+					back-to="/sources"
+				/>
 			</template>
 
 			<template #body>

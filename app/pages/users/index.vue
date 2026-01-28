@@ -43,7 +43,7 @@ function formatDate(date: Date | string): string {
 	<div class="users-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Users"
 					description="Manage user accounts and permissions"
 				/>

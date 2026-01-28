@@ -42,7 +42,7 @@ function handleClose() {
 	<div class="processing-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					:title="processing.processingComplete.value ? 'Import Complete' : 'Importing...'"
 					:description="processing.processingComplete.value ? 'All series have been processed' : 'Import in progress'"
 				/>

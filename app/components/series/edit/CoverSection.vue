@@ -88,251 +88,343 @@ async function uploadCover(url: string) {
 		isPending.value = false
 	}
 }
-
-const statusLabels: Record<typeof uploadStatus.value, string> = {
-	idle: "Upload",
-	uploading: "Uploading...",
-	processing: "Processing...",
-	completed: "Done!",
-	error: "Failed",
-}
-
-const uploadButtonText = computed(() => statusLabels[uploadStatus.value])
 </script>
 
 <template>
-	<section class="edit-section">
-		<div class="section-header">
-			<div class="section-title">
-				<div class="section-icon">
-					<UIcon
-						name="i-lucide-image"
-						class="icon"
-					/>
-				</div>
-				<div>
-					<h2>Cover</h2>
-					<p>The cover image displayed for this series</p>
-				</div>
+	<div class="cover-section">
+		<!-- Cover Preview with Brackets -->
+		<div class="cover-frame">
+			<div
+				v-if="serie.cover"
+				class="cover-image-wrapper"
+			>
+				<NuxtImg
+					:src="serie.cover"
+					alt="Cover"
+					class="cover-image"
+				/>
+				<!-- Corner brackets -->
+				<div class="bracket bracket-tl" />
+				<div class="bracket bracket-tr" />
+				<div class="bracket bracket-bl" />
+				<div class="bracket bracket-br" />
 			</div>
-			<button
-				class="lock-toggle"
-				:class="{ locked: isLocked }"
-				:disabled="isPending"
-				@click="toggleLock"
+			<div
+				v-else
+				class="no-cover"
 			>
 				<UIcon
-					:name="isLocked ? 'i-lucide-lock' : 'i-lucide-lock-open'"
-					class="lock-icon"
+					name="i-lucide-image-off"
+					class="no-cover-icon"
 				/>
-				<span>{{ isLocked ? "Locked" : "Auto" }}</span>
-			</button>
+				<span>NO SIGNAL</span>
+			</div>
 		</div>
 
-		<div class="section-body">
-			<!-- Cover gallery -->
-			<div class="cover-gallery">
-				<span class="label">{{ isLocked ? 'Select cover' : 'Current cover' }}</span>
-				<div class="gallery-grid">
-					<!-- Current cover -->
-					<div
-						v-if="serie.cover"
-						class="cover-item current"
-						:class="{ selectable: isLocked }"
-					>
-						<NuxtImg
-							:src="serie.cover"
-							alt="Current cover"
-							class="cover-image"
-						/>
-						<div class="cover-badge current-badge">
-							<UIcon
-								name="i-lucide-check"
-								class="badge-icon"
-							/>
-							Current
-						</div>
-					</div>
-
-					<!-- Alternative covers (only when locked) -->
-					<template v-if="isLocked">
-						<button
-							v-for="cover in sourceCovers.filter(c => !c.isCurrent)"
-							:key="cover.sourceName"
-							class="cover-item selectable"
-							:disabled="isPending"
-							@click="uploadCover(cover.url)"
-						>
-							<NuxtImg
-								:src="cover.url"
-								:alt="`${cover.sourceName} cover`"
-								class="cover-image"
-							/>
-							<div class="cover-label">
-								{{ cover.sourceName }}
-								<span
-									v-if="cover.isPrimary && serie.sources.length > 1"
-									class="primary-tag"
-								>Primary</span>
-							</div>
-						</button>
-					</template>
-
-					<!-- No cover placeholder -->
-					<div
-						v-if="!serie.cover && sourceCovers.length === 0"
-						class="no-cover"
-					>
-						<UIcon
-							name="i-lucide-image-off"
-							class="no-cover-icon"
-						/>
-						<span>No cover available</span>
-					</div>
-				</div>
+		<!-- Source Selector -->
+		<div class="source-selector">
+			<div class="selector-header">
+				<span class="selector-label">SOURCE</span>
+				<button
+					class="lock-toggle"
+					:class="{ locked: isLocked }"
+					:disabled="isPending"
+					@click="toggleLock"
+				>
+					<span
+						class="led"
+						:class="{ active: isLocked }"
+					/>
+					<span class="lock-text">{{ isLocked ? 'LOCKED' : 'AUTO' }}</span>
+				</button>
 			</div>
 
-			<!-- Custom URL upload (only when locked) -->
-			<template v-if="isLocked">
-				<div class="custom-upload">
-					<span class="label">Upload from URL</span>
-					<p class="upload-hint">
-						Image will be downloaded and stored permanently
-					</p>
-					<div class="upload-row">
-						<input
-							v-model="customCoverUrl"
-							type="url"
-							placeholder="https://example.com/cover.jpg"
-							class="url-input"
-							:disabled="uploadStatus !== 'idle'"
-						>
-						<button
-							class="upload-button"
-							:class="{
-								success: uploadStatus === 'completed',
-								error: uploadStatus === 'error',
-							}"
-							:disabled="uploadStatus !== 'idle' || !customCoverUrl"
-							@click="uploadCover(customCoverUrl)"
-						>
-							<UIcon
-								v-if="uploadStatus === 'uploading' || uploadStatus === 'processing'"
-								name="i-lucide-loader-2"
-								class="spinner"
-							/>
-							<UIcon
-								v-else-if="uploadStatus === 'completed'"
-								name="i-lucide-check"
-								class="status-icon"
-							/>
-							<UIcon
-								v-else-if="uploadStatus === 'error'"
-								name="i-lucide-x"
-								class="status-icon"
-							/>
-							<span>{{ uploadButtonText }}</span>
-						</button>
+			<div class="source-list">
+				<!-- Current source indicator when not locked -->
+				<template v-if="!isLocked">
+					<div
+						v-for="cover in sourceCovers"
+						:key="cover.sourceName"
+						class="source-item"
+						:class="{ current: cover.isCurrent }"
+					>
+						<span
+							class="led"
+							:class="{ active: cover.isCurrent }"
+						/>
+						<span class="source-name">{{ cover.sourceName }}</span>
+						<span
+							v-if="cover.isPrimary"
+							class="primary-tag"
+						>PRI</span>
 					</div>
-					<p
-						v-if="uploadStatus === 'processing'"
-						class="status-message processing"
-					>
-						<UIcon
-							name="i-lucide-loader-2"
-							class="spinner-sm"
-						/>
-						Processing image... This may take a few seconds.
-					</p>
-					<p
-						v-if="uploadError"
-						class="status-message error"
-					>
-						<UIcon
-							name="i-lucide-alert-circle"
-							class="error-icon"
-						/>
-						{{ uploadError }}
-					</p>
-				</div>
-			</template>
+				</template>
 
-			<!-- Unlocked hint -->
-			<p
-				v-else
-				class="hint"
+				<!-- Selectable sources when locked -->
+				<template v-else>
+					<button
+						v-for="cover in sourceCovers"
+						:key="cover.sourceName"
+						class="source-item selectable"
+						:class="{ current: cover.isCurrent }"
+						:disabled="isPending"
+						@click="uploadCover(cover.url)"
+					>
+						<span
+							class="led"
+							:class="{ active: cover.isCurrent }"
+						/>
+						<span class="source-name">{{ cover.sourceName }}</span>
+						<span
+							v-if="cover.isPrimary"
+							class="primary-tag"
+						>PRI</span>
+					</button>
+				</template>
+			</div>
+		</div>
+
+		<!-- Custom URL Upload (only when locked) -->
+		<div
+			v-if="isLocked"
+			class="upload-section"
+		>
+			<span class="upload-label">UPLOAD FROM URL</span>
+			<div class="terminal-wrapper">
+				<span class="terminal-prompt">&gt;</span>
+				<input
+					v-model="customCoverUrl"
+					type="url"
+					placeholder="https://..."
+					class="terminal-input"
+					:disabled="uploadStatus !== 'idle'"
+					@keyup.enter="uploadCover(customCoverUrl)"
+				>
+			</div>
+			<button
+				class="upload-btn"
+				:class="{
+					processing: uploadStatus === 'uploading' || uploadStatus === 'processing',
+					success: uploadStatus === 'completed',
+					error: uploadStatus === 'error',
+				}"
+				:disabled="uploadStatus !== 'idle' || !customCoverUrl"
+				@click="uploadCover(customCoverUrl)"
 			>
-				Lock this field to select a different cover or upload a custom one. When unlocked, the cover updates automatically from sources.
+				<UIcon
+					v-if="uploadStatus === 'uploading' || uploadStatus === 'processing'"
+					name="i-lucide-loader-2"
+					class="btn-icon spin"
+				/>
+				<UIcon
+					v-else-if="uploadStatus === 'completed'"
+					name="i-lucide-check"
+					class="btn-icon"
+				/>
+				<UIcon
+					v-else-if="uploadStatus === 'error'"
+					name="i-lucide-x"
+					class="btn-icon"
+				/>
+				<span>{{
+					uploadStatus === 'idle' ? 'UPLOAD' :
+					uploadStatus === 'uploading' ? 'SENDING...' :
+					uploadStatus === 'processing' ? 'PROCESSING...' :
+					uploadStatus === 'completed' ? 'DONE' : 'FAILED'
+				}}</span>
+			</button>
+			<p
+				v-if="uploadError"
+				class="error-text"
+			>
+				<span class="led error" />
+				{{ uploadError }}
 			</p>
 		</div>
-	</section>
+
+		<!-- Hint when unlocked -->
+		<p
+			v-else
+			class="hint"
+		>
+			Lock to select source or upload custom cover
+		</p>
+	</div>
 </template>
 
 <style scoped>
-.edit-section {
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.75rem;
+.cover-section {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* Cover Frame with Brackets */
+.cover-frame {
+	position: relative;
+	width: 100%;
+	max-width: 12rem;
+}
+
+.cover-image-wrapper {
+	position: relative;
+	aspect-ratio: 2 / 3;
+	background: var(--ui-bg);
+	border-radius: 0.25rem;
 	overflow: hidden;
 }
 
-/* Section header */
-.section-header {
+.cover-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+/* Corner brackets */
+.bracket {
+	position: absolute;
+	width: 16px;
+	height: 16px;
+	pointer-events: none;
+	z-index: 10;
+}
+
+.bracket::before,
+.bracket::after {
+	content: "";
+	position: absolute;
+	background: var(--ui-primary);
+}
+
+.bracket-tl {
+	top: 4px;
+	left: 4px;
+}
+.bracket-tl::before {
+	top: 0;
+	left: 0;
+	width: 12px;
+	height: 2px;
+}
+.bracket-tl::after {
+	top: 0;
+	left: 0;
+	width: 2px;
+	height: 12px;
+}
+
+.bracket-tr {
+	top: 4px;
+	right: 4px;
+}
+.bracket-tr::before {
+	top: 0;
+	right: 0;
+	width: 12px;
+	height: 2px;
+}
+.bracket-tr::after {
+	top: 0;
+	right: 0;
+	width: 2px;
+	height: 12px;
+}
+
+.bracket-bl {
+	bottom: 4px;
+	left: 4px;
+}
+.bracket-bl::before {
+	bottom: 0;
+	left: 0;
+	width: 12px;
+	height: 2px;
+}
+.bracket-bl::after {
+	bottom: 0;
+	left: 0;
+	width: 2px;
+	height: 12px;
+}
+
+.bracket-br {
+	bottom: 4px;
+	right: 4px;
+}
+.bracket-br::before {
+	bottom: 0;
+	right: 0;
+	width: 12px;
+	height: 2px;
+}
+.bracket-br::after {
+	bottom: 0;
+	right: 0;
+	width: 2px;
+	height: 12px;
+}
+
+/* No cover placeholder */
+.no-cover {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	aspect-ratio: 2 / 3;
+	background: var(--ui-bg);
+	border: 1px dashed var(--ui-border);
+	border-radius: 0.25rem;
+}
+
+.no-cover-icon {
+	width: 1.5rem;
+	height: 1.5rem;
+	color: var(--ui-text-dimmed);
+}
+
+.no-cover span {
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+	color: var(--ui-text-dimmed);
+	letter-spacing: 0.1em;
+}
+
+/* Source Selector */
+.source-selector {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.selector-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 1rem;
-	padding: 1rem 1.25rem;
-	border-bottom: 1px solid var(--ui-border-muted);
+	gap: 0.5rem;
 }
 
-.section-title {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-}
-
-.section-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 2rem;
-	height: 2rem;
-	background: color-mix(in oklch, var(--color-purple) 15%, transparent);
-	border-radius: 0.375rem;
-}
-
-.section-icon .icon {
-	width: 1rem;
-	height: 1rem;
-	color: var(--color-purple);
-}
-
-.section-title h2 {
-	font-size: var(--font-size-base);
-	font-weight: 600;
-	color: var(--ui-text);
-	margin: 0;
-}
-
-.section-title p {
+.selector-label {
 	font-size: var(--font-size-xs);
+	font-weight: 600;
 	color: var(--ui-text-muted);
-	margin: 0;
+	letter-spacing: 0.1em;
 }
 
-/* Lock toggle */
 .lock-toggle {
 	display: flex;
 	align-items: center;
 	gap: 0.375rem;
-	padding: 0.375rem 0.75rem;
+	padding: 0.25rem 0.5rem;
+	font-family: inherit;
 	font-size: var(--font-size-xs);
 	font-weight: 500;
 	color: var(--ui-text-muted);
-	background: var(--ui-bg-muted);
+	background: var(--ui-bg);
 	border: 1px solid var(--ui-border);
-	border-radius: 2rem;
+	border-radius: 0.25rem;
 	cursor: pointer;
 	transition: all 0.15s ease;
 }
@@ -343,8 +435,8 @@ const uploadButtonText = computed(() => statusLabels[uploadStatus.value])
 
 .lock-toggle.locked {
 	color: var(--ui-primary);
-	background: var(--ui-primary-soft);
-	border-color: transparent;
+	border-color: var(--ui-primary);
+	background: color-mix(in oklch, var(--ui-primary) 10%, transparent);
 }
 
 .lock-toggle:disabled {
@@ -352,222 +444,195 @@ const uploadButtonText = computed(() => statusLabels[uploadStatus.value])
 	cursor: not-allowed;
 }
 
-.lock-icon {
-	width: 0.875rem;
-	height: 0.875rem;
+.lock-text {
+	letter-spacing: 0.05em;
 }
 
-/* Section body */
-.section-body {
-	padding: 1.25rem;
-	display: flex;
-	flex-direction: column;
-	gap: 1.25rem;
+/* LED indicator */
+.led {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--ui-text-dimmed);
+	flex-shrink: 0;
+	transition: all 0.2s ease;
 }
 
-/* Labels */
-.label {
-	display: block;
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	color: var(--ui-text-muted);
-	text-transform: uppercase;
-	letter-spacing: 0.03em;
-	margin-bottom: 0.5rem;
-}
-
-/* Cover gallery */
-.cover-gallery {
-	padding-top: 0.25rem;
-}
-
-.gallery-grid {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 1rem;
-}
-
-.cover-item {
-	position: relative;
-	width: 7rem;
-	border-radius: 0.5rem;
-	overflow: hidden;
-	background: var(--ui-bg-muted);
-	border: 2px solid transparent;
-	transition: all 0.15s ease;
-}
-
-.cover-item.selectable {
-	cursor: pointer;
-}
-
-.cover-item.selectable:hover:not(:disabled) {
-	border-color: var(--ui-text-muted);
-}
-
-.cover-item.current {
-	border-color: var(--ui-primary);
-}
-
-.cover-item:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-
-.cover-image {
-	width: 100%;
-	aspect-ratio: 2 / 3;
-	object-fit: cover;
-	display: block;
-}
-
-.cover-badge {
-	position: absolute;
-	top: 0.375rem;
-	left: 0.375rem;
-	display: flex;
-	align-items: center;
-	gap: 0.25rem;
-	padding: 0.25rem 0.5rem;
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	border-radius: 0.25rem;
-}
-
-.current-badge {
-	color: var(--ui-bg);
+.led.active {
 	background: var(--ui-primary);
+	box-shadow: 0 0 4px color-mix(in oklch, var(--ui-primary) 30%, transparent);
 }
 
-.badge-icon {
-	width: 0.75rem;
-	height: 0.75rem;
+.led.error {
+	background: var(--ui-error);
+	box-shadow: 0 0 4px color-mix(in oklch, var(--ui-error) 30%, transparent);
 }
 
-.cover-label {
-	position: absolute;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	padding: 0.375rem 0.5rem;
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	color: white;
-	background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-	text-align: center;
-}
-
-.primary-tag {
-	display: block;
-	font-size: 0.625rem;
-	opacity: 0.8;
-}
-
-.no-cover {
+/* Source list */
+.source-list {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	width: 7rem;
-	aspect-ratio: 2 / 3;
-	background: var(--ui-bg-muted);
-	border: 1px dashed var(--ui-border);
-	border-radius: 0.5rem;
-	color: var(--ui-text-dimmed);
+	gap: 0.25rem;
 }
 
-.no-cover-icon {
-	width: 1.5rem;
-	height: 1.5rem;
-	margin-bottom: 0.25rem;
-}
-
-.no-cover span {
-	font-size: var(--font-size-xs);
-}
-
-/* Custom upload */
-.custom-upload {
-	padding-top: 0.25rem;
-}
-
-.upload-hint {
-	font-size: var(--font-size-xs);
-	color: var(--ui-text-dimmed);
-	margin: -0.25rem 0 0.75rem 0;
-}
-
-.upload-row {
+.source-item {
 	display: flex;
+	align-items: center;
 	gap: 0.5rem;
-}
-
-.url-input {
-	flex: 1;
-	padding: 0.625rem 0.875rem;
-	font-size: var(--font-size-sm);
+	padding: 0.5rem 0.625rem;
+	font-family: inherit;
+	font-size: var(--font-size-xs);
 	color: var(--ui-text);
 	background: var(--ui-bg);
 	border: 1px solid var(--ui-border);
-	border-radius: 0.5rem;
-	outline: none;
-	transition: border-color 0.15s ease;
+	border-radius: 0.25rem;
+	text-align: left;
 }
 
-.url-input::placeholder {
-	color: var(--ui-text-dimmed);
+.source-item.selectable {
+	cursor: pointer;
+	transition: all 0.15s ease;
 }
 
-.url-input:focus {
-	border-color: var(--ui-primary);
+.source-item.selectable:hover:not(:disabled) {
+	border-color: var(--ui-text-muted);
+	background: var(--ui-bg-muted);
 }
 
-.url-input:disabled {
+.source-item.selectable:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
-.upload-button {
+.source-item.current {
+	border-color: var(--ui-primary);
+	background: color-mix(in oklch, var(--ui-primary) 8%, var(--ui-bg-elevated));
+}
+
+.source-name {
+	flex: 1;
+}
+
+.primary-tag {
+	font-size: calc(var(--font-size-xs) - 0.0625rem);
+	font-weight: 600;
+	color: var(--ui-primary);
+	padding: 0.125rem 0.375rem;
+	background: color-mix(in oklch, var(--ui-primary) 15%, transparent);
+	border-radius: 0.125rem;
+	letter-spacing: 0.05em;
+}
+
+/* Upload section */
+.upload-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding-top: 0.5rem;
+	border-top: 1px solid var(--ui-border);
+}
+
+.upload-label {
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-text-muted);
+	letter-spacing: 0.1em;
+}
+
+/* Terminal input */
+.terminal-wrapper {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.terminal-prompt {
+	position: absolute;
+	left: 0.625rem;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-primary);
+	pointer-events: none;
+	z-index: 1;
+}
+
+.terminal-input {
+	width: 100%;
+	padding: 0.5rem 0.625rem 0.5rem 1.375rem;
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	color: var(--ui-primary);
+	background: var(--ui-bg);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.25rem;
+	outline: none;
+	transition: all 0.15s ease;
+}
+
+.terminal-input::placeholder {
+	color: var(--ui-text-dimmed);
+}
+
+.terminal-input:focus {
+	border-color: var(--ui-primary);
+	box-shadow: 0 0 0 1px color-mix(in oklch, var(--ui-primary) 20%, transparent);
+}
+
+.terminal-input:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Upload button */
+.upload-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 0.375rem;
-	min-width: 6rem;
-	padding: 0.625rem 1rem;
-	font-size: var(--font-size-sm);
-	font-weight: 500;
+	padding: 0.5rem 0.75rem;
+	font-family: inherit;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
 	color: var(--ui-bg);
 	background: var(--ui-primary);
-	border: none;
-	border-radius: 0.5rem;
+	border: 1px solid var(--ui-primary);
+	border-radius: 0.25rem;
 	cursor: pointer;
+	letter-spacing: 0.05em;
 	transition: all 0.15s ease;
 }
 
-.upload-button:hover:not(:disabled) {
-	opacity: 0.9;
+.upload-btn:hover:not(:disabled) {
+	background: color-mix(in oklch, var(--ui-primary) 85%, white);
+	box-shadow: 0 0 8px color-mix(in oklch, var(--ui-primary) 30%, transparent);
 }
 
-.upload-button:disabled {
+.upload-btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
-.upload-button.success {
+.upload-btn.processing {
+	background: var(--ui-warning);
+	border-color: var(--ui-warning);
+}
+
+.upload-btn.success {
 	background: var(--ui-success);
+	border-color: var(--ui-success);
 }
 
-.upload-button.error {
+.upload-btn.error {
 	background: var(--ui-error);
+	border-color: var(--ui-error);
 }
 
-.spinner,
-.status-icon {
-	width: 1rem;
-	height: 1rem;
+.btn-icon {
+	width: 0.875rem;
+	height: 0.875rem;
 }
 
-.spinner {
+.spin {
 	animation: spin 1s linear infinite;
 }
 
@@ -576,37 +641,21 @@ const uploadButtonText = computed(() => statusLabels[uploadStatus.value])
 	to { transform: rotate(360deg); }
 }
 
-.status-message {
+/* Error text */
+.error-text {
 	display: flex;
 	align-items: center;
 	gap: 0.375rem;
-	margin-top: 0.75rem;
 	font-size: var(--font-size-xs);
-}
-
-.status-message.processing {
-	color: var(--ui-info);
-}
-
-.status-message.error {
 	color: var(--ui-error);
-}
-
-.spinner-sm,
-.error-icon {
-	width: 0.875rem;
-	height: 0.875rem;
-}
-
-.spinner-sm {
-	animation: spin 1s linear infinite;
+	margin: 0;
 }
 
 /* Hint */
 .hint {
-	font-size: var(--font-size-sm);
-	color: var(--ui-text-muted);
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-dimmed);
 	margin: 0;
-	line-height: 1.5;
+	font-style: italic;
 }
 </style>

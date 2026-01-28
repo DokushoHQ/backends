@@ -65,8 +65,8 @@ const hasChapterIssues = computed(() =>
 	<div class="attention-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar title="Attention Center">
-					<template #description>
+				<UiPageHeader title="Attention Center">
+					<template #right>
 						<span
 							class="status-pill"
 							:class="{ 'all-clear': totalItems === 0 }"
@@ -75,7 +75,7 @@ const hasChapterIssues = computed(() =>
 							{{ totalItems === 0 ? 'All clear' : `${totalItems} items need review` }}
 						</span>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 			</template>
 
 			<template #body>

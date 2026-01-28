@@ -71,21 +71,19 @@ function setPage(newPage: number) {
 	<div class="issues-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Series Issues"
 					:description="`${pagination.total} series need attention`"
+					back-to="/attention"
 				>
 					<template #right>
-						<div class="navbar-right">
-							<UiSegmentedControl
-								v-model="selectedType"
-								:options="filterOptions"
-								class="desktop-only"
-							/>
-							<UiBackButton to="/attention" />
-						</div>
+						<UiSegmentedControl
+							v-model="selectedType"
+							:options="filterOptions"
+							class="desktop-only"
+						/>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 				<div class="mobile-filter-bar">
 					<UiSegmentedControl
 						v-model="selectedType"

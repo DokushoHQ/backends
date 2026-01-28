@@ -22,111 +22,95 @@ definePageMeta({
 useHead({
 	title: computed(() => title.value ? `Edit ${title.value} - Dokusho` : "Edit Series - Dokusho"),
 })
+
+// Refresh handler for child components
+const isRefreshing = ref(false)
+async function handleRefresh() {
+	isRefreshing.value = true
+	await refresh()
+	isRefreshing.value = false
+}
 </script>
 
 <template>
 	<div class="edit-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar>
-					<template #title>
-						<UBreadcrumb
-							:items="[
-								{ label: 'Series', to: '/series' },
-								{ label: title.length > 20 ? `${title.slice(0, 20)}...` : title, to: `/series/${serieId}` },
-								{ label: 'Edit' },
-							]"
-						/>
-					</template>
+				<UiPageHeader
+					:items="[
+						{ label: 'Series', to: '/series' },
+						{ label: title, to: `/series/${serieId}` },
+						{ label: 'Edit' },
+					]"
+					:back-to="`/series/${serieId}`"
+				>
 					<template #right>
-						<UiBackButton
-							:to="`/series/${serieId}`"
-							label="Back to Series"
-						/>
+						<button class="btn btn-secondary" :disabled="isRefreshing" @click="handleRefresh">
+							<UIcon :name="isRefreshing ? 'i-lucide-loader-2' : 'i-lucide-refresh-cw'"
+								:class="['btn-icon', { 'spin': isRefreshing }]" />
+							<span class="btn-label">Refresh</span>
+						</button>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 			</template>
 
 			<template #body>
 				<!-- Loading state -->
-				<div
-					v-if="pending"
-					class="loading-state"
-				>
-					<UIcon
-						name="i-lucide-loader-2"
-						class="loading-spinner"
-					/>
+				<div v-if="pending" class="loading-state">
+					<div class="loading-indicator">
+						<div class="led active pulse" />
+						<span class="loading-text">LOADING DATA...</span>
+					</div>
 				</div>
 
 				<!-- Error state -->
-				<div
-					v-else-if="error"
-					class="error-state"
-				>
-					<div class="error-icon">
-						<UIcon
-							name="i-lucide-alert-circle"
-							class="icon"
-						/>
+				<div v-else-if="error" class="error-state">
+					<div class="error-panel">
+						<div class="error-header">
+							<div class="led error" />
+							<span>SYSTEM ERROR</span>
+						</div>
+						<div class="error-body">
+							<p class="error-message">{{ error.message }}</p>
+							<button class="btn btn-secondary" @click="refresh()">
+								<UIcon name="i-lucide-refresh-cw" class="btn-icon" />
+								Retry
+							</button>
+						</div>
 					</div>
-					<h2>Failed to load series</h2>
-					<p>{{ error.message }}</p>
-					<button
-						class="retry-button"
-						@click="refresh()"
-					>
-						<UIcon
-							name="i-lucide-refresh-cw"
-							class="icon-sm"
-						/>
-						Try again
-					</button>
 				</div>
 
 				<!-- Main content -->
-				<div
-					v-else-if="serie"
-					class="edit-content"
-				>
-					<!-- Identity section: Cover + Title -->
-					<div class="identity-row">
-						<SeriesEditCoverSection
-							:serie="serie"
-							class="cover-section"
-							@updated="refresh"
-						/>
-						<div class="identity-text">
-							<SeriesEditTitleSection
-								:serie="serie"
-								@updated="refresh"
-							/>
-							<SeriesEditSynopsisSection
-								:serie="serie"
-								@updated="refresh"
-							/>
+				<div v-else-if="serie" class="page-content">
+					<!-- Identity Section: Cover + Title + Synopsis -->
+					<section class="content-section identity-section">
+						<div class="identity-grid">
+							<!-- Cover Column -->
+							<SeriesEditCoverSection :serie="serie" class="cover-column" @updated="handleRefresh" />
+
+							<!-- Identity Text Column -->
+							<div class="identity-text">
+								<SeriesEditTitleSection :serie="serie" @updated="handleRefresh" />
+								<SeriesEditSynopsisSection :serie="serie" @updated="handleRefresh" />
+							</div>
 						</div>
-					</div>
+					</section>
 
-					<!-- Preferences section -->
-					<div class="preferences-row">
-						<SeriesEditChapterPreferencesSection
-							:serie-id="serieId"
-							:sources="serie.sources"
-							@updated="refresh"
-						/>
+					<!-- Chapter Engine Section -->
+					<section class="content-section">
+						<div class="section-header">
+							<span>CHAPTER ENGINE</span>
+						</div>
+						<div class="engine-grid">
+							<SeriesEditChapterPreferencesSection :serie-id="serieId" :sources="serie.sources"
+								@updated="handleRefresh" />
 
-						<SeriesEditGroupPreferencesSection
-							:serie-id="serieId"
-							@updated="refresh"
-						/>
-					</div>
+							<SeriesEditGroupPreferencesSection :serie-id="serieId" @updated="handleRefresh" />
+						</div>
+					</section>
 
-					<!-- Manual overrides section -->
-					<SeriesEditChapterOverridesSection
-						:serie-id="serieId"
-						@updated="refresh"
-					/>
+					<!-- Override Registry Section -->
+					<SeriesEditChapterOverridesSection :serie-id="serieId" @updated="handleRefresh" />
 				</div>
 			</template>
 		</UDashboardPanel>
@@ -134,29 +118,180 @@ useHead({
 </template>
 
 <style scoped>
-.edit-content {
-	display: flex;
-	flex-direction: column;
-	gap: 1.5rem;
-	max-width: 72rem;
+/* Page uses monospace font */
+.edit-page {
+	font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-/* Identity row: Cover + Title/Synopsis */
-.identity-row {
+/* Loading State */
+.loading-state {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4rem 2rem;
+}
+
+.loading-indicator {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.led {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--ui-text-dimmed);
+	box-shadow: 0 0 0 1px var(--ui-border);
+}
+
+.led.active {
+	background: var(--ui-primary);
+	box-shadow:
+		0 0 6px color-mix(in oklch, var(--ui-primary) 30%, transparent),
+		0 0 0 1px color-mix(in oklch, var(--ui-primary) 60%, transparent);
+}
+
+.led.error {
+	background: var(--ui-error);
+	box-shadow:
+		0 0 6px color-mix(in oklch, var(--ui-error) 30%, transparent),
+		0 0 0 1px color-mix(in oklch, var(--ui-error) 60%, transparent);
+}
+
+.pulse {
+	animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+	0%,
+	100% {
+		opacity: 1;
+	}
+
+	50% {
+		opacity: 0.5;
+	}
+}
+
+.loading-text {
+	font-size: var(--font-size-xs);
+	font-weight: 500;
+	color: var(--ui-text-muted);
+	letter-spacing: 0.1em;
+}
+
+/* Error State */
+.error-state {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4rem 2rem;
+}
+
+.error-panel {
+	max-width: 24rem;
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-error);
+	border-radius: 0.25rem;
+	overflow: hidden;
+}
+
+.error-header {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.625rem 0.875rem;
+	background: color-mix(in oklch, var(--ui-error) 10%, transparent);
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-error);
+	letter-spacing: 0.05em;
+}
+
+.error-body {
+	padding: 1rem;
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
 }
 
+.error-message {
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-muted);
+	margin: 0;
+	word-break: break-word;
+}
+
+/* Main Content */
+.page-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	width: 100%;
+	padding: 1rem;
+}
+
 @media (min-width: 768px) {
-	.identity-row {
+	.page-content {
+		padding: 1.5rem;
+	}
+}
+
+/* Sections */
+.content-section {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.section-header {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	color: var(--ui-text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+}
+
+.section-header::before {
+	content: "──";
+	color: var(--ui-text-dimmed);
+}
+
+.section-header::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: linear-gradient(90deg, var(--ui-text-dimmed), transparent);
+}
+
+/* Identity Section */
+.identity-section {
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.375rem;
+	padding: 1.25rem;
+}
+
+.identity-grid {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+	.identity-grid {
 		flex-direction: row;
 		gap: 1.5rem;
 	}
 
-	.cover-section {
+	.cover-column {
 		flex-shrink: 0;
-		width: 16rem;
+		width: 14rem;
 	}
 
 	.identity-text {
@@ -171,104 +306,19 @@ useHead({
 	gap: 1rem;
 }
 
-/* Preferences row: Chapter + Group preferences */
-.preferences-row {
+/* Engine Grid */
+.engine-grid {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
 }
 
 @media (min-width: 1024px) {
-	.preferences-row {
+	.engine-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: 1.5rem;
 		align-items: start;
 	}
-}
-
-/* Loading state */
-.loading-state {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 4rem 2rem;
-}
-
-.loading-spinner {
-	width: 2rem;
-	height: 2rem;
-	color: var(--ui-text-muted);
-	animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-	from { transform: rotate(0deg); }
-	to { transform: rotate(360deg); }
-}
-
-/* Error state */
-.error-state {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 4rem 2rem;
-	text-align: center;
-}
-
-.error-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 4rem;
-	height: 4rem;
-	margin-bottom: 1.5rem;
-	border-radius: 50%;
-	background: var(--ui-error-soft);
-}
-
-.error-icon .icon {
-	width: 2rem;
-	height: 2rem;
-	color: var(--ui-error);
-}
-
-.error-state h2 {
-	font-size: var(--font-size-xl);
-	font-weight: 600;
-	color: var(--ui-text);
-	margin: 0 0 0.5rem 0;
-}
-
-.error-state p {
-	font-size: var(--font-size-base);
-	color: var(--ui-text-muted);
-	max-width: 24rem;
-	margin: 0 0 1.5rem 0;
-}
-
-.retry-button {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.625rem 1rem;
-	font-size: var(--font-size-sm);
-	font-weight: 500;
-	color: var(--ui-text);
-	background: var(--ui-bg-muted);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.5rem;
-	cursor: pointer;
-	transition: background-color 0.15s ease;
-}
-
-.retry-button:hover {
-	background: var(--ui-border);
-}
-
-.icon-sm {
-	width: 1rem;
-	height: 1rem;
 }
 </style>

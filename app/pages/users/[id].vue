@@ -38,22 +38,13 @@ function formatDate(date: Date | string | null): string {
 	<div class="user-detail-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar>
-					<template #title>
-						<UBreadcrumb
-							:items="[
-								{ label: 'Users', to: '/users' },
-								{ label: data?.user.name || data?.user.email || 'User' },
-							]"
-						/>
-					</template>
-					<template #right>
-						<UiBackButton
-							to="/users"
-							label="Back to Users"
-						/>
-					</template>
-				</UDashboardNavbar>
+				<UiPageHeader
+					:items="[
+						{ label: 'Users', to: '/users' },
+						{ label: data?.user.name || data?.user.email || 'User' },
+					]"
+					back-to="/users"
+				/>
 			</template>
 
 			<template #body>

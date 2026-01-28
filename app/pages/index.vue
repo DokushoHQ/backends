@@ -78,7 +78,7 @@ function getIssueLabel(issue: string): string {
 	<div class="overview-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Overview"
 					description="Monitor your manga library at a glance"
 				/>

@@ -83,18 +83,11 @@ function handlePanelToggle() {
 	<div class="browse-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					:title="source?.name || 'Browse'"
 					description="Search and select series to import"
+					back-to="/series/import/browse"
 				>
-					<template #leading>
-						<UButton
-							icon="i-lucide-arrow-left"
-							variant="ghost"
-							size="sm"
-							@click="router.push('/series/import/browse')"
-						/>
-					</template>
 					<template #right>
 						<ImporterSharedCartBadge
 							v-if="cart.cartCount.value > 0"
@@ -108,7 +101,7 @@ function handlePanelToggle() {
 							@click="router.push('/series')"
 						/>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 			</template>
 
 			<template #body>

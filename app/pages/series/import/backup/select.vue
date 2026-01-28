@@ -62,18 +62,11 @@ async function handleAddToCart() {
 	<div class="select-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Select Manga"
 					description="Choose manga to import"
+					back-to="/series/import/backup"
 				>
-					<template #leading>
-						<UButton
-							icon="i-lucide-arrow-left"
-							variant="ghost"
-							size="sm"
-							@click="router.push('/series/import/backup')"
-						/>
-					</template>
 					<template #right>
 						<ImporterSharedCartBadge
 							v-if="cart.cartCount.value > 0"
@@ -81,7 +74,7 @@ async function handleAddToCart() {
 							@click="router.push('/series/import/review')"
 						/>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 			</template>
 
 			<template #body>

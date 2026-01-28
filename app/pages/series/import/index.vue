@@ -16,18 +16,11 @@ onMounted(() => {
 	<div class="import-entry-page flex flex-col flex-1 min-h-0">
 		<UDashboardPanel class="flex-1 min-h-0">
 			<template #header>
-				<UDashboardNavbar
+				<UiPageHeader
 					title="Import Series"
 					description="Choose how you want to add series"
+					back-to="/series"
 				>
-					<template #leading>
-						<UButton
-							icon="i-lucide-arrow-left"
-							variant="ghost"
-							size="sm"
-							@click="router.push('/series')"
-						/>
-					</template>
 					<template #right>
 						<ImporterSharedCartBadge
 							v-if="cart.cartCount.value > 0"
@@ -35,7 +28,7 @@ onMounted(() => {
 							@click="router.push('/series/import/review')"
 						/>
 					</template>
-				</UDashboardNavbar>
+				</UiPageHeader>
 			</template>
 
 			<template #body>
