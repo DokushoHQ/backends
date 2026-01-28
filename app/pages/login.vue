@@ -164,13 +164,14 @@ function resetVerificationState() {
 			<template #header>
 				<div class="text-center">
 					<div class="flex justify-center mb-4">
-						<UIcon
-							name="i-lucide-book-open"
-							class="h-12 w-12"
-						/>
+						<img
+							src="/favicon.png"
+							alt="Tsundoku"
+							class="h-12 w-12 rounded-lg"
+						>
 					</div>
 					<h1 class="text-2xl font-semibold">
-						Welcome to Dokusho
+						Welcome to Tsundoku
 					</h1>
 					<p class="text-sm text-muted-foreground">
 						{{ signupEnabled ? 'Sign in or create an account to access the dashboard' : 'Sign in to access the dashboard' }}

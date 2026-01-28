@@ -18,7 +18,7 @@ defineProps<Props>()
 					Hi {{ userName }},
 				</EText>
 				<EText style="color: #4a4a4a; font-size: 16px; line-height: 1.5; margin: 0 0 16px 0;">
-					We received a request to change the email address associated with your Dokusho account.
+					We received a request to change the email address associated with your Tsundoku account.
 				</EText>
 				<EText style="color: #4a4a4a; font-size: 16px; line-height: 1.5; margin: 0 0 24px 0;">
 					Your email is being changed to: <strong>{{ newEmail }}</strong>
@@ -31,7 +31,7 @@ defineProps<Props>()
 				</EText>
 				<EHr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
 				<EText style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0;">
-					This email was sent by Dokusho. If you have any questions, please contact your administrator.
+					This email was sent by Tsundoku. If you have any questions, please contact your administrator.
 				</EText>
 			</EContainer>
 		</EBody>

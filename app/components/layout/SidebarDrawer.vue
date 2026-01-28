@@ -49,10 +49,10 @@ function handleBackdropClick() {
 					<div class="drawer-header">
 						<img
 							src="/favicon.png"
-							alt="Dokusho"
+							alt="Tsundoku"
 							class="drawer-logo"
 						>
-						<span class="drawer-title">Dokusho</span>
+						<span class="drawer-title">Tsundoku</span>
 					</div>
 
 					<nav class="drawer-nav">

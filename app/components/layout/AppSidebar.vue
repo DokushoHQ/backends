@@ -27,13 +27,13 @@ const { collapsed, mobileOpen, toggle, closeMobile } = useSidebar()
 		<div class="sidebar-header">
 			<img
 				src="/favicon.png"
-				alt="Dokusho"
+				alt="Tsundoku"
 				class="sidebar-logo"
 			>
 			<span
 				class="sidebar-title"
 				:class="{ 'collapsed-title': collapsed }"
-			>Dokusho</span>
+			>Tsundoku</span>
 		</div>
 
 		<LayoutSidebarNav

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 useHead({
-	title: "Dokusho",
-	titleTemplate: "%s - Dokusho",
+	title: "Tsundoku",
+	titleTemplate: "%s - Tsundoku",
 })
 
 // Initialize theme on app mount

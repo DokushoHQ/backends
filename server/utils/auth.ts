@@ -49,7 +49,7 @@ function createAuth() {
 		bearer(),
 		lastLoginMethod(),
 		twoFactor({
-			issuer: "Dokusho",
+			issuer: "Tsundoku",
 		}),
 		openAPI(),
 	]

@@ -20,7 +20,7 @@ definePageMeta({
 })
 
 useHead({
-	title: computed(() => title.value ? `Edit ${title.value} - Dokusho` : "Edit Series - Dokusho"),
+	title: computed(() => title.value ? `Edit ${title.value} - Tsundoku` : "Edit Series - Tsundoku"),
 })
 
 // Refresh handler for child components

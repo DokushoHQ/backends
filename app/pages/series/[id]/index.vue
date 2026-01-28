@@ -101,7 +101,7 @@ definePageMeta({
 })
 
 useHead({
-	title: computed(() => title.value ? `${title.value} - Dokusho` : "Series - Dokusho"),
+	title: computed(() => title.value ? `${title.value} - Tsundoku` : "Series - Tsundoku"),
 })
 </script>
 
