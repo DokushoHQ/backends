@@ -95,9 +95,30 @@ export async function configureSerieIndex() {
 	// Build language-specific sortable attributes (e.g., En_updated_at, Fr_updated_at)
 	const languageTimestamps = Object.values(Language).map(lang => `${lang}_updated_at`)
 
+	// Language-specific searchable fields
+	const languageSearchableFields = Object.values(Language).flatMap(lang => [
+		`title_${lang}`,
+		`synopsis_${lang}`,
+		`alternates_titles_${lang}`,
+	])
+
 	const settings: Parameters<typeof index.updateSettings>[0] = {
 		sortableAttributes: ["updated_at", ...languageTimestamps],
 		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists", "chapter_count", "languages_available", "has_missing_chapters", "has_unfilled_gaps", "gaps_all_filled", "total_missing_chapters", "languages_with_gaps"],
+		pagination: {
+			maxTotalHits: 10000,
+		},
+		searchableAttributes: [
+			"title",
+			"synopsis",
+			"authors",
+			"artists",
+			"external_ids",
+			...languageSearchableFields,
+		],
+		faceting: {
+			maxValuesPerFacet: 200,
+		},
 	}
 
 	let needsReindex = false
