@@ -113,7 +113,11 @@ export async function configureSerieIndex() {
 	}
 
 	// Parse and validate pagination/faceting config values with strict validation
-	const nonNegativeIntSchema = z.coerce.number().int().nonnegative()
+	// Preprocess to convert empty strings and null to undefined so they fail validation
+	const nonNegativeIntSchema = z.preprocess(
+		val => (val === "" || val === null ? undefined : val),
+		z.coerce.number().int().nonnegative(),
+	)
 
 	const maxTotalHitsResult = nonNegativeIntSchema.safeParse(config.searchMaxTotalHits)
 	const maxTotalHits = maxTotalHitsResult.success ? maxTotalHitsResult.data : 1000
