@@ -1,4 +1,5 @@
 import { Meilisearch, type Index } from "meilisearch"
+import { z } from "zod"
 import { Language, type SerieStatus, type SerieType } from "./db"
 
 export type FlattenPrefix = "synopsis" | "title" | "alternates_titles"
@@ -108,19 +109,23 @@ export async function configureSerieIndex() {
 		[Language.Jp]: "jpn",
 		[Language.Ko]: "kor",
 		[Language.Zh]: "cmn", // Mandarin Chinese
-		[Language.ZhHk]: "yue", // Cantonese
+		[Language.ZhHk]: "cmn", // Traditional Chinese (Hong Kong)
 	}
 
-	// Parse and validate pagination/faceting config values
-	const parsedMaxTotalHits = Number.parseInt(String(config.searchMaxTotalHits), 10)
-	const maxTotalHits = Number.isFinite(parsedMaxTotalHits) && parsedMaxTotalHits >= 0
-		? Math.floor(parsedMaxTotalHits)
-		: 1000 // Safe default
+	// Parse and validate pagination/faceting config values with strict validation
+	const nonNegativeIntSchema = z.coerce.number().int().nonnegative()
 
-	const parsedMaxValuesPerFacet = Number.parseInt(String(config.searchMaxValuesPerFacet), 10)
-	const maxValuesPerFacet = Number.isFinite(parsedMaxValuesPerFacet) && parsedMaxValuesPerFacet >= 0
-		? Math.floor(parsedMaxValuesPerFacet)
-		: 100 // Safe default
+	const maxTotalHitsResult = nonNegativeIntSchema.safeParse(config.searchMaxTotalHits)
+	const maxTotalHits = maxTotalHitsResult.success ? maxTotalHitsResult.data : 1000
+	if (!maxTotalHitsResult.success) {
+		console.warn(`Invalid searchMaxTotalHits config value "${config.searchMaxTotalHits}", using default: 1000`)
+	}
+
+	const maxValuesPerFacetResult = nonNegativeIntSchema.safeParse(config.searchMaxValuesPerFacet)
+	const maxValuesPerFacet = maxValuesPerFacetResult.success ? maxValuesPerFacetResult.data : 100
+	if (!maxValuesPerFacetResult.success) {
+		console.warn(`Invalid searchMaxValuesPerFacet config value "${config.searchMaxValuesPerFacet}", using default: 100`)
+	}
 
 	const settings: Parameters<typeof index.updateSettings>[0] = {
 		sortableAttributes: ["updated_at", ...languageTimestamps],
@@ -148,6 +153,10 @@ export async function configureSerieIndex() {
 			locales: [locale],
 		}))
 		console.log("Meilisearch localized attributes enabled for CJK languages")
+	}
+	else {
+		// Explicitly clear to reset Meilisearch defaults if previously enabled
+		settings.localizedAttributes = null
 	}
 
 	let needsReindex = false
