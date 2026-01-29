@@ -1,4 +1,4 @@
-import { type Index, Meilisearch } from "meilisearch"
+import { Meilisearch, type Index } from "meilisearch"
 import { Language, type SerieStatus, type SerieType } from "./db"
 
 export type FlattenPrefix = "synopsis" | "title" | "alternates_titles"
@@ -102,11 +102,20 @@ export async function configureSerieIndex() {
 		`alternates_titles_${lang}`,
 	])
 
+	// ISO 639-3 locale codes for CJK languages (only non-romanized)
+	// Romanized fields (JpRo, KoRo) use Latin characters and don't need special tokenization
+	const cjkLocaleMap: Partial<Record<Language, string>> = {
+		[Language.Jp]: "jpn",
+		[Language.Ko]: "kor",
+		[Language.Zh]: "cmn", // Mandarin Chinese
+		[Language.ZhHk]: "yue", // Cantonese
+	}
+
 	const settings: Parameters<typeof index.updateSettings>[0] = {
 		sortableAttributes: ["updated_at", ...languageTimestamps],
 		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists", "chapter_count", "languages_available", "has_missing_chapters", "has_unfilled_gaps", "gaps_all_filled", "total_missing_chapters", "languages_with_gaps"],
 		pagination: {
-			maxTotalHits: 10000,
+			maxTotalHits: config.searchMaxTotalHits,
 		},
 		searchableAttributes: [
 			"title",
@@ -117,8 +126,17 @@ export async function configureSerieIndex() {
 			...languageSearchableFields,
 		],
 		faceting: {
-			maxValuesPerFacet: 200,
+			maxValuesPerFacet: config.searchMaxValuesPerFacet,
 		},
+	}
+
+	// Experimental: Configure localized attributes for better CJK tokenization
+	if (config.experimentalSearchLocalizedAttributes) {
+		settings.localizedAttributes = Object.entries(cjkLocaleMap).map(([lang, locale]) => ({
+			attributePatterns: [`*_${lang}`],
+			locales: [locale],
+		}))
+		console.log("Meilisearch localized attributes enabled for CJK languages")
 	}
 
 	let needsReindex = false
@@ -164,11 +182,11 @@ export async function configureSerieIndex() {
 	if (needsReindex) {
 		try {
 			const { default: updateSchedulerQueue } = await import("../queues/update-scheduler")
-			await updateSchedulerQueue.add("update-scheduler", { type: "REINDEX_ALL" })
-			console.log("REINDEX_ALL job queued to generate embeddings")
+			await updateSchedulerQueue.add("update-scheduler", { type: "RECOMPUTE_ALL" })
+			console.log("RECOMPUTE_ALL job queued to generate embeddings")
 		}
 		catch (error) {
-			console.error("Failed to queue REINDEX_ALL job:", error)
+			console.error("Failed to queue RECOMPUTE_ALL job:", error)
 		}
 	}
 }

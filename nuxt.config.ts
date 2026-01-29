@@ -68,6 +68,9 @@ export default defineNuxtConfig({
 		enabledLanguages: "En",
 		primaryLanguage: "En",
 		fallbackPrimaryLanguage: "En",
+		experimentalSearchLocalizedAttributes: false,
+		searchMaxTotalHits: 10000,
+		searchMaxValuesPerFacet: 200,
 		byparrUrl: "",
 		public: {
 			baseUrl: "http://localhost:3000",
