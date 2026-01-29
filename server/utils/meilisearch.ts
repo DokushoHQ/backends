@@ -77,7 +77,7 @@ const EMBEDDER_DOCUMENT_TEMPLATE = `{{ doc.title }}. {% if doc.title_En %}{% for
 /**
  * Configure the serie index with required settings for filtering and sorting.
  * Should be called once during application startup or when settings need to be updated.
- * If embedder settings changed, triggers a REINDEX_ALL job to regenerate embeddings.
+ * If embedder settings changed, enqueues a RECOMPUTE_ALL job to regenerate embeddings.
  */
 export async function configureSerieIndex() {
 	const config = useRuntimeConfig()
@@ -111,11 +111,22 @@ export async function configureSerieIndex() {
 		[Language.ZhHk]: "yue", // Cantonese
 	}
 
+	// Parse and validate pagination/faceting config values
+	const parsedMaxTotalHits = Number.parseInt(String(config.searchMaxTotalHits), 10)
+	const maxTotalHits = Number.isFinite(parsedMaxTotalHits) && parsedMaxTotalHits >= 0
+		? Math.floor(parsedMaxTotalHits)
+		: 1000 // Safe default
+
+	const parsedMaxValuesPerFacet = Number.parseInt(String(config.searchMaxValuesPerFacet), 10)
+	const maxValuesPerFacet = Number.isFinite(parsedMaxValuesPerFacet) && parsedMaxValuesPerFacet >= 0
+		? Math.floor(parsedMaxValuesPerFacet)
+		: 100 // Safe default
+
 	const settings: Parameters<typeof index.updateSettings>[0] = {
 		sortableAttributes: ["updated_at", ...languageTimestamps],
 		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists", "chapter_count", "languages_available", "has_missing_chapters", "has_unfilled_gaps", "gaps_all_filled", "total_missing_chapters", "languages_with_gaps"],
 		pagination: {
-			maxTotalHits: config.searchMaxTotalHits,
+			maxTotalHits,
 		},
 		searchableAttributes: [
 			"title",
@@ -126,7 +137,7 @@ export async function configureSerieIndex() {
 			...languageSearchableFields,
 		],
 		faceting: {
-			maxValuesPerFacet: config.searchMaxValuesPerFacet,
+			maxValuesPerFacet,
 		},
 	}
 
