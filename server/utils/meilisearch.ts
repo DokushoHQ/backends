@@ -1,4 +1,5 @@
-import { type Index, Meilisearch } from "meilisearch"
+import { Meilisearch, type Index } from "meilisearch"
+import { z } from "zod"
 import { Language, type SerieStatus, type SerieType } from "./db"
 
 export type FlattenPrefix = "synopsis" | "title" | "alternates_titles"
@@ -77,7 +78,7 @@ const EMBEDDER_DOCUMENT_TEMPLATE = `{{ doc.title }}. {% if doc.title_En %}{% for
 /**
  * Configure the serie index with required settings for filtering and sorting.
  * Should be called once during application startup or when settings need to be updated.
- * If embedder settings changed, triggers a REINDEX_ALL job to regenerate embeddings.
+ * If embedder settings changed, enqueues a RECOMPUTE_ALL job to regenerate embeddings.
  */
 export async function configureSerieIndex() {
 	const config = useRuntimeConfig()
@@ -95,9 +96,71 @@ export async function configureSerieIndex() {
 	// Build language-specific sortable attributes (e.g., En_updated_at, Fr_updated_at)
 	const languageTimestamps = Object.values(Language).map(lang => `${lang}_updated_at`)
 
+	// Language-specific searchable fields
+	const languageSearchableFields = Object.values(Language).flatMap(lang => [
+		`title_${lang}`,
+		`synopsis_${lang}`,
+		`alternates_titles_${lang}`,
+	])
+
+	// ISO 639-3 locale codes for CJK languages (only non-romanized)
+	// Romanized fields (JpRo, KoRo) use Latin characters and don't need special tokenization
+	const cjkLocaleMap: Partial<Record<Language, string>> = {
+		[Language.Jp]: "jpn",
+		[Language.Ko]: "kor",
+		[Language.Zh]: "cmn", // Mandarin Chinese
+		[Language.ZhHk]: "cmn", // Traditional Chinese (Hong Kong)
+	}
+
+	// Parse and validate pagination/faceting config values with strict validation
+	// Preprocess to convert empty strings and null to undefined so they fail validation
+	const nonNegativeIntSchema = z.preprocess(
+		val => (val === "" || val === null ? undefined : val),
+		z.coerce.number().int().nonnegative(),
+	)
+
+	const maxTotalHitsResult = nonNegativeIntSchema.safeParse(config.searchMaxTotalHits)
+	const maxTotalHits = maxTotalHitsResult.success ? maxTotalHitsResult.data : 1000
+	if (!maxTotalHitsResult.success) {
+		console.warn(`Invalid searchMaxTotalHits config value "${config.searchMaxTotalHits}", using default: 1000`)
+	}
+
+	const maxValuesPerFacetResult = nonNegativeIntSchema.safeParse(config.searchMaxValuesPerFacet)
+	const maxValuesPerFacet = maxValuesPerFacetResult.success ? maxValuesPerFacetResult.data : 100
+	if (!maxValuesPerFacetResult.success) {
+		console.warn(`Invalid searchMaxValuesPerFacet config value "${config.searchMaxValuesPerFacet}", using default: 100`)
+	}
+
 	const settings: Parameters<typeof index.updateSettings>[0] = {
 		sortableAttributes: ["updated_at", ...languageTimestamps],
 		filterableAttributes: ["soft_deleted", "source_ids", "genres", "status", "type", "authors", "artists", "chapter_count", "languages_available", "has_missing_chapters", "has_unfilled_gaps", "gaps_all_filled", "total_missing_chapters", "languages_with_gaps"],
+		pagination: {
+			maxTotalHits,
+		},
+		searchableAttributes: [
+			"title",
+			"synopsis",
+			"authors",
+			"artists",
+			"external_ids",
+			...languageSearchableFields,
+		],
+		faceting: {
+			maxValuesPerFacet,
+		},
+	}
+
+	// Experimental: Configure localized attributes for better CJK tokenization
+	if (config.experimentalSearchLocalizedAttributes) {
+		settings.localizedAttributes = Object.entries(cjkLocaleMap).map(([lang, locale]) => ({
+			attributePatterns: [`*_${lang}`],
+			locales: [locale],
+		}))
+		console.log("Meilisearch localized attributes enabled for CJK languages")
+	}
+	else {
+		// Explicitly clear to reset Meilisearch defaults if previously enabled
+		settings.localizedAttributes = null
 	}
 
 	let needsReindex = false
@@ -143,11 +206,11 @@ export async function configureSerieIndex() {
 	if (needsReindex) {
 		try {
 			const { default: updateSchedulerQueue } = await import("../queues/update-scheduler")
-			await updateSchedulerQueue.add("update-scheduler", { type: "REINDEX_ALL" })
-			console.log("REINDEX_ALL job queued to generate embeddings")
+			await updateSchedulerQueue.add("update-scheduler", { type: "RECOMPUTE_ALL" })
+			console.log("RECOMPUTE_ALL job queued to generate embeddings")
 		}
 		catch (error) {
-			console.error("Failed to queue REINDEX_ALL job:", error)
+			console.error("Failed to queue RECOMPUTE_ALL job:", error)
 		}
 	}
 }
