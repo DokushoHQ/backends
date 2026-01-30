@@ -1,7 +1,8 @@
-import { type BetterAuthOptions, betterAuth } from "better-auth"
-import { APIError, createAuthMiddleware } from "better-auth/api"
+import { betterAuth, type BetterAuthOptions } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
+import { APIError, createAuthMiddleware } from "better-auth/api"
 import { admin, apiKey, bearer, genericOAuth, lastLoginMethod, openAPI, twoFactor } from "better-auth/plugins"
+import { z } from "zod"
 import emailQueue from "../queues/email"
 import { db } from "./db"
 
@@ -35,15 +36,33 @@ function mapGroupsToRole(groups: string[], roleMap: Record<string, string>): str
 	return null
 }
 
+const nonNegativeIntSchema = z.preprocess(
+	val => (val === "" || val === null ? undefined : val),
+	z.coerce.number().int().nonnegative(),
+)
+
 function createAuth() {
 	const config = useRuntimeConfig()
+
+	const apiKeyRateLimitMaxRequestsResult = nonNegativeIntSchema.safeParse(config.apiKeyRateLimitMaxRequests)
+	const apiKeyRateLimitMaxRequests = apiKeyRateLimitMaxRequestsResult.success ? apiKeyRateLimitMaxRequestsResult.data : 10000
+	if (!apiKeyRateLimitMaxRequestsResult.success) {
+		console.warn(`Invalid searchMaxTotalHits config value "${config.searchMaxTotalHits}", using default: ${apiKeyRateLimitMaxRequests}`)
+	}
+
+	const apiKeyRateLimitTimeWindowResult = nonNegativeIntSchema.safeParse(config.apiKeyRateLimitTimeWindow)
+	const apiKeyRateLimitTimeWindow = apiKeyRateLimitTimeWindowResult.success ? apiKeyRateLimitTimeWindowResult.data : 1000 * 60 * 5
+	if (!apiKeyRateLimitTimeWindowResult.success) {
+		console.warn(`Invalid searchMaxTotalHits config value "${config.searchMaxTotalHits}", using default: ${apiKeyRateLimitTimeWindow}`)
+	}
 
 	const basePlugins = [
 		admin(),
 		apiKey({
 			rateLimit: {
-				maxRequests: 1000,
-				timeWindow: 1000 * 60 * 5,
+				enabled: config.apiKeyRateLimitEnabled === "true",
+				maxRequests: apiKeyRateLimitMaxRequests,
+				timeWindow: apiKeyRateLimitTimeWindow,
 			},
 		}),
 		bearer(),
