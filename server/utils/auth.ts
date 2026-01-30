@@ -47,13 +47,13 @@ function createAuth() {
 	const apiKeyRateLimitMaxRequestsResult = nonNegativeIntSchema.safeParse(config.apiKeyRateLimitMaxRequests)
 	const apiKeyRateLimitMaxRequests = apiKeyRateLimitMaxRequestsResult.success ? apiKeyRateLimitMaxRequestsResult.data : 10000
 	if (!apiKeyRateLimitMaxRequestsResult.success) {
-		console.warn(`Invalid searchMaxTotalHits config value "${config.searchMaxTotalHits}", using default: ${apiKeyRateLimitMaxRequests}`)
+		console.warn(`Invalid apiKeyRateLimitMaxRequests config value "${config.apiKeyRateLimitMaxRequests}", using default: ${apiKeyRateLimitMaxRequests}`)
 	}
 
 	const apiKeyRateLimitTimeWindowResult = nonNegativeIntSchema.safeParse(config.apiKeyRateLimitTimeWindow)
 	const apiKeyRateLimitTimeWindow = apiKeyRateLimitTimeWindowResult.success ? apiKeyRateLimitTimeWindowResult.data : 1000 * 60 * 5
 	if (!apiKeyRateLimitTimeWindowResult.success) {
-		console.warn(`Invalid searchMaxTotalHits config value "${config.searchMaxTotalHits}", using default: ${apiKeyRateLimitTimeWindow}`)
+		console.warn(`Invalid apiKeyRateLimitTimeWindow config value "${config.apiKeyRateLimitTimeWindow}", using default: ${apiKeyRateLimitTimeWindow}`)
 	}
 
 	const basePlugins = [
