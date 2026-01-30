@@ -488,6 +488,20 @@ export async function deduplicateForLanguage(
 					}
 				}
 			}
+
+			// CASE: Primary has whole, secondary has splits → disable secondary splits
+			if (primaryHasWhole && secondaryCoverage) {
+				const secondarySplits = secondaryCoverage.chapters.filter(c =>
+					isSplitChapter(c.chapter_number) && c.enabled,
+				)
+
+				for (const split of secondarySplits) {
+					if (!toDisable.includes(split.id)) {
+						toDisable.push(split.id)
+						log(`  Disabling secondary split: Ch ${split.chapter_number} (whole exists in primary)`)
+					}
+				}
+			}
 		}
 	}
 

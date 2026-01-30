@@ -662,6 +662,53 @@ describe("deduplicateForLanguage", () => {
 	})
 
 	describe("prefer unsplit (cross-source)", () => {
+		it("disables secondary splits when primary has whole and secondary has no whole", async () => {
+			const primarySource = createSource({ source_id: "primary", is_primary: true })
+			const secondarySource = createSource({ source_id: "secondary", is_primary: false })
+
+			const chapters = [
+				// Chapter 7: both sources have whole - secondary correctly disabled
+				createChapter({ id: "ch-7-pri", chapter_number: 7, source_id: "primary", enabled: true }),
+				createChapter({ id: "ch-7-sec", chapter_number: 7, source_id: "secondary", enabled: false }),
+				// Chapter 8: primary has whole, secondary has ONLY splits (no ch 8)
+				// This is the bug case - secondary splits should be disabled
+				createChapter({ id: "ch-8", chapter_number: 8, source_id: "primary", enabled: true }),
+				createChapter({ id: "ch-8.1", chapter_number: 8.1, source_id: "secondary", enabled: true }),
+				createChapter({ id: "ch-8.2", chapter_number: 8.2, source_id: "secondary", enabled: true }),
+				// Chapter 9: same pattern as chapter 8
+				createChapter({ id: "ch-9", chapter_number: 9, source_id: "primary", enabled: true }),
+				createChapter({ id: "ch-9.1", chapter_number: 9.1, source_id: "secondary", enabled: true }),
+				createChapter({ id: "ch-9.2", chapter_number: 9.2, source_id: "secondary", enabled: true }),
+			]
+
+			vi.mocked(db.chapter.findMany).mockResolvedValue(chapters)
+			vi.mocked(db.serieChapterPreference.findUnique).mockResolvedValue({
+				prefer_unsplit: {},
+				prefer_unsplit_default: true,
+				use_secondary_fallback: {},
+				use_secondary_fallback_default: true,
+			})
+			vi.mocked(db.serieGroupPreference.findMany).mockResolvedValue([])
+
+			const result = await deduplicateForLanguage(
+				"serie-1",
+				"en",
+				[primarySource, secondarySource],
+				mockLog,
+			)
+
+			// Secondary splits should be disabled when primary has whole
+			expect(result.changes.to_disable).toContain("ch-8.1")
+			expect(result.changes.to_disable).toContain("ch-8.2")
+			expect(result.changes.to_disable).toContain("ch-9.1")
+			expect(result.changes.to_disable).toContain("ch-9.2")
+			// Primary whole chapters should NOT be disabled
+			expect(result.changes.to_disable).not.toContain("ch-8")
+			expect(result.changes.to_disable).not.toContain("ch-9")
+			expect(result.changes.primary_to_disable).not.toContain("ch-8")
+			expect(result.changes.primary_to_disable).not.toContain("ch-9")
+		})
+
 		it("enables secondary whole chapter over primary splits", async () => {
 			const primarySource = createSource({ source_id: "primary", is_primary: true })
 			const secondarySource = createSource({ source_id: "secondary", is_primary: false })
