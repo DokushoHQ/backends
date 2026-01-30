@@ -72,6 +72,9 @@ export default defineNuxtConfig({
 		searchMaxTotalHits: 10000,
 		searchMaxValuesPerFacet: 200,
 		byparrUrl: "",
+		apiKeyRateLimitEnabled: "true",
+		apiKeyRateLimitMaxRequests: 10000,
+		apiKeyRateLimitTimeWindow: 1000 * 60 * 5,
 		public: {
 			baseUrl: "http://localhost:3000",
 			oidcProviderName: "",
