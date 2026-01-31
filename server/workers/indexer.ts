@@ -66,7 +66,26 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 
 	const lockedFields = new Set(serie.locked_fields as SerieField[])
 
-	// 2. Build updates for non-locked fields
+	// 2. Merge MultiLanguage fields from all sources (used for both display and search)
+	// Sources are ordered by is_primary desc, so primary source values come first in merged arrays
+	const languages = Object.keys(SourceLanguage) as (keyof typeof SourceLanguage)[]
+	const mergedTitles: Record<string, string[]> = {}
+	const mergedSynopses: Record<string, string[]> = {}
+	const mergedAlternates: Record<string, string[]> = {}
+
+	for (const source of serie.sources) {
+		for (const lang of languages) {
+			const titles = getMultiLanguageValues(source.title as MultiLanguage, lang)
+			const synopses = getMultiLanguageValues(source.synopsis as MultiLanguage | null, lang)
+			const alternates = getMultiLanguageValues(source.alternates_titles as MultiLanguage | null, lang)
+
+			mergedTitles[lang] = [...new Set([...(mergedTitles[lang] ?? []), ...titles])]
+			mergedSynopses[lang] = [...new Set([...(mergedSynopses[lang] ?? []), ...synopses])]
+			mergedAlternates[lang] = [...new Set([...(mergedAlternates[lang] ?? []), ...alternates])]
+		}
+	}
+
+	// 3. Build updates for non-locked fields
 	const updates: {
 		title?: string
 		synopsis?: string | null
@@ -76,13 +95,10 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 	} = {}
 
 	if (!lockedFields.has("title")) {
-		updates.title = resolveSerieTitle(
-			primarySource.title as MultiLanguage,
-			primarySource.alternates_titles as MultiLanguage | null,
-		)
+		updates.title = resolveSerieTitle(mergedTitles, mergedAlternates)
 	}
 	if (!lockedFields.has("synopsis")) {
-		const synopsis = resolveMultiLanguage(primarySource.synopsis as MultiLanguage | null, "")
+		const synopsis = resolveMultiLanguage(mergedSynopses, "")
 		updates.synopsis = synopsis || null
 	}
 	if (!lockedFields.has("status")) {
@@ -121,34 +137,12 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 
 	await job.updateProgress(70)
 
-	// 4. Build language-specific search data from all sources
-	const languages = Object.keys(SourceLanguage) as (keyof typeof SourceLanguage)[]
-	const titlesByLang: Record<string, string[]> = {}
-	const synopsesByLang: Record<string, string[]> = {}
-	const alternatesByLang: Record<string, string[]> = {}
-
-	for (const source of serie.sources) {
-		for (const lang of languages) {
-			const titles = getMultiLanguageValues(source.title as MultiLanguage, lang)
-			const synopses = getMultiLanguageValues(source.synopsis as MultiLanguage | null, lang)
-			const alternates = getMultiLanguageValues(source.alternates_titles as MultiLanguage | null, lang)
-
-			titlesByLang[lang] = [...(titlesByLang[lang] ?? []), ...titles]
-			synopsesByLang[lang] = [...(synopsesByLang[lang] ?? []), ...synopses]
-			alternatesByLang[lang] = [...(alternatesByLang[lang] ?? []), ...alternates]
-		}
-	}
-
-	// Deduplicate and build flat fields for Meilisearch
+	// 4. Build flat fields for Meilisearch (reuse already-merged data)
 	const flatFields: Record<string, string[]> = {}
 	for (const lang of languages) {
-		const titles = [...new Set(titlesByLang[lang] ?? [])]
-		const synopses = [...new Set(synopsesByLang[lang] ?? [])]
-		const alternates = [...new Set(alternatesByLang[lang] ?? [])]
-
-		if (titles.length) flatFields[`title_${lang}`] = titles
-		if (synopses.length) flatFields[`synopsis_${lang}`] = synopses
-		if (alternates.length) flatFields[`alternates_titles_${lang}`] = alternates
+		if (mergedTitles[lang]?.length) flatFields[`title_${lang}`] = mergedTitles[lang]
+		if (mergedSynopses[lang]?.length) flatFields[`synopsis_${lang}`] = mergedSynopses[lang]
+		if (mergedAlternates[lang]?.length) flatFields[`alternates_titles_${lang}`] = mergedAlternates[lang]
 	}
 
 	// 5. Calculate chapter availability stats
