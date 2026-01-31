@@ -9,7 +9,7 @@ import { JOB_PRIORITY, QUEUE_NAME, serieInserterJobDataSchema } from "../queues/
 import type { Language, Prisma } from "../utils/db"
 import { db } from "../utils/db"
 import { getFlowProducer } from "../utils/flow-producer"
-import { resolveMultiLanguage } from "../utils/serie"
+import { resolveMultiLanguage, resolveSerieTitle } from "../utils/serie"
 import { getSourceById } from "../utils/sources"
 
 export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInserterJobResult>({
@@ -185,7 +185,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					// CREATE PATH - New Serie + SerieSource
 					const newSerie = await tx.serie.create({
 						data: {
-							title: resolveMultiLanguage(serieData.title),
+							title: resolveSerieTitle(serieData.title, serieData.alternatesTitles),
 							synopsis: resolveMultiLanguage(serieData.synopsis, "") || null,
 							type: serieData.type,
 							status: serieData.status,

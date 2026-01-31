@@ -1,39 +1,163 @@
 import type { Prisma, Serie, SerieSource, SerieStatus, SerieType } from "./db"
 import { db } from "./db"
 import type { MultiLanguage } from "./sources/core"
+import { SourceLanguage } from "./sources/core"
 
 // Field types matching the PrismaJson types
 export type SerieField = "title" | "synopsis" | "cover" | "status" | "type"
 export type ChapterField = "title" | "chapter_number" | "volume_number" | "volume_name"
 
+// Romanized variants (readable for Western users) - checked before Asian script
+const ROMANIZED_LANGUAGES: SourceLanguage[] = [
+	SourceLanguage.JpRo,
+	SourceLanguage.KoRo,
+]
+
+// Asian script variants - last resort before fallback string
+const ASIAN_LANGUAGES: SourceLanguage[] = [
+	SourceLanguage.Jp,
+	SourceLanguage.Ko,
+	SourceLanguage.Zh,
+	SourceLanguage.ZhHk,
+]
+
+/**
+ * Parse enabled languages from comma-separated config string
+ */
+export function parseEnabledLanguages(configString: string | null | undefined): string[] {
+	if (!configString) return []
+	return configString.split(",").map(l => l.trim()).filter(Boolean)
+}
+
+/** Language config for resolution functions */
+export interface LanguageConfig {
+	primaryLanguage: string
+	fallbackPrimaryLanguage: string
+	enabledLanguages: string
+}
+
+/** Get language config from runtime config or use provided config for testing */
+function getLanguageConfig(testConfig?: LanguageConfig): LanguageConfig {
+	if (testConfig) return testConfig
+	const config = useRuntimeConfig()
+	return {
+		primaryLanguage: config.primaryLanguage as string,
+		fallbackPrimaryLanguage: config.fallbackPrimaryLanguage as string,
+		enabledLanguages: config.enabledLanguages as string,
+	}
+}
+
 /**
  * Resolve a MultiLanguage object to a single string using language priority:
  * 1. PRIMARY_LANGUAGE (from config)
- * 2. FALLBACK_PRIMARY_LANGUAGE (from config, defaults to En)
- * 3. First available value
- * 4. fallback parameter or "Untitled"
+ * 2. FALLBACK_PRIMARY_LANGUAGE (from config)
+ * 3. ENABLED_LANGUAGES in config order
+ * 4. Romanized variants (JpRo, KoRo)
+ * 5. Asian script variants (Jp, Ko, Zh, ZhHk)
+ * 6. fallback parameter or "Untitled"
+ *
+ * @param ml - MultiLanguage object to resolve
+ * @param fallback - Fallback value if no language found
+ * @param testConfig - Optional config for testing (bypasses useRuntimeConfig)
  */
-export function resolveMultiLanguage(ml: MultiLanguage | null | undefined, fallback = "Untitled"): string {
+export function resolveMultiLanguage(
+	ml: MultiLanguage | null | undefined,
+	fallback = "Untitled",
+	testConfig?: LanguageConfig,
+): string {
 	if (!ml || typeof ml !== "object") return fallback
 
-	const config = useRuntimeConfig()
+	const config = getLanguageConfig(testConfig)
 	const values = ml as Record<string, string[]>
-
-	// Try PRIMARY_LANGUAGE first
 	const primary = config.primaryLanguage
-	if (primary && values[primary]?.[0]) {
-		return values[primary][0]
-	}
-
-	// Try FALLBACK_PRIMARY_LANGUAGE
 	const fallbackLang = config.fallbackPrimaryLanguage
-	if (fallbackLang && values[fallbackLang]?.[0]) {
-		return values[fallbackLang][0]
+	const enabledLanguages = parseEnabledLanguages(config.enabledLanguages)
+
+	// 1. Primary language
+	if (primary && values[primary]?.[0]) return values[primary][0]
+
+	// 2. Fallback language
+	if (fallbackLang && values[fallbackLang]?.[0]) return values[fallbackLang][0]
+
+	// 3. Enabled languages in config order
+	for (const lang of enabledLanguages) {
+		if (values[lang]?.[0]) return values[lang][0]
 	}
 
-	// Try first available value
-	const firstValue = Object.values(values).find(arr => arr?.[0])?.[0]
-	if (firstValue) return firstValue
+	// 4. Romanized variants (JpRo, KoRo)
+	for (const lang of ROMANIZED_LANGUAGES) {
+		if (values[lang]?.[0]) return values[lang][0]
+	}
+
+	// 5. Asian script variants (Jp, Ko, Zh, ZhHk)
+	for (const lang of ASIAN_LANGUAGES) {
+		if (values[lang]?.[0]) return values[lang][0]
+	}
+
+	return fallback
+}
+
+/**
+ * Resolve serie title considering both title and alternatesTitles.
+ * Priority order for each language: title first, then alternates.
+ * Language priority:
+ * 1. PRIMARY_LANGUAGE
+ * 2. FALLBACK_PRIMARY_LANGUAGE
+ * 3. ENABLED_LANGUAGES in config order
+ * 4. Romanized variants (JpRo, KoRo)
+ * 5. Asian script variants (Jp, Ko, Zh, ZhHk)
+ * 6. fallback parameter or "Untitled"
+ *
+ * @param title - Main title MultiLanguage object
+ * @param alternatesTitles - Alternate titles MultiLanguage object
+ * @param fallback - Fallback value if no language found
+ * @param testConfig - Optional config for testing (bypasses useRuntimeConfig)
+ */
+export function resolveSerieTitle(
+	title: MultiLanguage | null | undefined,
+	alternatesTitles: MultiLanguage | null | undefined,
+	fallback = "Untitled",
+	testConfig?: LanguageConfig,
+): string {
+	const config = getLanguageConfig(testConfig)
+	const primary = config.primaryLanguage
+	const fallbackLang = config.fallbackPrimaryLanguage
+	const enabledLanguages = parseEnabledLanguages(config.enabledLanguages)
+
+	const getValue = (ml: MultiLanguage | null | undefined, lang: string): string | undefined => {
+		if (!ml || typeof ml !== "object") return undefined
+		return (ml as Record<string, string[]>)[lang]?.[0]
+	}
+
+	// 1. Primary: title then alternates
+	if (primary) {
+		const v = getValue(title, primary) ?? getValue(alternatesTitles, primary)
+		if (v) return v
+	}
+
+	// 2. Fallback: title then alternates
+	if (fallbackLang) {
+		const v = getValue(title, fallbackLang) ?? getValue(alternatesTitles, fallbackLang)
+		if (v) return v
+	}
+
+	// 3. Enabled languages: title then alternates
+	for (const lang of enabledLanguages) {
+		const v = getValue(title, lang) ?? getValue(alternatesTitles, lang)
+		if (v) return v
+	}
+
+	// 4. Romanized: title then alternates
+	for (const lang of ROMANIZED_LANGUAGES) {
+		const v = getValue(title, lang) ?? getValue(alternatesTitles, lang)
+		if (v) return v
+	}
+
+	// 5. Asian script: title then alternates
+	for (const lang of ASIAN_LANGUAGES) {
+		const v = getValue(title, lang) ?? getValue(alternatesTitles, lang)
+		if (v) return v
+	}
 
 	return fallback
 }

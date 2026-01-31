@@ -5,7 +5,7 @@ import { QUEUE_NAME, indexerJobDataSchema } from "../queues/indexer"
 import { db } from "../utils/db"
 import { serieIndex } from "../utils/meilisearch"
 import type { SerieField } from "../utils/serie"
-import { getMultiLanguageValues, resolveMultiLanguage } from "../utils/serie"
+import { getMultiLanguageValues, resolveMultiLanguage, resolveSerieTitle } from "../utils/serie"
 import { SourceLanguage, type MultiLanguage } from "../utils/sources/core"
 
 async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
@@ -76,7 +76,10 @@ async function processUpdate(job: Job<IndexerJobData>, serieId: string) {
 	} = {}
 
 	if (!lockedFields.has("title")) {
-		updates.title = resolveMultiLanguage(primarySource.title as MultiLanguage)
+		updates.title = resolveSerieTitle(
+			primarySource.title as MultiLanguage,
+			primarySource.alternates_titles as MultiLanguage | null,
+		)
 	}
 	if (!lockedFields.has("synopsis")) {
 		const synopsis = resolveMultiLanguage(primarySource.synopsis as MultiLanguage | null, "")
