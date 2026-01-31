@@ -126,7 +126,8 @@ export function resolveSerieTitle(
 
 	const getValue = (ml: MultiLanguage | null | undefined, lang: string): string | undefined => {
 		if (!ml || typeof ml !== "object") return undefined
-		return (ml as Record<string, string[]>)[lang]?.[0]
+		const v = (ml as Record<string, string[]>)[lang]?.[0]
+		return v?.trim() ? v : undefined
 	}
 
 	// 1. Primary: title then alternates

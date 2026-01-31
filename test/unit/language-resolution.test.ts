@@ -81,6 +81,11 @@ describe("resolveMultiLanguage", () => {
 			expect(resolveMultiLanguage(ml, "Untitled", testConfig)).toBe("Title")
 		})
 
+		it("handles empty strings in languages", () => {
+			const ml: MultiLanguage = { Fr: [""], En: ["Title"] }
+			expect(resolveMultiLanguage(ml, "Untitled", testConfig)).toBe("Title")
+		})
+
 		it("uses first element of array", () => {
 			const ml: MultiLanguage = { Fr: ["Premier", "Deuxième"] }
 			expect(resolveMultiLanguage(ml, "Untitled", testConfig)).toBe("Premier")
@@ -98,6 +103,12 @@ describe("resolveSerieTitle", () => {
 
 		it("uses alternates[primary] when title[primary] missing", () => {
 			const title: MultiLanguage = { En: ["English Title"] }
+			const alternates: MultiLanguage = { Fr: ["Titre Français"] }
+			expect(resolveSerieTitle(title, alternates, "Untitled", testConfig)).toBe("Titre Français")
+		})
+
+		it("uses alternates[primary] when title[primary] is empty string", () => {
+			const title: MultiLanguage = { Fr: [""], En: ["English Title"] }
 			const alternates: MultiLanguage = { Fr: ["Titre Français"] }
 			expect(resolveSerieTitle(title, alternates, "Untitled", testConfig)).toBe("Titre Français")
 		})
