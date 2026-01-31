@@ -65,6 +65,12 @@ describe("resolveMultiLanguage", () => {
 			expect(resolveMultiLanguage({}, "Untitled", testConfig)).toBe("Untitled")
 			expect(resolveMultiLanguage(null, "Untitled", testConfig)).toBe("Untitled")
 		})
+
+		it("falls back to any available language when configured languages not present", () => {
+			// Config has Fr/En, but data only has Portuguese
+			const ml: MultiLanguage = { Pt: ["Título Português"] }
+			expect(resolveMultiLanguage(ml, "Untitled", testConfig)).toBe("Título Português")
+		})
 	})
 
 	describe("edge cases", () => {
@@ -166,6 +172,23 @@ describe("resolveSerieTitle", () => {
 		it("returns fallback when both are null", () => {
 			expect(resolveSerieTitle(null, null, "Untitled", testConfig)).toBe("Untitled")
 			expect(resolveSerieTitle(null, null, "Custom Fallback", testConfig)).toBe("Custom Fallback")
+		})
+
+		it("falls back to any available language when configured languages not present", () => {
+			// Config has Fr/En, but data only has Portuguese
+			const title: MultiLanguage = { Pt: ["Título Português"] }
+			expect(resolveSerieTitle(title, null, "Untitled", testConfig)).toBe("Título Português")
+		})
+
+		it("prefers title over alternates for any-language fallback", () => {
+			const title: MultiLanguage = { Pt: ["Título Principal"] }
+			const alternates: MultiLanguage = { Es: ["Título Alternativo"] }
+			expect(resolveSerieTitle(title, alternates, "Untitled", testConfig)).toBe("Título Principal")
+		})
+
+		it("uses alternates for any-language fallback when title has no data", () => {
+			const alternates: MultiLanguage = { Es: ["Título Español"] }
+			expect(resolveSerieTitle(null, alternates, "Untitled", testConfig)).toBe("Título Español")
 		})
 	})
 })

@@ -94,6 +94,11 @@ export function resolveMultiLanguage(
 		if (values[lang]?.[0]) return values[lang][0]
 	}
 
+	// 6. Any available language (last resort before fallback)
+	for (const arr of Object.values(values)) {
+		if (arr?.[0]?.trim()) return arr[0]
+	}
+
 	return fallback
 }
 
@@ -159,6 +164,17 @@ export function resolveSerieTitle(
 		const v = getValue(title, lang) ?? getValue(alternatesTitles, lang)
 		if (v) return v
 	}
+
+	// 6. Any available language (last resort before fallback)
+	const getAnyValue = (ml: MultiLanguage | null | undefined): string | undefined => {
+		if (!ml || typeof ml !== "object") return undefined
+		for (const arr of Object.values(ml as Record<string, string[]>)) {
+			if (arr?.[0]?.trim()) return arr[0]
+		}
+		return undefined
+	}
+	const anyValue = getAnyValue(title) ?? getAnyValue(alternatesTitles)
+	if (anyValue) return anyValue
 
 	return fallback
 }
