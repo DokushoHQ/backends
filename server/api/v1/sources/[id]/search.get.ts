@@ -1,3 +1,4 @@
+import { resolveMultiLanguage } from "../../../../utils/serie"
 import { getSource } from "../../../../utils/sources"
 
 export default defineEventHandler(async (event) => {
@@ -37,18 +38,10 @@ export default defineEventHandler(async (event) => {
 		})
 		const importedMap = new Map(existingSerieSources.map(s => [s.external_id, s.serie_id]))
 
-		// Helper to get first value from MultiLanguage for search results
-		const getTitle = (ml: Partial<Record<string, string[]>>): string => {
-			const enTitle = ml.En?.[0]
-			if (enTitle) return enTitle
-			const firstLang = Object.values(ml)[0]
-			return firstLang?.[0] || "Unknown"
-		}
-
 		return {
 			series: results.series.map(s => ({
 				id: s.id,
-				title: getTitle(s.title),
+				title: resolveMultiLanguage(s.title, "Untitled"),
 				cover: s.cover?.toString() ?? null,
 				imported: importedMap.has(s.id),
 				serieId: importedMap.get(s.id) ?? null,

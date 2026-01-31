@@ -1,3 +1,4 @@
+import { resolveMultiLanguage, resolveSerieTitle } from "../../../../utils/serie"
 import { getSource } from "../../../../utils/sources"
 
 export default defineEventHandler(async (event) => {
@@ -26,13 +27,6 @@ export default defineEventHandler(async (event) => {
 		const source = await getSource(dbSource.external_id)
 		const detail = await source.fetchSerieDetail(serieId)
 
-		// Helper to get first value from MultiLanguage
-		const getFirstValue = (ml: Partial<Record<string, string[]>> | undefined): string | null => {
-			if (!ml) return null
-			const values = Object.values(ml).flat()
-			return values[0] || null
-		}
-
 		// Helper to get all values from MultiLanguage
 		const getAllValues = (ml: Partial<Record<string, string[]>> | undefined): string[] => {
 			if (!ml) return []
@@ -43,10 +37,10 @@ export default defineEventHandler(async (event) => {
 
 		return {
 			id: detail.id,
-			title: getFirstValue(detail.title) || "Unknown",
+			title: resolveSerieTitle(detail.title, detail.alternatesTitles, "Untitled"),
 			alternateTitles: getAllValues(detail.alternatesTitles),
 			cover: detail.cover?.toString() ?? null,
-			synopsis: getFirstValue(detail.synopsis),
+			synopsis: resolveMultiLanguage(detail.synopsis, "") || null,
 			status: detail.status,
 			type: detail.type,
 			genres: detail.genres,
