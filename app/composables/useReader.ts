@@ -8,12 +8,15 @@ type Page = {
 }
 
 type ReadingMode = "vertical" | "paged" | "double"
+type ReadingDirection = "ltr" | "rtl"
 
 type Spread = {
 	pages: Page[]
 }
 
-export function useReader(serieId: Ref<string>, chapterId: Ref<string>) {
+const RTL_TYPES = new Set(["Manga", "Doujinshi"])
+
+export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieType: Ref<string | undefined>) {
 	const orpc = useOrpc()
 
 	const dataQuery = useQuery(computed(() =>
@@ -37,8 +40,20 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>) {
 	const prevChapter = computed(() => navQuery.data.value?.prev ?? null)
 	const nextChapter = computed(() => navQuery.data.value?.next ?? null)
 
-	// Settings (persisted)
-	const mode = useLocalStorage<ReadingMode>("reader-mode", "vertical")
+	// Layout derived from serie type
+	const isVertical = computed(() => serieType.value === "Webtoon")
+	const direction = computed<ReadingDirection>(() =>
+		RTL_TYPES.has(serieType.value ?? "") ? "rtl" : "ltr",
+	)
+
+	// Only the horizontal sub-preference is persisted
+	const horizontalMode = useLocalStorage<"paged" | "double">("reader-horizontal-mode", "paged")
+	const mode = computed<ReadingMode>({
+		get: () => isVertical.value ? "vertical" : horizontalMode.value,
+		set: (v: ReadingMode) => {
+			if (v !== "vertical") horizontalMode.value = v as "paged" | "double"
+		},
+	})
 	const currentPage = ref(0)
 
 	// Reset page on chapter change or mode change
@@ -198,13 +213,22 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>) {
 
 		switch (e.key) {
 			case "ArrowRight":
+				e.preventDefault()
+				if (mode.value === "paged" || mode.value === "double") {
+					if (direction.value === "rtl") prevPage()
+					else nextPage()
+				}
+				break
 			case " ":
 				e.preventDefault()
 				if (mode.value === "paged" || mode.value === "double") nextPage()
 				break
 			case "ArrowLeft":
 				e.preventDefault()
-				if (mode.value === "paged" || mode.value === "double") prevPage()
+				if (mode.value === "paged" || mode.value === "double") {
+					if (direction.value === "rtl") nextPage()
+					else prevPage()
+				}
 				break
 			case "]":
 				if (nextChapter.value) {
@@ -251,6 +275,8 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>) {
 		prevChapter,
 		nextChapter,
 		mode,
+		isVertical,
+		direction,
 		currentPage,
 		totalPages,
 		spreads,

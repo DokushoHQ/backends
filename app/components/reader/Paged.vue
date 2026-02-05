@@ -2,6 +2,7 @@
 const props = defineProps<{
 	pages: Array<{ index: number, type: string, url: string | null, content: string | null }>
 	currentPage: number
+	direction: "ltr" | "rtl"
 }>()
 
 const emit = defineEmits<{
@@ -20,10 +21,10 @@ function handleClick(e: MouseEvent) {
 	const third = rect.width / 3
 
 	if (x < third) {
-		emit("prev")
+		emit(props.direction === "rtl" ? "next" : "prev")
 	}
 	else if (x > third * 2) {
-		emit("next")
+		emit(props.direction === "rtl" ? "prev" : "next")
 	}
 }
 </script>
@@ -48,13 +49,13 @@ function handleClick(e: MouseEvent) {
 		<div class="reader-paged__zones">
 			<div class="reader-paged__zone reader-paged__zone--prev">
 				<UIcon
-					name="i-lucide-chevron-left"
+					:name="direction === 'rtl' ? 'i-lucide-chevron-right' : 'i-lucide-chevron-left'"
 					class="reader-paged__zone-icon"
 				/>
 			</div>
 			<div class="reader-paged__zone reader-paged__zone--next">
 				<UIcon
-					name="i-lucide-chevron-right"
+					:name="direction === 'rtl' ? 'i-lucide-chevron-left' : 'i-lucide-chevron-right'"
 					class="reader-paged__zone-icon"
 				/>
 			</div>

@@ -17,6 +17,14 @@ watch(() => route.params, (params) => {
 	chapterId.value = params.chapterId as string
 })
 
+// Fetch serie info for toolbar
+const serieQuery = useQuery(computed(() =>
+	orpc.serie.get.queryOptions({ input: { id: serieId.value } }),
+))
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const serieType = computed(() => (serieQuery.data.value as any)?.type as string | undefined)
+
 const {
 	imagePages,
 	loading,
@@ -24,6 +32,8 @@ const {
 	prevChapter,
 	nextChapter,
 	mode,
+	isVertical,
+	direction,
 	currentPage,
 	totalPages,
 	currentSpreadPages,
@@ -32,12 +42,7 @@ const {
 	prevPage,
 	preloadImages,
 	toggleFullscreen,
-} = useReader(serieId, chapterId)
-
-// Fetch serie info for toolbar
-const serieQuery = useQuery(computed(() =>
-	orpc.serie.get.queryOptions({ input: { id: serieId.value } }),
-))
+} = useReader(serieId, chapterId, serieType)
 
 // Find current chapter from chapters list
 const chaptersQuery = useQuery(computed(() =>
@@ -86,6 +91,7 @@ function handlePageVisible(index: number) {
 			:prev-chapter="prevChapter"
 			:next-chapter="nextChapter"
 			:mode="mode"
+			:is-vertical="isVertical"
 			:page-counter="pageCounter"
 			@update:mode="mode = $event"
 			@toggle-fullscreen="toggleFullscreen"
@@ -157,6 +163,7 @@ function handlePageVisible(index: number) {
 				v-else-if="mode === 'paged'"
 				:pages="imagePages"
 				:current-page="currentPage"
+				:direction="direction"
 				@next="nextPage"
 				@prev="prevPage"
 			/>
@@ -169,6 +176,7 @@ function handlePageVisible(index: number) {
 				:total-spreads="totalPages"
 				:total-individual-pages="imagePages.length"
 				:page-range="currentSpreadPageRange"
+				:direction="direction"
 				@next="nextPage"
 				@prev="prevPage"
 			/>

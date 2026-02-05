@@ -7,6 +7,7 @@ defineProps<{
 	prevChapter: { id: string, chapter_number: number, title: string | null } | null
 	nextChapter: { id: string, chapter_number: number, title: string | null } | null
 	mode: "vertical" | "paged" | "double"
+	isVertical: boolean
 	pageCounter?: string | null
 }>()
 
@@ -93,43 +94,33 @@ const emit = defineEmits<{
 				/>
 			</span>
 
-			<div class="reader-toolbar__divider" />
+			<template v-if="!isVertical">
+				<div class="reader-toolbar__divider" />
 
-			<button
-				class="reader-toolbar__mode-btn"
-				:class="{ 'reader-toolbar__mode-btn--active': mode === 'vertical' }"
-				title="Vertical scroll"
-				@click="emit('update:mode', 'vertical')"
-			>
-				<UIcon
-					name="i-lucide-scroll"
-					class="size-4"
-				/>
-			</button>
+				<button
+					class="reader-toolbar__mode-btn"
+					:class="{ 'reader-toolbar__mode-btn--active': mode === 'paged' }"
+					title="Single page"
+					@click="emit('update:mode', 'paged')"
+				>
+					<UIcon
+						name="i-lucide-file"
+						class="size-4"
+					/>
+				</button>
 
-			<button
-				class="reader-toolbar__mode-btn"
-				:class="{ 'reader-toolbar__mode-btn--active': mode === 'paged' }"
-				title="Single page"
-				@click="emit('update:mode', 'paged')"
-			>
-				<UIcon
-					name="i-lucide-file"
-					class="size-4"
-				/>
-			</button>
-
-			<button
-				class="reader-toolbar__mode-btn"
-				:class="{ 'reader-toolbar__mode-btn--active': mode === 'double' }"
-				title="Double page"
-				@click="emit('update:mode', 'double')"
-			>
-				<UIcon
-					name="i-lucide-book-open"
-					class="size-4"
-				/>
-			</button>
+				<button
+					class="reader-toolbar__mode-btn"
+					:class="{ 'reader-toolbar__mode-btn--active': mode === 'double' }"
+					title="Double page"
+					@click="emit('update:mode', 'double')"
+				>
+					<UIcon
+						name="i-lucide-book-open"
+						class="size-4"
+					/>
+				</button>
+			</template>
 
 			<div class="reader-toolbar__divider" />
 

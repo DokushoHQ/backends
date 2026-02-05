@@ -5,6 +5,7 @@ const props = defineProps<{
 	totalSpreads: number
 	totalIndividualPages: number
 	pageRange: { start: number, end: number }
+	direction: "ltr" | "rtl"
 }>()
 
 const emit = defineEmits<{
@@ -21,10 +22,10 @@ function handleClick(e: MouseEvent) {
 	const third = rect.width / 3
 
 	if (x < third) {
-		emit("prev")
+		emit(props.direction === "rtl" ? "next" : "prev")
 	}
 	else if (x > third * 2) {
-		emit("next")
+		emit(props.direction === "rtl" ? "prev" : "next")
 	}
 }
 </script>
@@ -52,13 +53,13 @@ function handleClick(e: MouseEvent) {
 		<div class="reader-double__zones">
 			<div class="reader-double__zone reader-double__zone--prev">
 				<UIcon
-					name="i-lucide-chevron-left"
+					:name="direction === 'rtl' ? 'i-lucide-chevron-right' : 'i-lucide-chevron-left'"
 					class="reader-double__zone-icon"
 				/>
 			</div>
 			<div class="reader-double__zone reader-double__zone--next">
 				<UIcon
-					name="i-lucide-chevron-right"
+					:name="direction === 'rtl' ? 'i-lucide-chevron-left' : 'i-lucide-chevron-right'"
 					class="reader-double__zone-icon"
 				/>
 			</div>
