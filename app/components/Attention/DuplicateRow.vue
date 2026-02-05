@@ -14,7 +14,7 @@ defineProps<{
 
 <template>
 	<NuxtLink
-		to="/attention/duplicates"
+		to="/dashboard/attention/duplicates"
 		class="duplicate-row"
 	>
 		<div class="cover-stack">

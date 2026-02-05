@@ -25,7 +25,7 @@ const totalChaptersNeedingData = computed(() =>
 		:description="`${totalChaptersNeedingData} chapters need data`"
 		icon="i-lucide-hard-drive"
 		color="blue"
-		link-to="/attention/issues?type=chapter_data_missing"
+		link-to="/dashboard/attention/issues?type=chapter_data_missing"
 	>
 		<div
 			v-if="series.length > 0"
@@ -34,7 +34,7 @@ const totalChaptersNeedingData = computed(() =>
 			<NuxtLink
 				v-for="serie in series.slice(0, 5)"
 				:key="serie.id"
-				:to="`/series/${serie.id}`"
+				:to="`/dashboard/series/${serie.id}`"
 				class="chapter-row"
 			>
 				<div class="serie-cover">

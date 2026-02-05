@@ -30,12 +30,19 @@ onMounted(() => {
 const lastUsedEmail = computed(() => lastLoginMethod.value === "email")
 const lastUsedOidc = computed(() => oidcProviderId.value && lastLoginMethod.value === oidcProviderId.value)
 
+// Redirect destination after auth
+const route = useRoute()
+const redirectTo = computed(() => {
+	const redirect = route.query.redirect as string | undefined
+	return redirect || "/"
+})
+
 // Redirect if already authenticated
 watch(
 	isAuthenticated,
 	(authenticated) => {
 		if (authenticated) {
-			navigateTo("/")
+			navigateTo(redirectTo.value)
 		}
 	},
 	{ immediate: true },
@@ -79,7 +86,7 @@ async function handleEmailLogin() {
 			await navigateTo("/two-factor")
 		}
 		else {
-			await navigateTo("/", { external: true })
+			await navigateTo(redirectTo.value, { external: true })
 		}
 	}
 	catch (e: unknown) {
@@ -125,7 +132,7 @@ async function handleOAuthLogin() {
 	try {
 		await authClient.signIn.oauth2({
 			providerId: oidcProviderId.value,
-			callbackURL: "/",
+			callbackURL: redirectTo.value,
 		})
 	}
 	catch {

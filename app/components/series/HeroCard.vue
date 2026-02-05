@@ -50,7 +50,7 @@ const showArtists = computed(() => {
 
 			<div class="serie-badges">
 				<NuxtLink
-					:to="`/series?type=${encodeURIComponent(type)}`"
+					:to="`/dashboard/series?type=${encodeURIComponent(type)}`"
 					class="type-badge"
 				>
 					{{ type }}
@@ -58,7 +58,7 @@ const showArtists = computed(() => {
 				<NuxtLink
 					v-for="s in status"
 					:key="s"
-					:to="`/series?status=${encodeURIComponent(s)}`"
+					:to="`/dashboard/series?status=${encodeURIComponent(s)}`"
 					class="status-badge"
 				>
 					{{ s }}
@@ -84,7 +84,7 @@ const showArtists = computed(() => {
 						:key="author.name"
 					>
 						<NuxtLink
-							:to="`/series?author=${encodeURIComponent(author.name)}`"
+							:to="`/dashboard/series?author=${encodeURIComponent(author.name)}`"
 							class="pill-link"
 						>{{ author.name }}</NuxtLink><span v-if="index < authors.length - 1">, </span>
 					</template>
@@ -102,7 +102,7 @@ const showArtists = computed(() => {
 						:key="artist.name"
 					>
 						<NuxtLink
-							:to="`/series?artist=${encodeURIComponent(artist.name)}`"
+							:to="`/dashboard/series?artist=${encodeURIComponent(artist.name)}`"
 							class="pill-link"
 						>{{ artist.name }}</NuxtLink><span v-if="index < artists.length - 1">, </span>
 					</template>

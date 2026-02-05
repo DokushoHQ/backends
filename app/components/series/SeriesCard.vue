@@ -17,7 +17,7 @@ defineProps<Props>()
 
 <template>
 	<NuxtLink
-		:to="`/series/${serie.id}`"
+		:to="`/dashboard/series/${serie.id}`"
 		class="series-card"
 	>
 		<SeriesCardBase

@@ -96,7 +96,7 @@ const segments = computed<Segment[]>(() => {
 
 <template>
 	<NuxtLink
-		:to="`/jobs/${queue.name}`"
+		:to="`/dashboard/jobs/${queue.name}`"
 		class="queue-card"
 	>
 		<div class="queue-header">

@@ -13,30 +13,30 @@ onUnmounted(() => {
 
 // Helper to check if route matches (including nested routes)
 function isActiveRoute(path: string): boolean {
-	if (path === "/") {
-		return route.path === "/"
+	if (path === "/dashboard") {
+		return route.path === "/dashboard"
 	}
 	return route.path === path || route.path.startsWith(`${path}/`)
 }
 
 const navigation = computed(() => {
 	const items = [
-		{ label: "Overview", icon: "i-lucide-home", to: "/", active: isActiveRoute("/") },
+		{ label: "Overview", icon: "i-lucide-home", to: "/dashboard", active: isActiveRoute("/dashboard") },
 	]
 
 	if (isAdmin.value) {
-		items.push({ label: "Attention", icon: "i-lucide-alert-triangle", to: "/attention", active: isActiveRoute("/attention") })
+		items.push({ label: "Attention", icon: "i-lucide-alert-triangle", to: "/dashboard/attention", active: isActiveRoute("/dashboard/attention") })
 	}
 
 	items.push(
-		{ label: "Series", icon: "i-lucide-book-open", to: "/series", active: isActiveRoute("/series") },
-		{ label: "Sources", icon: "i-lucide-server", to: "/sources", active: isActiveRoute("/sources") },
+		{ label: "Series", icon: "i-lucide-book-open", to: "/dashboard/series", active: isActiveRoute("/dashboard/series") },
+		{ label: "Sources", icon: "i-lucide-server", to: "/dashboard/sources", active: isActiveRoute("/dashboard/sources") },
 	)
 
 	if (isAdmin.value) {
 		items.push(
-			{ label: "Users", icon: "i-lucide-users", to: "/users", active: isActiveRoute("/users") },
-			{ label: "Jobs", icon: "i-lucide-briefcase", to: "/jobs", active: isActiveRoute("/jobs") },
+			{ label: "Users", icon: "i-lucide-users", to: "/dashboard/users", active: isActiveRoute("/dashboard/users") },
+			{ label: "Jobs", icon: "i-lucide-briefcase", to: "/dashboard/jobs", active: isActiveRoute("/dashboard/jobs") },
 		)
 	}
 

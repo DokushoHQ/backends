@@ -9,7 +9,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 	const { data: session } = await authClient.useSession(useFetch)
 
 	if (!session.value?.user) {
-		return navigateTo("/login")
+		return navigateTo(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
 	}
 
 	// Check if user needs to set up 2FA (password users without 2FA enabled)

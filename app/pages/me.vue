@@ -1,7 +1,7 @@
 <script setup lang="ts">
 definePageMeta({
 	title: "My Profile",
-	layout: "default",
+	layout: "reader",
 })
 
 const route = useRoute()

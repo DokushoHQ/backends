@@ -84,7 +84,7 @@ const description = computed(() => {
 				<UButton
 					v-if="type === 'empty' && isAdmin"
 					icon="i-lucide-plus"
-					to="/series/import"
+					to="/dashboard/series/import"
 				>
 					Import Series
 				</UButton>
