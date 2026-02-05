@@ -22,10 +22,12 @@ function handleClick(e: MouseEvent) {
 	const third = rect.width / 3
 
 	if (x < third) {
-		emit(props.direction === "rtl" ? "next" : "prev")
+		if (props.direction === "rtl") emit("next")
+		else emit("prev")
 	}
 	else if (x > third * 2) {
-		emit(props.direction === "rtl" ? "prev" : "next")
+		if (props.direction === "rtl") emit("prev")
+		else emit("next")
 	}
 }
 </script>

@@ -185,7 +185,7 @@ export function useImportUrls() {
 
 				// Fetch detail to get full info
 				try {
-					const detail = await $fetch(`/api/v1/sources/${item.sourceId}/detail`, {
+					const detail = await apiFetch(`/api/v1/sources/${item.sourceId}/detail`, {
 						query: { serieId: item.externalId },
 					}) as SerieDetail
 

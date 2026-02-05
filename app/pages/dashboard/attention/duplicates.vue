@@ -25,7 +25,7 @@ const groups = computed(() => (data.value?.groups ?? []) as DuplicateGroup[])
 const pagination = computed(() => (data.value?.pagination ?? { page: 1, limit: 20, total: 0, totalPages: 0 }) as DuplicatePagination)
 
 // Detection
-const { detecting, progress, startDetection, checkActiveJob, pollJobStatus } = useDuplicateDetection()
+const { detecting, progress, startDetection, checkActiveJob } = useDuplicateDetection()
 
 // Track if initial animation has played
 const hasAnimated = ref(false)
@@ -42,23 +42,16 @@ watch([page, statusFilter], () => {
 	hasAnimated.value = false
 })
 
-// Poll and refresh on completion
-const detectionWatcher = setInterval(async () => {
-	if (detecting.value) {
-		const result = await pollJobStatus()
-		if (result?.completed) {
-			hasAnimated.value = false
-			await refresh()
-		}
+// Refresh list when detection completes
+watch(detecting, (val, oldVal) => {
+	if (oldVal && !val) {
+		hasAnimated.value = false
+		refresh()
 	}
-}, 2000)
+})
 
 onMounted(() => {
 	checkActiveJob()
-})
-
-onUnmounted(() => {
-	clearInterval(detectionWatcher)
 })
 
 // Merge state
