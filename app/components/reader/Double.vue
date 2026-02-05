@@ -1,17 +1,18 @@
 <script setup lang="ts">
 const props = defineProps<{
-	pages: Array<{ index: number, type: string, url: string | null, content: string | null }>
-	currentPage: number
+	spreadPages: Array<{ index: number, type: string, url: string | null, content: string | null }>
+	currentSpreadIndex: number
+	totalSpreads: number
+	totalIndividualPages: number
+	pageRange: { start: number, end: number }
 }>()
 
 const emit = defineEmits<{
-	"next": []
-	"prev": []
-	"update:currentPage": [page: number]
+	next: []
+	prev: []
 }>()
 
-const imagePages = computed(() => props.pages.filter(p => p.type === "image" && p.url))
-const current = computed(() => imagePages.value[props.currentPage])
+const isPair = computed(() => props.spreadPages.length === 2)
 
 function handleClick(e: MouseEvent) {
 	const target = e.currentTarget as HTMLElement
@@ -30,32 +31,35 @@ function handleClick(e: MouseEvent) {
 
 <template>
 	<div
-		class="reader-paged"
+		class="reader-double"
 		@click="handleClick"
 	>
 		<div
-			v-if="current"
-			class="reader-paged__container"
+			v-if="spreadPages.length > 0"
+			class="reader-double__container"
+			:class="{ 'reader-double__container--pair': isPair }"
 		>
 			<img
-				:key="current.index"
-				:src="current.url!"
-				:alt="`Page ${current.index + 1}`"
-				class="reader-paged__image"
+				v-for="page in spreadPages"
+				:key="page.index"
+				:src="page.url!"
+				:alt="`Page ${page.index + 1}`"
+				class="reader-double__image"
+				:class="{ 'reader-double__image--half': isPair }"
 			>
 		</div>
 
-		<div class="reader-paged__zones">
-			<div class="reader-paged__zone reader-paged__zone--prev">
+		<div class="reader-double__zones">
+			<div class="reader-double__zone reader-double__zone--prev">
 				<UIcon
 					name="i-lucide-chevron-left"
-					class="reader-paged__zone-icon"
+					class="reader-double__zone-icon"
 				/>
 			</div>
-			<div class="reader-paged__zone reader-paged__zone--next">
+			<div class="reader-double__zone reader-double__zone--next">
 				<UIcon
 					name="i-lucide-chevron-right"
-					class="reader-paged__zone-icon"
+					class="reader-double__zone-icon"
 				/>
 			</div>
 		</div>
@@ -63,7 +67,7 @@ function handleClick(e: MouseEvent) {
 </template>
 
 <style scoped>
-.reader-paged {
+.reader-double {
 	position: relative;
 	display: flex;
 	align-items: center;
@@ -73,28 +77,36 @@ function handleClick(e: MouseEvent) {
 	user-select: none;
 }
 
-.reader-paged__container {
-	max-width: 900px;
+.reader-double__container {
+	max-width: 1400px;
 	max-height: calc(100vh - 7rem);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 }
 
-.reader-paged__image {
+.reader-double__container--pair {
+	gap: 2px;
+}
+
+.reader-double__image {
 	max-width: 100%;
 	max-height: calc(100vh - 7rem);
 	object-fit: contain;
 }
 
-.reader-paged__zones {
+.reader-double__image--half {
+	max-width: 50%;
+}
+
+.reader-double__zones {
 	position: absolute;
 	inset: 0;
 	display: flex;
 	pointer-events: none;
 }
 
-.reader-paged__zone {
+.reader-double__zone {
 	flex: 1;
 	display: flex;
 	align-items: center;
@@ -102,22 +114,22 @@ function handleClick(e: MouseEvent) {
 	transition: opacity 0.2s ease;
 }
 
-.reader-paged:hover .reader-paged__zone {
+.reader-double:hover .reader-double__zone {
 	opacity: 1;
 }
 
-.reader-paged__zone--prev {
+.reader-double__zone--prev {
 	justify-content: flex-start;
 	padding-left: 1rem;
 }
 
-.reader-paged__zone--next {
+.reader-double__zone--next {
 	justify-content: flex-end;
 	padding-right: 1rem;
 	flex: 2;
 }
 
-.reader-paged__zone-icon {
+.reader-double__zone-icon {
 	width: 2rem;
 	height: 2rem;
 	color: var(--ui-text-dimmed);

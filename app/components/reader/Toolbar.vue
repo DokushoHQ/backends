@@ -6,11 +6,12 @@ defineProps<{
 	chapterTitle?: string | null
 	prevChapter: { id: string, chapter_number: number, title: string | null } | null
 	nextChapter: { id: string, chapter_number: number, title: string | null } | null
-	mode: "vertical" | "paged"
+	mode: "vertical" | "paged" | "double"
+	pageCounter?: string | null
 }>()
 
 const emit = defineEmits<{
-	"update:mode": [mode: "vertical" | "paged"]
+	"update:mode": [mode: "vertical" | "paged" | "double"]
 	"toggle-fullscreen": []
 }>()
 </script>
@@ -41,6 +42,13 @@ const emit = defineEmits<{
 				</span>
 			</span>
 		</div>
+
+		<span
+			v-if="pageCounter"
+			class="reader-toolbar__page-counter"
+		>
+			{{ pageCounter }}
+		</span>
 
 		<div class="reader-toolbar__right">
 			<NuxtLink
@@ -102,8 +110,20 @@ const emit = defineEmits<{
 			<button
 				class="reader-toolbar__mode-btn"
 				:class="{ 'reader-toolbar__mode-btn--active': mode === 'paged' }"
-				title="Paged mode"
+				title="Single page"
 				@click="emit('update:mode', 'paged')"
+			>
+				<UIcon
+					name="i-lucide-file"
+					class="size-4"
+				/>
+			</button>
+
+			<button
+				class="reader-toolbar__mode-btn"
+				:class="{ 'reader-toolbar__mode-btn--active': mode === 'double' }"
+				title="Double page"
+				@click="emit('update:mode', 'double')"
 			>
 				<UIcon
 					name="i-lucide-book-open"
@@ -193,6 +213,14 @@ const emit = defineEmits<{
 .reader-toolbar__chapter-title {
 	font-weight: 400;
 	color: var(--ui-text-muted);
+}
+
+.reader-toolbar__page-counter {
+	font-size: var(--font-size-xs);
+	color: var(--ui-text-muted);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .reader-toolbar__right {

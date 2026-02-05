@@ -25,6 +25,9 @@ const {
 	nextChapter,
 	mode,
 	currentPage,
+	totalPages,
+	currentSpreadPages,
+	currentSpreadPageRange,
 	nextPage,
 	prevPage,
 	preloadImages,
@@ -51,6 +54,20 @@ const chapterInfo = computed(() => {
 	return ch ? { chapter_number: ch.chapter_number, title: ch.title } : null
 })
 
+// Page counter for toolbar
+const pageCounter = computed(() => {
+	if (mode.value === "paged") {
+		return `${currentPage.value + 1} / ${imagePages.value.length}`
+	}
+	if (mode.value === "double") {
+		const { start, end } = currentSpreadPageRange.value
+		if (!start) return null
+		if (start === end) return `${start} / ${imagePages.value.length}`
+		return `${start}-${end} / ${imagePages.value.length}`
+	}
+	return null
+})
+
 // Preload on vertical scroll visibility
 function handlePageVisible(index: number) {
 	preloadImages(index + 1)
@@ -69,6 +86,7 @@ function handlePageVisible(index: number) {
 			:prev-chapter="prevChapter"
 			:next-chapter="nextChapter"
 			:mode="mode"
+			:page-counter="pageCounter"
 			@update:mode="mode = $event"
 			@toggle-fullscreen="toggleFullscreen"
 		/>
@@ -136,9 +154,21 @@ function handlePageVisible(index: number) {
 
 			<!-- Paged mode -->
 			<ReaderPaged
-				v-else
+				v-else-if="mode === 'paged'"
 				:pages="imagePages"
 				:current-page="currentPage"
+				@next="nextPage"
+				@prev="prevPage"
+			/>
+
+			<!-- Double page mode -->
+			<ReaderDouble
+				v-else-if="mode === 'double'"
+				:spread-pages="currentSpreadPages"
+				:current-spread-index="currentPage"
+				:total-spreads="totalPages"
+				:total-individual-pages="imagePages.length"
+				:page-range="currentSpreadPageRange"
 				@next="nextPage"
 				@prev="prevPage"
 			/>
