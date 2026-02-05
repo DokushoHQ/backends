@@ -61,12 +61,37 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	})
 	const currentPage = ref(0)
 
-	// Reset page on chapter change or mode change
+	// Reset page on chapter change
 	watch(chapterId, () => {
 		currentPage.value = 0
 	})
-	watch(mode, () => {
-		currentPage.value = 0
+
+	// Translate position when switching between paged ↔ double
+	watch(mode, (newMode, oldMode) => {
+		if (newMode === "vertical" || oldMode === "vertical") {
+			currentPage.value = 0
+			return
+		}
+		if (oldMode === "paged" && newMode === "double") {
+			// Find which spread contains the current individual page
+			const target = currentPage.value
+			let pageCount = 0
+			for (let s = 0; s < spreads.value.length; s++) {
+				pageCount += spreads.value[s]!.pages.length
+				if (pageCount > target) {
+					currentPage.value = s
+					return
+				}
+			}
+		}
+		else if (oldMode === "double" && newMode === "paged") {
+			// Find the first individual page index of the current spread
+			let pageIndex = 0
+			for (let s = 0; s < currentPage.value && s < spreads.value.length; s++) {
+				pageIndex += spreads.value[s]!.pages.length
+			}
+			currentPage.value = pageIndex
+		}
 	})
 
 	// Paged/double mode state
