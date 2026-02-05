@@ -72,14 +72,14 @@ function handleClick(e: MouseEvent) {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-height: calc(100vh - 7rem);
+	min-height: calc(100vh - 4rem);
 	cursor: pointer;
 	user-select: none;
 }
 
 .reader-double__container {
 	max-width: 1400px;
-	max-height: calc(100vh - 7rem);
+	max-height: calc(100vh - 4rem);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -91,7 +91,7 @@ function handleClick(e: MouseEvent) {
 
 .reader-double__image {
 	max-width: 100%;
-	max-height: calc(100vh - 7rem);
+	max-height: calc(100vh - 4rem);
 	object-fit: contain;
 }
 

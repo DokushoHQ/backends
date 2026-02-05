@@ -149,6 +149,9 @@ const emit = defineEmits<{
 
 <style scoped>
 .reader-toolbar {
+	position: sticky;
+	top: 0;
+	z-index: 50;
 	height: 3rem;
 	display: flex;
 	align-items: center;
