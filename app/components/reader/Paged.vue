@@ -45,21 +45,6 @@ function handleClick(e: MouseEvent) {
 				class="reader-paged__image"
 			>
 		</div>
-
-		<div class="reader-paged__zones">
-			<div class="reader-paged__zone reader-paged__zone--prev">
-				<UIcon
-					:name="direction === 'rtl' ? 'i-lucide-chevron-right' : 'i-lucide-chevron-left'"
-					class="reader-paged__zone-icon"
-				/>
-			</div>
-			<div class="reader-paged__zone reader-paged__zone--next">
-				<UIcon
-					:name="direction === 'rtl' ? 'i-lucide-chevron-left' : 'i-lucide-chevron-right'"
-					class="reader-paged__zone-icon"
-				/>
-			</div>
-		</div>
 	</div>
 </template>
 
@@ -86,44 +71,5 @@ function handleClick(e: MouseEvent) {
 	max-width: 100%;
 	max-height: calc(100vh - 4rem);
 	object-fit: contain;
-}
-
-.reader-paged__zones {
-	position: absolute;
-	inset: 0;
-	display: flex;
-	pointer-events: none;
-}
-
-.reader-paged__zone {
-	flex: 1;
-	display: flex;
-	align-items: center;
-	opacity: 0;
-	transition: opacity 0.2s ease;
-}
-
-.reader-paged:hover .reader-paged__zone {
-	opacity: 1;
-}
-
-.reader-paged__zone--prev {
-	justify-content: flex-start;
-	padding-left: 1rem;
-}
-
-.reader-paged__zone--next {
-	justify-content: flex-end;
-	padding-right: 1rem;
-	flex: 2;
-}
-
-.reader-paged__zone-icon {
-	width: 2rem;
-	height: 2rem;
-	color: var(--ui-text-dimmed);
-	background: color-mix(in oklch, var(--ui-bg) 80%, transparent);
-	border-radius: 50%;
-	padding: 0.25rem;
 }
 </style>

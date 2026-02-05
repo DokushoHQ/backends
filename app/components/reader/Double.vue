@@ -49,21 +49,6 @@ function handleClick(e: MouseEvent) {
 				:class="{ 'reader-double__image--half': isPair }"
 			>
 		</div>
-
-		<div class="reader-double__zones">
-			<div class="reader-double__zone reader-double__zone--prev">
-				<UIcon
-					:name="direction === 'rtl' ? 'i-lucide-chevron-right' : 'i-lucide-chevron-left'"
-					class="reader-double__zone-icon"
-				/>
-			</div>
-			<div class="reader-double__zone reader-double__zone--next">
-				<UIcon
-					:name="direction === 'rtl' ? 'i-lucide-chevron-left' : 'i-lucide-chevron-right'"
-					class="reader-double__zone-icon"
-				/>
-			</div>
-		</div>
 	</div>
 </template>
 
@@ -98,44 +83,5 @@ function handleClick(e: MouseEvent) {
 
 .reader-double__image--half {
 	max-width: 50%;
-}
-
-.reader-double__zones {
-	position: absolute;
-	inset: 0;
-	display: flex;
-	pointer-events: none;
-}
-
-.reader-double__zone {
-	flex: 1;
-	display: flex;
-	align-items: center;
-	opacity: 0;
-	transition: opacity 0.2s ease;
-}
-
-.reader-double:hover .reader-double__zone {
-	opacity: 1;
-}
-
-.reader-double__zone--prev {
-	justify-content: flex-start;
-	padding-left: 1rem;
-}
-
-.reader-double__zone--next {
-	justify-content: flex-end;
-	padding-right: 1rem;
-	flex: 2;
-}
-
-.reader-double__zone-icon {
-	width: 2rem;
-	height: 2rem;
-	color: var(--ui-text-dimmed);
-	background: color-mix(in oklch, var(--ui-bg) 80%, transparent);
-	border-radius: 50%;
-	padding: 0.25rem;
 }
 </style>
