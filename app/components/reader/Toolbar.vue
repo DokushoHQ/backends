@@ -8,6 +8,7 @@ defineProps<{
 	nextChapter: { id: string, chapter_number: number, title: string | null } | null
 	mode: "vertical" | "paged" | "double"
 	isVertical: boolean
+	isMobile: boolean
 	pageCounter?: string | null
 }>()
 
@@ -94,7 +95,7 @@ const emit = defineEmits<{
 				/>
 			</span>
 
-			<template v-if="!isVertical">
+			<template v-if="!isVertical && !isMobile">
 				<div class="reader-toolbar__divider" />
 
 				<button
@@ -122,18 +123,20 @@ const emit = defineEmits<{
 				</button>
 			</template>
 
-			<div class="reader-toolbar__divider" />
+			<template v-if="!isMobile">
+				<div class="reader-toolbar__divider" />
 
-			<button
-				class="reader-toolbar__mode-btn"
-				title="Fullscreen (F)"
-				@click="emit('toggle-fullscreen')"
-			>
-				<UIcon
-					name="i-lucide-maximize"
-					class="size-4"
-				/>
-			</button>
+				<button
+					class="reader-toolbar__mode-btn"
+					title="Fullscreen (F)"
+					@click="emit('toggle-fullscreen')"
+				>
+					<UIcon
+						name="i-lucide-maximize"
+						class="size-4"
+					/>
+				</button>
+			</template>
 		</div>
 	</div>
 </template>

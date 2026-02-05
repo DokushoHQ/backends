@@ -46,10 +46,15 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		RTL_TYPES.has(serieType.value ?? "") ? "rtl" : "ltr",
 	)
 
-	// Only the horizontal sub-preference is persisted
-	const horizontalMode = useLocalStorage<"paged" | "double">("reader-horizontal-mode", "paged")
+	// Mobile forces single page; desktop defaults to double
+	const isMobile = useMediaQuery("(max-width: 768px)")
+	const horizontalMode = useLocalStorage<"paged" | "double">("reader-horizontal-mode", "double")
 	const mode = computed<ReadingMode>({
-		get: () => isVertical.value ? "vertical" : horizontalMode.value,
+		get: () => {
+			if (isVertical.value) return "vertical"
+			if (isMobile.value) return "paged"
+			return horizontalMode.value
+		},
 		set: (v: ReadingMode) => {
 			if (v !== "vertical") horizontalMode.value = v as "paged" | "double"
 		},
@@ -276,6 +281,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		nextChapter,
 		mode,
 		isVertical,
+		isMobile,
 		direction,
 		currentPage,
 		totalPages,

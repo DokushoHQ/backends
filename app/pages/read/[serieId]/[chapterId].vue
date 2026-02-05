@@ -33,6 +33,7 @@ const {
 	nextChapter,
 	mode,
 	isVertical,
+	isMobile,
 	direction,
 	currentPage,
 	totalPages,
@@ -92,6 +93,7 @@ function handlePageVisible(index: number) {
 			:next-chapter="nextChapter"
 			:mode="mode"
 			:is-vertical="isVertical"
+			:is-mobile="isMobile"
 			:page-counter="pageCounter"
 			@update:mode="mode = $event"
 			@toggle-fullscreen="toggleFullscreen"
