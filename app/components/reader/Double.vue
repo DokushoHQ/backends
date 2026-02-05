@@ -38,7 +38,7 @@ function handleClick(e: MouseEvent) {
 		<div
 			v-if="spreadPages.length > 0"
 			class="reader-double__container"
-			:class="{ 'reader-double__container--pair': isPair }"
+			:class="{ 'reader-double__container--pair': isPair, 'reader-double__container--rtl': direction === 'rtl' }"
 		>
 			<img
 				v-for="page in spreadPages"
@@ -73,6 +73,10 @@ function handleClick(e: MouseEvent) {
 
 .reader-double__container--pair {
 	gap: 2px;
+}
+
+.reader-double__container--rtl {
+	flex-direction: row-reverse;
 }
 
 .reader-double__image {
