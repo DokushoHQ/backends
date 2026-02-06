@@ -20,7 +20,7 @@ export const list = authed
 		artist: z.string().optional(),
 		status: z.string().optional(),
 		type: z.string().optional(),
-		language: z.string().optional(),
+		language: languageSchema.optional(),
 	}))
 	.handler(async ({ input }) => {
 		const { page, q: searchQuery, genre, author, artist, status, type, language } = input

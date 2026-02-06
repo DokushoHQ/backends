@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useQuery } from "@tanstack/vue-query"
+import type { Language } from "~~/prisma/generated/enums"
 
 definePageMeta({
 	layout: "reader",
@@ -13,7 +14,7 @@ const filters = ref({
 	type: (route.query.type as string) || undefined,
 	status: (route.query.status as string) || undefined,
 	genre: (route.query.genre as string) || undefined,
-	language: (route.query.language as string) || undefined,
+	language: (route.query.language as Language | undefined) || undefined,
 })
 
 const page = ref(Number(route.query.page) || 1)

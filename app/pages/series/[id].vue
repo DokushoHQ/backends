@@ -8,15 +8,15 @@ definePageMeta({
 const route = useRoute()
 const orpc = useOrpc()
 
-const serieId = route.params.id as string
+const serieId = computed(() => route.params.id as string)
 
-const serieQuery = useQuery(
-	orpc.serie.get.queryOptions({ input: { id: serieId } }),
-)
+const serieQuery = useQuery(computed(() =>
+	orpc.serie.get.queryOptions({ input: { id: serieId.value } }),
+))
 
-const chaptersQuery = useQuery(
-	orpc.serie.chapters.queryOptions({ input: { serieId } }),
-)
+const chaptersQuery = useQuery(computed(() =>
+	orpc.serie.chapters.queryOptions({ input: { serieId: serieId.value } }),
+))
 
 const serie = computed(() => serieQuery.data.value)
 const chapters = computed(() => chaptersQuery.data.value?.chapters ?? [])
@@ -37,7 +37,11 @@ const availableLanguages = computed(() => [...chaptersByLanguage.value.keys()])
 const selectedLanguage = ref<string | null>(null)
 
 watch(availableLanguages, (langs) => {
-	if (langs.length > 0 && !selectedLanguage.value) {
+	if (!langs.length) {
+		selectedLanguage.value = null
+		return
+	}
+	if (!selectedLanguage.value || !langs.includes(selectedLanguage.value)) {
 		selectedLanguage.value = langs.includes("En") ? "En" : langs[0]!
 	}
 })
@@ -70,7 +74,7 @@ const filteredChapters = computed(() => {
 				name="i-lucide-alert-circle"
 				class="serie-page__error-icon"
 			/>
-			<p>{{ serieQuery.error.value.message }}</p>
+			<p>{{ serieQuery.error.value instanceof Error ? serieQuery.error.value.message : 'Failed to load series' }}</p>
 			<NuxtLink
 				to="/"
 				class="serie-page__error-link"
