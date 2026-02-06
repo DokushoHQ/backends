@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { authed } from "../middleware/auth"
 import { db } from "../../utils/db"
+import { languageSchema } from "../../utils/schemas"
 
 export const getData = authed
 	.input(z.object({
@@ -32,7 +33,7 @@ export const getNavigation = authed
 	.input(z.object({
 		serieId: z.string().uuid(),
 		chapterId: z.string().uuid(),
-		language: z.string().optional(),
+		language: languageSchema.optional(),
 	}))
 	.handler(async ({ input }) => {
 		const currentChapter = await db.chapter.findUnique({
@@ -51,7 +52,7 @@ export const getNavigation = authed
 				where: {
 					serie_id: input.serieId,
 					enabled: true,
-					language: lang as never,
+					language: lang,
 					chapter_number: { lt: currentChapter.chapter_number },
 				},
 				orderBy: { chapter_number: "desc" },
@@ -61,7 +62,7 @@ export const getNavigation = authed
 				where: {
 					serie_id: input.serieId,
 					enabled: true,
-					language: lang as never,
+					language: lang,
 					chapter_number: { gt: currentChapter.chapter_number },
 				},
 				orderBy: { chapter_number: "asc" },

@@ -243,19 +243,21 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 
 		switch (e.key) {
 			case "ArrowRight":
-				e.preventDefault()
 				if (mode.value === "paged" || mode.value === "double") {
+					e.preventDefault()
 					if (direction.value === "rtl") prevPage()
 					else nextPage()
 				}
 				break
 			case " ":
-				e.preventDefault()
-				if (mode.value === "paged" || mode.value === "double") nextPage()
+				if (mode.value === "paged" || mode.value === "double") {
+					e.preventDefault()
+					nextPage()
+				}
 				break
 			case "ArrowLeft":
-				e.preventDefault()
 				if (mode.value === "paged" || mode.value === "double") {
+					e.preventDefault()
 					if (direction.value === "rtl") nextPage()
 					else prevPage()
 				}

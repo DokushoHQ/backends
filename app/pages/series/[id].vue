@@ -139,7 +139,7 @@ const filteredChapters = computed(() => {
 							<span v-if="serie.authors?.length">
 								by {{ serie.authors.map((a: any) => a.name).join(', ') }}
 							</span>
-							<span v-if="serie.artists?.length && serie.artists.map((a: any) => a.name).join(',') !== serie.authors?.map((a: any) => a.name).join(',')">
+							<span v-if="serie.artists?.length && serie.artists.map((a: any) => a.name).join(',') !== (serie.authors?.map((a: any) => a.name).join(',') ?? '')">
 								art by {{ serie.artists.map((a: any) => a.name).join(', ') }}
 							</span>
 						</div>

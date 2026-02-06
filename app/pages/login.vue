@@ -34,7 +34,10 @@ const lastUsedOidc = computed(() => oidcProviderId.value && lastLoginMethod.valu
 const route = useRoute()
 const redirectTo = computed(() => {
 	const redirect = route.query.redirect as string | undefined
-	return redirect || "/"
+	if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+		return redirect
+	}
+	return "/"
 })
 
 // Redirect if already authenticated
@@ -86,7 +89,7 @@ async function handleEmailLogin() {
 			await navigateTo("/two-factor")
 		}
 		else {
-			await navigateTo(redirectTo.value, { external: true })
+			await navigateTo(redirectTo.value)
 		}
 	}
 	catch (e: unknown) {

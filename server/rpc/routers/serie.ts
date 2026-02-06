@@ -3,8 +3,13 @@ import { authed } from "../middleware/auth"
 import { db } from "../../utils/db"
 import { serieIndex } from "../../utils/meilisearch"
 import { getSources } from "../../utils/sources"
+import { languageSchema } from "../../utils/schemas"
 
 const PAGE_SIZE = 24
+
+function escapeFilterValue(value: string): string {
+	return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")
+}
 
 export const list = authed
 	.input(z.object({
@@ -21,12 +26,12 @@ export const list = authed
 		const { page, q: searchQuery, genre, author, artist, status, type, language } = input
 
 		const filters: string[] = ["soft_deleted = false"]
-		if (genre) filters.push(`genres = "${genre}"`)
-		if (author) filters.push(`authors = "${author}"`)
-		if (artist) filters.push(`artists = "${artist}"`)
-		if (status) filters.push(`status = "${status}"`)
-		if (type) filters.push(`type = "${type}"`)
-		if (language) filters.push(`languages_available = "${language}"`)
+		if (genre) filters.push(`genres = "${escapeFilterValue(genre)}"`)
+		if (author) filters.push(`authors = "${escapeFilterValue(author)}"`)
+		if (artist) filters.push(`artists = "${escapeFilterValue(artist)}"`)
+		if (status) filters.push(`status = "${escapeFilterValue(status)}"`)
+		if (type) filters.push(`type = "${escapeFilterValue(type)}"`)
+		if (language) filters.push(`languages_available = "${escapeFilterValue(language)}"`)
 
 		const sortField = language ? `${language}_updated_at:desc` : "updated_at:desc"
 
@@ -150,14 +155,14 @@ export const get = authed
 export const chapters = authed
 	.input(z.object({
 		serieId: z.string().uuid(),
-		language: z.string().optional(),
+		language: languageSchema.optional(),
 	}))
 	.handler(async ({ input }) => {
 		const chapters = await db.chapter.findMany({
 			where: {
 				serie_id: input.serieId,
 				enabled: true,
-				...(input.language ? { language: input.language as never } : {}),
+				...(input.language ? { language: input.language } : {}),
 			},
 			include: {
 				groups: { select: { id: true, name: true, url: true } },
