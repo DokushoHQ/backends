@@ -103,6 +103,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	const imageDimensions = ref(new Map<number, { w: number, h: number }>())
 
 	watch([imagePages, mode], ([imgs, m]) => {
+		if (!import.meta.client) return
 		if (m !== "double") return
 		for (const page of imgs) {
 			if (page.url && !imageDimensions.value.has(page.index)) {

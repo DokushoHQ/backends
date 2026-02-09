@@ -20,6 +20,11 @@ const emit = defineEmits<{
 const searchQuery = ref(props.modelValue.q ?? "")
 const debounceTimer = ref<ReturnType<typeof setTimeout>>()
 
+watch(() => props.modelValue.q, (val) => {
+	clearTimeout(debounceTimer.value)
+	searchQuery.value = val ?? ""
+})
+
 watch(searchQuery, (val) => {
 	clearTimeout(debounceTimer.value)
 	debounceTimer.value = setTimeout(() => {
