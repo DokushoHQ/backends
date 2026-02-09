@@ -86,7 +86,7 @@ async function handleEmailLogin() {
 		else if ((result.data as { twoFactorRedirect?: boolean })?.twoFactorRedirect) {
 			// 2FA is required - the twoFactorClient plugin will handle the redirect
 			// via onTwoFactorRedirect callback, but we can also navigate explicitly
-			await navigateTo("/two-factor")
+			await navigateTo(`/two-factor?redirect=${encodeURIComponent(redirectTo.value)}`)
 		}
 		else {
 			await navigateTo(redirectTo.value)

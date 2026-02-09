@@ -43,7 +43,7 @@ export const getNavigation = authed
 		})
 
 		if (!currentChapter) {
-			throw new Error("Chapter not found")
+			throw new ORPCError("NOT_FOUND", { message: "Chapter not found" })
 		}
 
 		const lang = input.language ?? currentChapter.language
