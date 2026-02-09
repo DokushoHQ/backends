@@ -93,6 +93,7 @@ function handlePageVisible(pageIndex: number) {
 			:prev-chapter="prevChapter"
 			:next-chapter="nextChapter"
 			:mode="mode"
+			:direction="direction"
 			:is-vertical="isVertical"
 			:is-mobile="isMobile"
 			:page-counter="pageCounter"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
 	serieId: string
 	serieTitle: string
 	chapterNumber: number
@@ -7,6 +7,7 @@ defineProps<{
 	prevChapter: { id: string, chapter_number: number, title: string | null } | null
 	nextChapter: { id: string, chapter_number: number, title: string | null } | null
 	mode: "vertical" | "paged" | "double"
+	direction: "ltr" | "rtl"
 	isVertical: boolean
 	isMobile: boolean
 	pageCounter?: string | null
@@ -16,6 +17,22 @@ const emit = defineEmits<{
 	"update:mode": [mode: "vertical" | "paged" | "double"]
 	"toggle-fullscreen": []
 }>()
+
+const leftNavChapter = computed(() =>
+	props.direction === "rtl" ? props.nextChapter : props.prevChapter,
+)
+
+const rightNavChapter = computed(() =>
+	props.direction === "rtl" ? props.prevChapter : props.nextChapter,
+)
+
+const leftNavTitle = computed(() =>
+	props.direction === "rtl" ? "Next chapter (])" : "Previous chapter ([)",
+)
+
+const rightNavTitle = computed(() =>
+	props.direction === "rtl" ? "Previous chapter ([)" : "Next chapter (])",
+)
 </script>
 
 <template>
@@ -45,55 +62,101 @@ const emit = defineEmits<{
 			</span>
 		</div>
 
-		<span
+		<div
 			v-if="pageCounter"
-			class="reader-toolbar__page-counter"
+			class="reader-toolbar__progress"
 		>
-			{{ pageCounter }}
-		</span>
+			<NuxtLink
+				v-if="leftNavChapter"
+				:to="`/read/${serieId}/${leftNavChapter.id}`"
+				class="reader-toolbar__nav-btn"
+				:title="leftNavTitle"
+			>
+				<UIcon
+					name="i-lucide-chevron-left"
+					class="size-4"
+				/>
+			</NuxtLink>
+			<span
+				v-else
+				class="reader-toolbar__nav-btn reader-toolbar__nav-btn--disabled"
+			>
+				<UIcon
+					name="i-lucide-chevron-left"
+					class="size-4"
+				/>
+			</span>
+
+			<span class="reader-toolbar__page-counter">
+				{{ pageCounter }}
+			</span>
+
+			<NuxtLink
+				v-if="rightNavChapter"
+				:to="`/read/${serieId}/${rightNavChapter.id}`"
+				class="reader-toolbar__nav-btn"
+				:title="rightNavTitle"
+			>
+				<UIcon
+					name="i-lucide-chevron-right"
+					class="size-4"
+				/>
+			</NuxtLink>
+			<span
+				v-else
+				class="reader-toolbar__nav-btn reader-toolbar__nav-btn--disabled"
+			>
+				<UIcon
+					name="i-lucide-chevron-right"
+					class="size-4"
+				/>
+			</span>
+		</div>
 
 		<div class="reader-toolbar__right">
-			<NuxtLink
-				v-if="prevChapter"
-				:to="`/read/${serieId}/${prevChapter.id}`"
-				class="reader-toolbar__nav-btn"
-				title="Previous chapter ([)"
-			>
-				<UIcon
-					name="i-lucide-chevron-left"
-					class="size-4"
-				/>
-			</NuxtLink>
-			<span
-				v-else
-				class="reader-toolbar__nav-btn reader-toolbar__nav-btn--disabled"
-			>
-				<UIcon
-					name="i-lucide-chevron-left"
-					class="size-4"
-				/>
-			</span>
+			<template v-if="!pageCounter">
+				<NuxtLink
+					v-if="leftNavChapter"
+					:to="`/read/${serieId}/${leftNavChapter.id}`"
+					class="reader-toolbar__nav-btn"
+					:title="leftNavTitle"
+				>
+					<UIcon
+						name="i-lucide-chevron-left"
+						class="size-4"
+					/>
+				</NuxtLink>
+				<span
+					v-else
+					class="reader-toolbar__nav-btn reader-toolbar__nav-btn--disabled"
+				>
+					<UIcon
+						name="i-lucide-chevron-left"
+						class="size-4"
+					/>
+				</span>
 
-			<NuxtLink
-				v-if="nextChapter"
-				:to="`/read/${serieId}/${nextChapter.id}`"
-				class="reader-toolbar__nav-btn"
-				title="Next chapter (])"
-			>
-				<UIcon
-					name="i-lucide-chevron-right"
-					class="size-4"
-				/>
-			</NuxtLink>
-			<span
-				v-else
-				class="reader-toolbar__nav-btn reader-toolbar__nav-btn--disabled"
-			>
-				<UIcon
-					name="i-lucide-chevron-right"
-					class="size-4"
-				/>
-			</span>
+				<NuxtLink
+					v-if="rightNavChapter"
+					:to="`/read/${serieId}/${rightNavChapter.id}`"
+					class="reader-toolbar__nav-btn"
+					:title="rightNavTitle"
+				>
+					<UIcon
+						name="i-lucide-chevron-right"
+						class="size-4"
+					/>
+				</NuxtLink>
+				<span
+					v-else
+					class="reader-toolbar__nav-btn reader-toolbar__nav-btn--disabled"
+				>
+					<UIcon
+						name="i-lucide-chevron-right"
+						class="size-4"
+					/>
+				</span>
+			</template>
 
 			<template v-if="!isVertical && !isMobile">
 				<div class="reader-toolbar__divider" />
@@ -217,6 +280,13 @@ const emit = defineEmits<{
 	color: var(--ui-text-muted);
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.reader-toolbar__progress {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
 	flex-shrink: 0;
 }
 
