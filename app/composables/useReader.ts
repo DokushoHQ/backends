@@ -64,7 +64,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		},
 	})
 	const currentPage = ref(0)
-	function routeQueryValue(queryValue: string | string[] | null | undefined) {
+	function routeQueryValue(queryValue: string | null | Array<string | null> | undefined) {
 		return Array.isArray(queryValue) ? queryValue[0] : queryValue
 	}
 
