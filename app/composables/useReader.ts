@@ -263,7 +263,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	})
 
 	// Optional chapter-entry hint: open the requested page/spread from query.
-	watch([chapterId, totalPages, mode, spreadsReady], ([, count, m, ready]) => {
+	watch([chapterId, totalPages, mode], ([, count, m]) => {
 		if (pendingStartPage.value === null) return
 		if (count <= 0) return
 
@@ -274,24 +274,15 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 			return
 		}
 
-		// In double mode, use a safe fallback before spread dimensions are fully ready.
-		if (!ready) {
-			const fallbackSpread = Math.floor(Math.max(pendingStartPage.value - 1, 0) / 2)
-			currentPage.value = clampTranslatedIndex(fallbackSpread, "double")
-			pendingStartPage.value = null
-			pendingStartAtLast.value = false
-			return
-		}
-
-		const targetPageIndex = Math.max(pendingStartPage.value - 1, 0)
-		const spreadIndex = translateIndexWithSpreads("paged", "double", targetPageIndex)
+		// In double mode, `page` query is the spread index (1-based) to match URL sync behavior.
+		const spreadIndex = Math.max(pendingStartPage.value - 1, 0)
 		currentPage.value = clampTranslatedIndex(spreadIndex, "double")
 		pendingStartPage.value = null
 		pendingStartAtLast.value = false
 	}, { immediate: true })
 
 	// Optional chapter-entry hint: open the last page/spread (used when crossing to previous chapter).
-	watch([chapterId, totalPages, mode, spreadsReady], ([, count, m, _ready]) => {
+	watch([chapterId, totalPages, mode], ([, count, m]) => {
 		if (!pendingStartAtLast.value) return
 		if (count <= 0) return
 
