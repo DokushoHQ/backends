@@ -16,153 +16,156 @@ defineProps<{
 		:to="`/series/${serie.id}`"
 		class="browse-card"
 	>
-		<div class="browse-card__cover">
-			<NuxtImg
-				v-if="serie.cover"
-				:src="serie.cover"
-				:alt="serie.title"
-				class="browse-card__image"
-				loading="lazy"
-				width="240"
-				height="340"
-			/>
-			<div
-				v-else
-				class="browse-card__placeholder"
-			>
-				<UIcon
-					name="i-lucide-book-open"
-					class="browse-card__placeholder-icon"
-				/>
-			</div>
-
-			<div class="browse-card__overlay">
-				<div class="browse-card__badges">
-					<span class="browse-card__type">{{ serie.type }}</span>
+		<SeriesCardBase
+			:title="serie.title"
+			:cover="serie.cover"
+		>
+			<template #badge>
+				<div
+					v-if="serie.type"
+					class="type-badge"
+				>
+					{{ serie.type }}
 				</div>
-				<span class="browse-card__chapters">
-					{{ serie._count.chapters }} ch.
-				</span>
-			</div>
-		</div>
+			</template>
 
-		<div class="browse-card__info">
-			<h3 class="browse-card__title">
-				{{ serie.title }}
-			</h3>
-			<p
-				v-if="serie.status.length > 0"
-				class="browse-card__status"
-			>
-				{{ serie.status[0] }}
-			</p>
-		</div>
+			<template #badge-bottom>
+				<div class="chapter-badge">
+					<span class="chapter-number">{{ serie._count.chapters }}</span>
+					<span class="chapter-label">Ch</span>
+				</div>
+				<div
+					v-if="serie.status.length > 0"
+					class="status-badge"
+				>
+					{{ serie.status[0] }}
+				</div>
+			</template>
+		</SeriesCardBase>
 	</NuxtLink>
 </template>
 
 <style scoped>
 .browse-card {
-	display: flex;
-	flex-direction: column;
+	display: block;
 	text-decoration: none;
-	color: inherit;
+	cursor: pointer;
 	border-radius: var(--radius-card);
-	overflow: hidden;
-	transition: transform 0.2s ease, box-shadow 0.2s ease;
+	transition: box-shadow 0.25s ease;
+	-webkit-tap-highlight-color: transparent;
 }
 
-.browse-card:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 8px 24px color-mix(in oklch, var(--ui-text) 8%, transparent);
+@media (hover: hover) {
+	.browse-card:hover :deep(.series-card-base) {
+		border-color: var(--ui-primary);
+	}
+
+	.browse-card:hover :deep(.spine-accent) {
+		height: 100%;
+	}
 }
 
-.browse-card__cover {
-	position: relative;
-	aspect-ratio: 5 / 7;
-	overflow: hidden;
-	border-radius: var(--radius-card);
-	background: var(--ui-bg-muted);
+.browse-card:focus-visible {
+	outline: 2px solid var(--ui-primary);
+	outline-offset: 2px;
 }
 
-.browse-card__image {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	transition: transform 0.3s ease;
-}
-
-.browse-card:hover .browse-card__image {
-	transform: scale(1.03);
-}
-
-.browse-card__placeholder {
-	width: 100%;
-	height: 100%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: var(--ui-bg-muted);
-}
-
-.browse-card__placeholder-icon {
-	width: 2.5rem;
-	height: 2.5rem;
-	color: var(--ui-text-dimmed);
-}
-
-.browse-card__overlay {
+/* Type badge - top right */
+.type-badge {
 	position: absolute;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	padding: 0.5rem;
-	display: flex;
-	align-items: flex-end;
-	justify-content: space-between;
-	background: linear-gradient(to top, oklch(0 0 0 / 0.7), transparent);
-	pointer-events: none;
-}
-
-.browse-card__badges {
-	display: flex;
-	gap: 0.25rem;
-}
-
-.browse-card__type {
-	padding: 0.125rem 0.375rem;
-	border-radius: 0.25rem;
-	font-size: 0.6875rem;
+	top: 0.375rem;
+	right: calc(var(--card-cut, 0.5rem) + 0.25rem);
+	padding: 0.0625rem 0.25rem;
+	font-size: 0.5625rem;
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
 	background: color-mix(in oklch, var(--ui-primary) 85%, transparent);
 	color: oklch(0.98 0 0);
+	border-radius: 0.1875rem;
 }
 
-.browse-card__chapters {
-	font-size: 0.6875rem;
-	font-weight: 500;
-	color: oklch(0.9 0 0);
+@media (min-width: 640px) {
+	.type-badge {
+		top: 0.5rem;
+		right: calc(0.75rem + 0.25rem);
+		padding: 0.125rem 0.375rem;
+		font-size: 0.6875rem;
+		border-radius: 0.25rem;
+	}
 }
 
-.browse-card__info {
-	padding: 0.5rem 0.125rem;
+/* Chapter badge - bottom left */
+.chapter-badge {
+	position: absolute;
+	bottom: 0.375rem;
+	left: 0.375rem;
+	display: flex;
+	align-items: baseline;
+	gap: 0.0625rem;
+	padding: 0.125rem 0.375rem;
+	background: color-mix(in oklch, var(--ui-bg-elevated) 95%, transparent);
+	backdrop-filter: blur(8px);
+	border-radius: 0.1875rem;
+	border: 1px solid var(--ui-border);
 }
 
-.browse-card__title {
-	font-size: var(--font-size-sm);
-	font-weight: 600;
-	color: var(--ui-text);
-	line-height: 1.3;
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
+@media (min-width: 640px) {
+	.chapter-badge {
+		bottom: 0.625rem;
+		left: 0.625rem;
+		gap: 0.125rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.25rem;
+	}
 }
 
-.browse-card__status {
+.chapter-number {
 	font-size: var(--font-size-xs);
+	font-weight: 700;
+	color: var(--ui-text);
+	font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 640px) {
+	.chapter-number {
+		font-size: var(--font-size-sm);
+	}
+}
+
+.chapter-label {
+	font-size: 0.5rem;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 	color: var(--ui-text-muted);
-	margin-top: 0.125rem;
+}
+
+@media (min-width: 640px) {
+	.chapter-label {
+		font-size: 0.625rem;
+	}
+}
+
+/* Status badge - hidden on mobile to prevent crowding */
+.status-badge {
+	display: none;
+}
+
+@media (min-width: 640px) {
+	.status-badge {
+		display: block;
+		position: absolute;
+		bottom: 0.625rem;
+		right: calc(0.625rem + 0.25rem);
+		padding: 0.25rem 0.5rem;
+		font-size: var(--font-size-xs);
+		font-weight: 500;
+		color: var(--ui-text-muted);
+		background: color-mix(in oklch, var(--ui-bg-elevated) 95%, transparent);
+		backdrop-filter: blur(8px);
+		border-radius: 0.25rem;
+		border: 1px solid var(--ui-border);
+	}
 }
 </style>

@@ -55,6 +55,13 @@ watch([filters, page], () => {
 	navigateTo({ query }, { replace: true })
 }, { deep: true })
 
+function setPage(p: number) {
+	page.value = p
+	if (import.meta.client) {
+		window.scrollTo({ top: 0, behavior: "instant" })
+	}
+}
+
 // Reset page when filters change from user interaction
 watch(filters, () => {
 	if (!syncingFromRoute.value) page.value = 1
@@ -64,55 +71,26 @@ watch(filters, () => {
 <template>
 	<div class="browse-page">
 		<div class="browse-page__container">
-			<div class="browse-page__header">
-				<h1 class="browse-page__title">
-					Library
-				</h1>
-				<p class="browse-page__subtitle">
-					{{ data?.pagination.total ?? 0 }} series
-				</p>
-			</div>
-
 			<BrowseFilters v-model="filters" />
+
+			<p
+				v-if="data && !isLoading"
+				class="browse-page__count"
+			>
+				{{ data.pagination.total }} series
+			</p>
 
 			<BrowseGrid
 				:series="data?.data ?? []"
 				:loading="isLoading"
 			/>
 
-			<!-- Pagination -->
-			<div
-				v-if="data && data.pagination.totalPages > 1"
-				class="browse-page__pagination"
-			>
-				<button
-					class="browse-page__page-btn"
-					aria-label="Previous page"
-					:disabled="page <= 1"
-					@click="page--"
-				>
-					<UIcon
-						name="i-lucide-chevron-left"
-						class="size-4"
-					/>
-				</button>
-
-				<span class="browse-page__page-info">
-					Page {{ page }} of {{ data.pagination.totalPages }}
-				</span>
-
-				<button
-					class="browse-page__page-btn"
-					aria-label="Next page"
-					:disabled="page >= data.pagination.totalPages"
-					@click="page++"
-				>
-					<UIcon
-						name="i-lucide-chevron-right"
-						class="size-4"
-					/>
-				</button>
-			</div>
+			<UiPagination
+				v-if="data"
+				:page="page"
+				:total-pages="data.pagination.totalPages"
+				@update:page="setPage"
+			/>
 		</div>
 	</div>
 </template>
@@ -125,71 +103,25 @@ watch(filters, () => {
 
 @media (min-width: 640px) {
 	.browse-page {
-		padding: 2rem;
+		padding: 2rem 1.5rem;
+	}
+}
+
+@media (min-width: 1280px) {
+	.browse-page {
+		padding: 2rem 2.5rem;
 	}
 }
 
 .browse-page__container {
-	max-width: 80rem;
-	margin: 0 auto;
 	display: flex;
 	flex-direction: column;
-	gap: 1.5rem;
+	gap: 1.25rem;
 }
 
-.browse-page__header {
-	display: flex;
-	align-items: baseline;
-	gap: 0.75rem;
-}
-
-.browse-page__title {
-	font-size: var(--font-size-2xl);
-	font-weight: 700;
-	color: var(--ui-text);
-	letter-spacing: -0.02em;
-}
-
-.browse-page__subtitle {
-	font-size: var(--font-size-sm);
+.browse-page__count {
+	font-size: var(--font-size-xs);
 	color: var(--ui-text-dimmed);
-}
-
-.browse-page__pagination {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 1rem;
-	padding: 1rem 0;
-}
-
-.browse-page__page-btn {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 2.25rem;
-	height: 2.25rem;
-	border: 1px solid var(--ui-border);
-	border-radius: 0.5rem;
-	background: var(--ui-bg-elevated);
-	color: var(--ui-text);
-	cursor: pointer;
-	transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.browse-page__page-btn:hover:not(:disabled) {
-	border-color: var(--ui-primary);
-	background: color-mix(in oklch, var(--ui-primary) 8%, transparent);
-}
-
-.browse-page__page-btn:disabled {
-	opacity: 0.3;
-	cursor: default;
-}
-
-.browse-page__page-info {
-	font-size: var(--font-size-sm);
-	color: var(--ui-text-muted);
-	font-variant-numeric: tabular-nums;
+	margin: -0.5rem 0;
 }
 </style>

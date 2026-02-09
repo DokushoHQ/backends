@@ -7,12 +7,9 @@ interface LinkedAccount {
 
 interface Props {
 	user: {
-		id: string
 		name: string
 		email: string
 		image: string | null
-		role: string | null
-		createdAt: string
 	}
 	linkedAccounts: LinkedAccount[]
 }
@@ -32,31 +29,6 @@ const changeEmailError = ref<string | null>(null)
 const changeEmailSuccess = ref(false)
 
 const hasChanges = computed(() => name.value !== props.user.name || image.value !== (props.user.image ?? ""))
-
-const userInitials = computed(() => {
-	if (name.value) {
-		return name.value
-			.split(" ")
-			.map(n => n[0])
-			.join("")
-			.toUpperCase()
-			.slice(0, 2)
-	}
-	return (props.user.email[0] ?? "?").toUpperCase()
-})
-
-const roleLabel = computed(() => {
-	if (!props.user.role) return "User"
-	return props.user.role.charAt(0).toUpperCase() + props.user.role.slice(1)
-})
-
-const memberSince = computed(() => {
-	return new Date(props.user.createdAt).toLocaleDateString(undefined, {
-		year: "numeric",
-		month: "long",
-		day: "numeric",
-	})
-})
 
 function getProviderIcon(providerId: string): string {
 	if (providerId === "credential") return "i-lucide-key-round"
@@ -150,33 +122,11 @@ async function handleChangeEmail() {
 
 <template>
 	<UiContentCard
-		title="Profile Information"
-		description="Update your personal information"
+		title="Account"
 		icon="i-lucide-user"
 		color="blue"
 	>
 		<div class="card-body">
-			<!-- Avatar and basic info -->
-			<div class="profile-header">
-				<UAvatar
-					:src="image || undefined"
-					:text="userInitials"
-					class="profile-avatar"
-				/>
-				<div class="profile-info">
-					<div class="profile-name-row">
-						<span class="profile-name">{{ name || user.email }}</span>
-						<span
-							class="role-badge"
-							:class="user.role === 'admin' ? 'role-admin' : 'role-user'"
-						>
-							{{ roleLabel }}
-						</span>
-					</div>
-					<span class="member-since">Member since {{ memberSince }}</span>
-				</div>
-			</div>
-
 			<!-- Edit form -->
 			<div class="form-section">
 				<div class="form-field">
@@ -366,61 +316,6 @@ async function handleChangeEmail() {
 	flex-direction: column;
 	gap: 1.5rem;
 	padding: 1rem;
-}
-
-/* Profile header */
-.profile-header {
-	display: flex;
-	align-items: center;
-	gap: 1rem;
-}
-
-.profile-avatar {
-	width: 4rem;
-	height: 4rem;
-	font-size: var(--font-size-xl);
-}
-
-.profile-info {
-	display: flex;
-	flex-direction: column;
-	gap: 0.25rem;
-}
-
-.profile-name-row {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-}
-
-.profile-name {
-	font-size: var(--font-size-base);
-	font-weight: 500;
-	color: var(--ui-text);
-}
-
-.role-badge {
-	display: inline-flex;
-	align-items: center;
-	padding: 0.125rem 0.5rem;
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	border-radius: 2rem;
-}
-
-.role-badge.role-admin {
-	background: var(--ui-primary-soft);
-	color: var(--ui-primary);
-}
-
-.role-badge.role-user {
-	background: var(--ui-bg-muted);
-	color: var(--ui-text-muted);
-}
-
-.member-since {
-	font-size: var(--font-size-sm);
-	color: var(--ui-text-muted);
 }
 
 /* Form section */

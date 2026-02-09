@@ -68,7 +68,7 @@ withDefaults(defineProps<Props>(), {
 
 <style scoped>
 .series-card-base {
-	--card-cut: 0.75rem;
+	--card-cut: 0.5rem;
 
 	position: relative;
 	display: flex;
@@ -88,10 +88,14 @@ withDefaults(defineProps<Props>(), {
 	);
 
 	transition:
-		transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-		box-shadow 0.25s ease,
 		border-color 0.15s ease,
 		opacity 0.15s ease;
+}
+
+@media (min-width: 640px) {
+	.series-card-base {
+		--card-cut: 0.75rem;
+	}
 }
 
 .series-card-base.is-disabled {
@@ -111,7 +115,6 @@ withDefaults(defineProps<Props>(), {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
-	transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .cover-placeholder {
@@ -150,16 +153,23 @@ withDefaults(defineProps<Props>(), {
 /* Title spine - book spine aesthetic */
 .card-spine {
 	position: relative;
-	padding: 0.625rem 0.75rem;
-	height: 3.5rem;
+	padding: 0.375rem 0.5rem;
+	min-height: 2.75rem;
 	flex-shrink: 0;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
 }
 
+@media (min-width: 640px) {
+	.card-spine {
+		padding: 0.625rem 0.75rem;
+		min-height: 3.5rem;
+	}
+}
+
 .series-title {
-	font-size: var(--font-size-sm);
+	font-size: var(--font-size-xs);
 	font-weight: 600;
 	color: var(--ui-text);
 	line-height: 1.3;
@@ -170,6 +180,12 @@ withDefaults(defineProps<Props>(), {
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
 	overflow: hidden;
+}
+
+@media (min-width: 640px) {
+	.series-title {
+		font-size: var(--font-size-sm);
+	}
 }
 
 /* Accent line - like a bookmark ribbon */

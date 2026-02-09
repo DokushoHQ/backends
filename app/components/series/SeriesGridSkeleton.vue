@@ -68,7 +68,7 @@ withDefaults(defineProps<{
 
 .skeleton-card {
 	--card-radius: 0.5rem;
-	--card-cut: 0.75rem;
+	--card-cut: 0.5rem;
 
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
@@ -86,6 +86,12 @@ withDefaults(defineProps<{
 
 	animation: skeleton-fade 1.5s ease-in-out infinite;
 	animation-delay: var(--delay);
+}
+
+@media (min-width: 640px) {
+	.skeleton-card {
+		--card-cut: 0.75rem;
+	}
 }
 
 @keyframes skeleton-fade {
@@ -141,12 +147,20 @@ withDefaults(defineProps<{
 }
 
 .skeleton-spine {
-	padding: 0.625rem 0.75rem;
-	min-height: 3.25rem;
+	padding: 0.375rem 0.5rem;
+	min-height: 2.75rem;
 	display: flex;
 	flex-direction: column;
-	gap: 0.375rem;
+	gap: 0.25rem;
 	justify-content: center;
+}
+
+@media (min-width: 640px) {
+	.skeleton-spine {
+		padding: 0.625rem 0.75rem;
+		min-height: 3.25rem;
+		gap: 0.375rem;
+	}
 }
 
 .skeleton-title {

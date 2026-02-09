@@ -30,6 +30,9 @@
 	--radius-panel: 0.375rem; /* 6px - panels, small cards */
 	--radius-card: 0.75rem; /* 12px - content cards, large cards */
 
+	/* Reader layout */
+	--reader-bottom-nav-height: 3.5rem;
+
 	/* Sidebar dimensions */
 	--sidebar-width: 15rem; /* 240px expanded */
 	--sidebar-collapsed-width: 4rem; /* 64px - matches icon center position */

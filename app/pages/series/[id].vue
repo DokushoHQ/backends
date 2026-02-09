@@ -50,6 +50,8 @@ const filteredChapters = computed(() => {
 	if (!selectedLanguage.value) return chapters.value
 	return chaptersByLanguage.value.get(selectedLanguage.value) ?? []
 })
+
+const synopsisExpanded = ref(false)
 </script>
 
 <template>
@@ -148,12 +150,23 @@ const filteredChapters = computed(() => {
 							</span>
 						</div>
 
-						<p
+						<div
 							v-if="serie.synopsis"
-							class="serie-hero__synopsis"
+							class="serie-hero__synopsis-wrap"
 						>
-							{{ serie.synopsis }}
-						</p>
+							<p
+								class="serie-hero__synopsis"
+								:class="{ 'serie-hero__synopsis--expanded': synopsisExpanded }"
+							>
+								{{ serie.synopsis }}
+							</p>
+							<button
+								class="serie-hero__synopsis-toggle"
+								@click="synopsisExpanded = !synopsisExpanded"
+							>
+								{{ synopsisExpanded ? 'Show less' : 'Show more' }}
+							</button>
+						</div>
 
 						<div
 							v-if="serie.genres?.length"
@@ -337,27 +350,42 @@ const filteredChapters = computed(() => {
 .serie-hero__content {
 	position: relative;
 	display: flex;
-	gap: 1.5rem;
+	flex-direction: column;
+	align-items: center;
+	gap: 1.25rem;
 	padding: 2rem 1rem;
-	max-width: 56rem;
-	margin: 0 auto;
 }
 
 @media (min-width: 640px) {
 	.serie-hero__content {
-		padding: 2.5rem 2rem;
+		flex-direction: row;
+		align-items: flex-start;
+		padding: 2.5rem 1.5rem;
 		gap: 2rem;
+	}
+}
+
+@media (min-width: 1280px) {
+	.serie-hero__content {
+		padding: 3rem 2.5rem;
+		gap: 2.5rem;
 	}
 }
 
 .serie-hero__cover {
 	flex-shrink: 0;
-	width: 140px;
+	width: 160px;
 }
 
 @media (min-width: 640px) {
 	.serie-hero__cover {
-		width: 180px;
+		width: 200px;
+	}
+}
+
+@media (min-width: 1280px) {
+	.serie-hero__cover {
+		width: 220px;
 	}
 }
 
@@ -381,8 +409,17 @@ const filteredChapters = computed(() => {
 .serie-hero__info {
 	display: flex;
 	flex-direction: column;
+	align-items: center;
+	text-align: center;
 	gap: 0.5rem;
 	min-width: 0;
+}
+
+@media (min-width: 640px) {
+	.serie-hero__info {
+		align-items: flex-start;
+		text-align: left;
+	}
 }
 
 .serie-hero__title {
@@ -436,6 +473,10 @@ const filteredChapters = computed(() => {
 	gap: 0.5rem;
 }
 
+.serie-hero__synopsis-wrap {
+	margin-top: 0.25rem;
+}
+
 .serie-hero__synopsis {
 	font-size: var(--font-size-base);
 	color: var(--ui-text-muted);
@@ -444,7 +485,38 @@ const filteredChapters = computed(() => {
 	-webkit-line-clamp: 4;
 	-webkit-box-orient: vertical;
 	overflow: hidden;
+}
+
+.serie-hero__synopsis--expanded {
+	display: block;
+	-webkit-line-clamp: unset;
+}
+
+.serie-hero__synopsis-toggle {
+	background: none;
+	border: none;
+	padding: 0;
 	margin-top: 0.25rem;
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-primary);
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
+}
+
+@media (min-width: 640px) {
+	.serie-hero__synopsis {
+		-webkit-line-clamp: unset;
+		display: block;
+	}
+
+	.serie-hero__synopsis-toggle {
+		display: none;
+	}
+}
+
+.serie-hero__synopsis-toggle:hover {
+	text-decoration: underline;
 }
 
 .serie-hero__genres {
@@ -485,14 +557,18 @@ const filteredChapters = computed(() => {
 
 /* Chapters */
 .serie-chapters {
-	max-width: 56rem;
-	margin: 0 auto;
 	padding: 1.5rem 1rem 3rem;
 }
 
 @media (min-width: 640px) {
 	.serie-chapters {
-		padding: 1.5rem 2rem 3rem;
+		padding: 1.5rem 1.5rem 3rem;
+	}
+}
+
+@media (min-width: 1280px) {
+	.serie-chapters {
+		padding: 2rem 2.5rem 3rem;
 	}
 }
 
@@ -558,12 +634,19 @@ const filteredChapters = computed(() => {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 0.75rem 1rem;
+	padding: 0.875rem 1rem;
 	gap: 1rem;
 	text-decoration: none;
 	color: inherit;
 	border-bottom: 1px solid var(--ui-border);
+	-webkit-tap-highlight-color: transparent;
 	transition: background-color 0.15s ease;
+}
+
+@media (min-width: 640px) {
+	.serie-chapter-row {
+		padding: 0.75rem 1rem;
+	}
 }
 
 .serie-chapter-row:last-child {
@@ -572,6 +655,10 @@ const filteredChapters = computed(() => {
 
 .serie-chapter-row:hover {
 	background: var(--ui-bg-muted);
+}
+
+.serie-chapter-row:active {
+	background: color-mix(in oklch, var(--ui-text) 6%, transparent);
 }
 
 .serie-chapter-row__main {

@@ -21,6 +21,7 @@ function isActiveRoute(path: string): boolean {
 
 const navigation = computed(() => {
 	const items = [
+		{ label: "Library", icon: "i-lucide-book-open-text", to: "/", active: false, separator: true },
 		{ label: "Overview", icon: "i-lucide-home", to: "/dashboard", active: isActiveRoute("/dashboard") },
 	]
 

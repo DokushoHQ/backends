@@ -13,75 +13,58 @@ defineProps<{
 </script>
 
 <template>
-	<div class="browse-grid">
-		<template v-if="loading">
-			<div
-				v-for="i in 12"
-				:key="i"
-				class="browse-grid__skeleton"
-			>
-				<div class="browse-grid__skeleton-cover" />
-				<div class="browse-grid__skeleton-text" />
-				<div class="browse-grid__skeleton-text browse-grid__skeleton-text--short" />
-			</div>
-		</template>
+	<SeriesGridSkeleton
+		v-if="loading"
+		:count="24"
+	/>
 
-		<template v-else>
-			<BrowseCard
-				v-for="serie in series"
-				:key="serie.id"
-				:serie="serie"
-			/>
-		</template>
+	<div
+		v-else
+		class="browse-grid"
+	>
+		<BrowseCard
+			v-for="serie in series"
+			:key="serie.id"
+			:serie="serie"
+		/>
 	</div>
 </template>
 
 <style scoped>
 .browse-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 	gap: 1rem;
+	grid-template-columns: repeat(2, 1fr);
+	align-items: start;
 }
 
 @media (min-width: 640px) {
 	.browse-grid {
-		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-		gap: 1.25rem;
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+@media (min-width: 768px) {
+	.browse-grid {
+		grid-template-columns: repeat(4, 1fr);
 	}
 }
 
 @media (min-width: 1024px) {
 	.browse-grid {
-		grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-		gap: 1.5rem;
+		grid-template-columns: repeat(5, 1fr);
 	}
 }
 
-.browse-grid__skeleton {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-	animation: pulse 1.5s ease-in-out infinite;
+@media (min-width: 1280px) {
+	.browse-grid {
+		grid-template-columns: repeat(6, 1fr);
+	}
 }
 
-.browse-grid__skeleton-cover {
-	aspect-ratio: 5 / 7;
-	border-radius: var(--radius-card);
-	background: var(--ui-bg-muted);
-}
-
-.browse-grid__skeleton-text {
-	height: 0.75rem;
-	border-radius: 0.25rem;
-	background: var(--ui-bg-muted);
-}
-
-.browse-grid__skeleton-text--short {
-	width: 60%;
-}
-
-@keyframes pulse {
-	0%, 100% { opacity: 1; }
-	50% { opacity: 0.5; }
+@media (min-width: 1536px) {
+	.browse-grid {
+		grid-template-columns: repeat(8, 1fr);
+	}
 }
 </style>
