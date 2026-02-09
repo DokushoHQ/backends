@@ -66,7 +66,8 @@ function handleClick(e: MouseEvent) {
 }
 
 .reader-double__container {
-	max-width: 1400px;
+	width: 100%;
+	max-width: min(1800px, calc(100vw - 1rem));
 	max-height: calc(100vh - 4rem);
 	display: flex;
 	align-items: center;
@@ -88,6 +89,7 @@ function handleClick(e: MouseEvent) {
 }
 
 .reader-double__image--half {
-	max-width: 50%;
+	width: calc((100% - 2px) / 2);
+	max-width: none;
 }
 </style>

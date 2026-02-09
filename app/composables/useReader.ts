@@ -9,6 +9,7 @@ type Page = {
 
 type ReadingMode = "vertical" | "paged" | "double"
 type ReadingDirection = "ltr" | "rtl"
+type HorizontalReadingMode = "paged" | "double"
 
 type Spread = {
 	pages: Page[]
@@ -61,52 +62,18 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		},
 	})
 	const currentPage = ref(0)
+	const pendingModeTranslation = ref<{
+		from: HorizontalReadingMode
+		to: HorizontalReadingMode
+		sourceIndex: number
+	} | null>(null)
 
 	// Reset page and cached state on chapter change
 	watch(chapterId, () => {
 		currentPage.value = 0
+		pendingModeTranslation.value = null
 		imageDimensions.value = new Map()
 		preloadedUrls.value = new Set()
-	})
-
-	// Translate position when switching between paged ↔ double
-	watch(mode, (newMode, oldMode) => {
-		if (newMode === "vertical" || oldMode === "vertical") {
-			currentPage.value = 0
-			return
-		}
-		const dimensionsReady = imagePages.value.length > 0
-			&& imagePages.value.every(p => imageDimensions.value.has(p.index))
-		if (oldMode === "paged" && newMode === "double") {
-			if (!dimensionsReady) {
-				// Spreads not fully computed yet — use safe approximation
-				currentPage.value = Math.floor(currentPage.value / 2)
-				return
-			}
-			// Find which spread contains the current individual page
-			const target = currentPage.value
-			let pageCount = 0
-			for (let s = 0; s < spreads.value.length; s++) {
-				pageCount += spreads.value[s]!.pages.length
-				if (pageCount > target) {
-					currentPage.value = s
-					return
-				}
-			}
-		}
-		else if (oldMode === "double" && newMode === "paged") {
-			if (!dimensionsReady) {
-				// Spreads not fully computed yet — use safe approximation
-				currentPage.value = currentPage.value * 2
-				return
-			}
-			// Find the first individual page index of the current spread
-			let pageIndex = 0
-			for (let s = 0; s < currentPage.value && s < spreads.value.length; s++) {
-				pageIndex += spreads.value[s]!.pages.length
-			}
-			currentPage.value = pageIndex
-		}
 	})
 
 	// Paged/double mode state
@@ -115,6 +82,10 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	// Spread detection for double mode — load dimensions incrementally around current page
 	const imageDimensions = ref(new Map<number, { w: number, h: number }>())
 	const DIMENSION_LOOKAHEAD = 6
+	const imageDimensionsLoaded = computed(() =>
+		imagePages.value.length > 0
+		&& imagePages.value.every(p => imageDimensions.value.has(p.index)),
+	)
 
 	function loadDimensions(imgs: Page[], startIdx: number, count: number) {
 		if (!import.meta.client) return
@@ -190,6 +161,79 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		}
 
 		return result
+	})
+	const spreadsReady = computed(() => {
+		if (!imageDimensionsLoaded.value) return false
+		let spreadPageCount = 0
+		for (const spread of spreads.value) spreadPageCount += spread.pages.length
+		return spreadPageCount === imagePages.value.length
+	})
+
+	function clampTranslatedIndex(index: number, targetMode: HorizontalReadingMode) {
+		const maxIndex = targetMode === "double"
+			? Math.max(spreads.value.length - 1, 0)
+			: Math.max(imagePages.value.length - 1, 0)
+		return Math.min(Math.max(index, 0), maxIndex)
+	}
+
+	function fallbackTranslateIndex(from: HorizontalReadingMode, to: HorizontalReadingMode, sourceIndex: number) {
+		if (from === "paged" && to === "double") return Math.floor(sourceIndex / 2)
+		if (from === "double" && to === "paged") return sourceIndex * 2
+		return sourceIndex
+	}
+
+	function translateIndexWithSpreads(from: HorizontalReadingMode, to: HorizontalReadingMode, sourceIndex: number) {
+		if (from === "paged" && to === "double") {
+			let pageCount = 0
+			for (let s = 0; s < spreads.value.length; s++) {
+				pageCount += spreads.value[s]!.pages.length
+				if (pageCount > sourceIndex) return s
+			}
+			return Math.max(spreads.value.length - 1, 0)
+		}
+		if (from === "double" && to === "paged") {
+			let pageIndex = 0
+			for (let s = 0; s < sourceIndex && s < spreads.value.length; s++) {
+				pageIndex += spreads.value[s]!.pages.length
+			}
+			return pageIndex
+		}
+		return sourceIndex
+	}
+
+	// Translate position when switching between paged ↔ double
+	watch(mode, (newMode, oldMode) => {
+		if (newMode === "vertical" || oldMode === "vertical") {
+			pendingModeTranslation.value = null
+			currentPage.value = 0
+			return
+		}
+		const from = oldMode as HorizontalReadingMode
+		const to = newMode as HorizontalReadingMode
+		const sourceIndex = currentPage.value
+
+		if (!spreadsReady.value) {
+			pendingModeTranslation.value = { from, to, sourceIndex }
+			currentPage.value = clampTranslatedIndex(fallbackTranslateIndex(from, to, sourceIndex), to)
+			return
+		}
+
+		pendingModeTranslation.value = null
+		currentPage.value = clampTranslatedIndex(translateIndexWithSpreads(from, to, sourceIndex), to)
+	})
+
+	// Retry deferred paged/double translation once dimensions + spreads are fully ready
+	watch(spreadsReady, (ready) => {
+		if (!ready) return
+		const pending = pendingModeTranslation.value
+		if (!pending) return
+		if (mode.value !== pending.to) return
+
+		currentPage.value = clampTranslatedIndex(
+			translateIndexWithSpreads(pending.from, pending.to, pending.sourceIndex),
+			pending.to,
+		)
+		pendingModeTranslation.value = null
 	})
 
 	const totalPages = computed(() => {

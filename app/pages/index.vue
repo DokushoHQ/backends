@@ -20,9 +20,9 @@ const filters = ref({
 const page = ref(Math.max(1, Number(route.query.page) || 1))
 
 // Sync refs back when route.query changes (browser back/forward)
-let syncingFromRoute = false
+const syncingFromRoute = ref(false)
 watch(() => route.query, (query) => {
-	syncingFromRoute = true
+	syncingFromRoute.value = true
 	filters.value = {
 		q: (query.q as string) || undefined,
 		type: (query.type as string) || undefined,
@@ -32,7 +32,7 @@ watch(() => route.query, (query) => {
 	}
 	page.value = Math.max(1, Number(query.page) || 1)
 	nextTick(() => {
-		syncingFromRoute = false
+		syncingFromRoute.value = false
 	})
 })
 
@@ -44,7 +44,7 @@ const { data, isLoading } = useQuery(computed(() =>
 
 // Push state → URL when refs change
 watch([filters, page], () => {
-	if (syncingFromRoute) return
+	if (syncingFromRoute.value) return
 	const query: Record<string, string> = {}
 	if (filters.value.q) query.q = filters.value.q
 	if (filters.value.type) query.type = filters.value.type
@@ -57,7 +57,7 @@ watch([filters, page], () => {
 
 // Reset page when filters change from user interaction
 watch(filters, () => {
-	if (!syncingFromRoute) page.value = 1
+	if (!syncingFromRoute.value) page.value = 1
 }, { deep: true })
 </script>
 
