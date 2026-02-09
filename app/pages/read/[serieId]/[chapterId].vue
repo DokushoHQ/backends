@@ -22,8 +22,7 @@ const serieQuery = useQuery(computed(() =>
 	orpc.serie.get.queryOptions({ input: { id: serieId.value } }),
 ))
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const serieType = computed(() => (serieQuery.data.value as any)?.type as string | undefined)
+const serieType = computed(() => serieQuery.data.value?.type)
 
 const {
 	imagePages,
@@ -55,8 +54,7 @@ const serieInfo = computed(() =>
 )
 
 const chapterInfo = computed(() => {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const ch = chaptersQuery.data.value?.chapters.find((c: any) => c.id === chapterId.value)
+	const ch = chaptersQuery.data.value?.chapters?.find(c => c.id === chapterId.value)
 	return ch ? { chapter_number: ch.chapter_number, title: ch.title } : null
 })
 
