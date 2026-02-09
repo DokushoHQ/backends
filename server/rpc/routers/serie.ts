@@ -80,7 +80,7 @@ export const list = authed
 				sources: (hit?.sources as string[]) ?? [],
 				last_chapter_at: lastChapterAt ? new Date(lastChapterAt) : null,
 			}
-		}).filter(Boolean)
+		}).filter((s): s is NonNullable<typeof s> => s !== null)
 
 		const total = searchResult.estimatedTotalHits ?? series.length
 

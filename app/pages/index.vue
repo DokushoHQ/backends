@@ -17,7 +17,7 @@ const filters = ref({
 	language: (route.query.language as Language | undefined) || undefined,
 })
 
-const page = ref(Number(route.query.page) || 1)
+const page = ref(Math.max(1, Number(route.query.page) || 1))
 
 // Sync refs back when route.query changes (browser back/forward)
 let syncingFromRoute = false
@@ -30,7 +30,7 @@ watch(() => route.query, (query) => {
 		genre: (query.genre as string) || undefined,
 		language: (query.language as Language | undefined) || undefined,
 	}
-	page.value = Number(query.page) || 1
+	page.value = Math.max(1, Number(query.page) || 1)
 	nextTick(() => {
 		syncingFromRoute = false
 	})
@@ -44,6 +44,7 @@ const { data, isLoading } = useQuery(computed(() =>
 
 // Push state → URL when refs change
 watch([filters, page], () => {
+	if (syncingFromRoute) return
 	const query: Record<string, string> = {}
 	if (filters.value.q) query.q = filters.value.q
 	if (filters.value.type) query.type = filters.value.type
@@ -75,7 +76,7 @@ watch(filters, () => {
 			<BrowseFilters v-model="filters" />
 
 			<BrowseGrid
-				:series="(data?.data ?? []).filter(Boolean) as any"
+				:series="data?.data ?? []"
 				:loading="isLoading"
 			/>
 

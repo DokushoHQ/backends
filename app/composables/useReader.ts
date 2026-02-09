@@ -18,6 +18,7 @@ const RTL_TYPES = new Set(["Manga", "Doujinshi"])
 
 export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieType: Ref<string | undefined>) {
 	const orpc = useOrpc()
+	const toast = useToast()
 
 	const dataQuery = useQuery(computed(() =>
 		orpc.chapter.getData.queryOptions({
@@ -74,7 +75,14 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 			currentPage.value = 0
 			return
 		}
+		const dimensionsReady = imagePages.value.length > 0
+			&& imagePages.value.every(p => imageDimensions.value.has(p.index))
 		if (oldMode === "paged" && newMode === "double") {
+			if (!dimensionsReady) {
+				// Spreads not fully computed yet — use safe approximation
+				currentPage.value = Math.floor(currentPage.value / 2)
+				return
+			}
 			// Find which spread contains the current individual page
 			const target = currentPage.value
 			let pageCount = 0
@@ -87,6 +95,11 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 			}
 		}
 		else if (oldMode === "double" && newMode === "paged") {
+			if (!dimensionsReady) {
+				// Spreads not fully computed yet — use safe approximation
+				currentPage.value = currentPage.value * 2
+				return
+			}
 			// Find the first individual page index of the current spread
 			let pageIndex = 0
 			for (let s = 0; s < currentPage.value && s < spreads.value.length; s++) {
@@ -111,7 +124,12 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 				const pageIndex = page.index
 				img.onload = () => {
 					imageDimensions.value.set(pageIndex, { w: img.naturalWidth, h: img.naturalHeight })
-					// Trigger reactivity
+					imageDimensions.value = new Map(imageDimensions.value)
+				}
+				img.onerror = () => {
+					console.warn(`Failed to load dimensions for page ${pageIndex}`)
+					// Mark as loaded with 0x0 so we don't retry; will be treated as non-spread
+					imageDimensions.value.set(pageIndex, { w: 0, h: 0 })
 					imageDimensions.value = new Map(imageDimensions.value)
 				}
 				img.src = page.url
@@ -286,7 +304,6 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	}
 
 	function toggleFullscreen() {
-		const toast = useToast()
 		if (document.fullscreenElement) {
 			document.exitFullscreen().catch((e) => {
 				console.warn("Failed to exit fullscreen:", e)
