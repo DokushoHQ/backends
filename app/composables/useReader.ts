@@ -16,6 +16,7 @@ type Spread = {
 }
 
 const RTL_TYPES = new Set(["Manga", "Doujinshi"])
+const VERTICAL_TYPES = new Set(["Webtoon", "Manhwa"])
 
 export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieType: Ref<string | undefined>) {
 	const orpc = useOrpc()
@@ -44,7 +45,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	const nextChapter = computed(() => navQuery.data.value?.next ?? null)
 
 	// Layout derived from serie type
-	const isVertical = computed(() => serieType.value === "Webtoon")
+	const isVertical = computed(() => VERTICAL_TYPES.has(serieType.value ?? ""))
 	const direction = computed<ReadingDirection>(() =>
 		RTL_TYPES.has(serieType.value ?? "") ? "rtl" : "ltr",
 	)
