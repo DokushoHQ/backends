@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { BreadcrumbItem } from "./Breadcrumb.vue"
 
-defineProps<{
+const props = withDefaults(defineProps<{
 	/**
 	 * Page title (for simple header mode)
 	 */
@@ -20,19 +20,31 @@ defineProps<{
 	 * When provided, shows a back button before the title/breadcrumb
 	 */
 	backTo?: string
-}>()
+	/**
+	 * Show the mobile sidebar menu button.
+	 * Set to false when used outside the dashboard layout.
+	 */
+	showMobileMenu?: boolean
+}>(), {
+	showMobileMenu: true,
+})
 
-const { openMobile } = useSidebar()
+function handleOpenMobile() {
+	if (props.showMobileMenu) {
+		useSidebar().openMobile()
+	}
+}
 </script>
 
 <template>
 	<header class="page-header">
 		<div class="header-left">
-			<!-- Mobile sidebar toggle -->
+			<!-- Mobile sidebar toggle (dashboard layout only) -->
 			<button
+				v-if="showMobileMenu"
 				class="mobile-menu-btn"
 				aria-label="Open menu"
-				@click="openMobile"
+				@click="handleOpenMobile"
 			>
 				<UIcon
 					name="i-lucide-menu"

@@ -3,66 +3,59 @@ const route = useRoute()
 const { isAdmin } = await useAuth()
 
 function isActive(path: string): boolean {
-	if (path === "/") return route.path === "/"
+	if (path === "/") return route.path === "/" || route.path.startsWith("/series/")
 	return route.path === path || route.path.startsWith(`${path}/`)
 }
+
+const backTo = computed(() => {
+	if (route.path.startsWith("/series/")) return "/"
+	return undefined
+})
+
+const links = computed(() => {
+	const items = [
+		{ label: "Library", icon: "i-lucide-library", to: "/" },
+		{ label: "Profile", icon: "i-lucide-user", to: "/me" },
+	]
+	if (isAdmin.value) {
+		items.push({ label: "Dashboard", icon: "i-lucide-layout-dashboard", to: "/dashboard" })
+	}
+	return items
+})
 </script>
 
 <template>
 	<div class="reader-layout">
-		<header class="reader-header">
-			<div class="reader-header__left">
-				<NuxtLink
-					to="/"
-					class="reader-header__logo"
-				>
-					<UIcon
-						name="i-lucide-book-open"
-						class="reader-header__logo-icon"
-					/>
-					<span class="reader-header__title">Tsundoku</span>
-				</NuxtLink>
-
-				<nav class="reader-header__nav">
-					<NuxtLink
-						to="/"
-						class="reader-header__nav-link"
-						:class="{ 'reader-header__nav-link--active': isActive('/') }"
+		<UiPageHeader
+			title="Tsundoku"
+			:back-to="backTo"
+			:show-mobile-menu="false"
+		>
+			<template #right>
+				<nav class="reader-nav">
+					<template
+						v-for="(link, i) in links"
+						:key="link.to"
 					>
-						<UIcon
-							name="i-lucide-library"
-							class="reader-header__nav-icon"
+						<span
+							v-if="i > 0 && link.to === '/dashboard'"
+							class="reader-nav__sep"
 						/>
-						Library
-					</NuxtLink>
-					<NuxtLink
-						to="/me"
-						class="reader-header__nav-link"
-						:class="{ 'reader-header__nav-link--active': isActive('/me') }"
-					>
-						<UIcon
-							name="i-lucide-user"
-							class="reader-header__nav-icon"
-						/>
-						Profile
-					</NuxtLink>
-
-					<template v-if="isAdmin">
-						<span class="reader-header__nav-sep" />
 						<NuxtLink
-							to="/dashboard"
-							class="reader-header__nav-link"
+							:to="link.to"
+							class="reader-nav__link"
+							:class="{ 'reader-nav__link--active': isActive(link.to) }"
 						>
 							<UIcon
-								name="i-lucide-layout-dashboard"
-								class="reader-header__nav-icon"
+								:name="link.icon"
+								class="reader-nav__icon"
 							/>
-							Dashboard
+							{{ link.label }}
 						</NuxtLink>
 					</template>
 				</nav>
-			</div>
-		</header>
+			</template>
+		</UiPageHeader>
 
 		<main class="reader-main">
 			<slot />
@@ -80,76 +73,33 @@ function isActive(path: string): boolean {
 	background: var(--ui-bg);
 }
 
-.reader-header {
-	height: 2.75rem;
+.reader-main {
+	flex: 1;
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 0 1rem;
-	border-bottom: 1px solid var(--ui-border);
-	background: var(--ui-bg-elevated);
-	flex-shrink: 0;
+	flex-direction: column;
+	padding-bottom: var(--reader-bottom-nav-height);
 }
 
 @media (min-width: 640px) {
-	.reader-header {
-		height: 3.5rem;
-		padding: 0 1.5rem;
+	.reader-main {
+		padding-bottom: 0;
 	}
 }
 
-@media (min-width: 1280px) {
-	.reader-header {
-		padding: 0 2.5rem;
-	}
-}
-
-.reader-header__left {
-	display: flex;
-	align-items: center;
-	gap: 2rem;
-}
-
-.reader-header__logo {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	color: var(--ui-text);
-	text-decoration: none;
-	font-weight: 600;
-	font-size: var(--font-size-base);
-}
-
-.reader-header__logo-icon {
-	width: 1.25rem;
-	height: 1.25rem;
-}
-
-@media (min-width: 640px) {
-	.reader-header__logo {
-		font-size: var(--font-size-md);
-		gap: 0.625rem;
-	}
-
-	.reader-header__logo-icon {
-		width: 1.375rem;
-		height: 1.375rem;
-	}
-}
-
-.reader-header__nav {
+/* Nav links in the right slot of UiPageHeader */
+.reader-nav {
 	display: none;
 	align-items: center;
 	gap: 0.125rem;
 }
 
 @media (min-width: 640px) {
-	.reader-header__nav {
+	.reader-nav {
 		display: flex;
 	}
 }
 
-.reader-header__nav-link {
+.reader-nav__link {
 	position: relative;
 	display: flex;
 	align-items: center;
@@ -163,54 +113,24 @@ function isActive(path: string): boolean {
 	transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.reader-header__nav-icon {
+.reader-nav__icon {
 	width: 1rem;
 	height: 1rem;
 }
 
-.reader-header__nav-link:hover {
+.reader-nav__link:hover {
 	color: var(--ui-text);
 	background: var(--ui-bg-muted);
 }
 
-.reader-header__nav-link--active {
+.reader-nav__link--active {
 	color: var(--ui-primary);
 }
 
-.reader-header__nav-link--active::after {
-	content: '';
-	position: absolute;
-	bottom: -0.6875rem;
-	left: 0.75rem;
-	right: 0.75rem;
-	height: 2px;
-	background: var(--ui-primary);
-	border-radius: 2px 2px 0 0;
-}
-
-@media (min-width: 640px) {
-	.reader-header__nav-link--active::after {
-		bottom: -0.8125rem;
-	}
-}
-
-.reader-header__nav-sep {
+.reader-nav__sep {
 	width: 1px;
 	height: 1rem;
 	margin: 0 0.375rem;
 	background: var(--ui-border);
-}
-
-.reader-main {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	padding-bottom: var(--reader-bottom-nav-height);
-}
-
-@media (min-width: 640px) {
-	.reader-main {
-		padding-bottom: 0;
-	}
 }
 </style>

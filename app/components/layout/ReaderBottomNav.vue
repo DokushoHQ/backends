@@ -3,7 +3,7 @@ const route = useRoute()
 const { isAdmin } = await useAuth()
 
 function isActive(path: string): boolean {
-	if (path === "/") return route.path === "/"
+	if (path === "/") return route.path === "/" || route.path.startsWith("/series/")
 	return route.path === path || route.path.startsWith(`${path}/`)
 }
 
