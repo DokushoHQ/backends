@@ -19,12 +19,30 @@ const filters = ref({
 
 const page = ref(Number(route.query.page) || 1)
 
+// Sync refs back when route.query changes (browser back/forward)
+let syncingFromRoute = false
+watch(() => route.query, (query) => {
+	syncingFromRoute = true
+	filters.value = {
+		q: (query.q as string) || undefined,
+		type: (query.type as string) || undefined,
+		status: (query.status as string) || undefined,
+		genre: (query.genre as string) || undefined,
+		language: (query.language as Language | undefined) || undefined,
+	}
+	page.value = Number(query.page) || 1
+	nextTick(() => {
+		syncingFromRoute = false
+	})
+})
+
 const { data, isLoading } = useQuery(computed(() =>
 	orpc.serie.list.queryOptions({
 		input: { page: page.value, ...filters.value },
 	}),
 ))
 
+// Push state → URL when refs change
 watch([filters, page], () => {
 	const query: Record<string, string> = {}
 	if (filters.value.q) query.q = filters.value.q
@@ -36,9 +54,9 @@ watch([filters, page], () => {
 	navigateTo({ query }, { replace: true })
 }, { deep: true })
 
-// Reset page when filters change
+// Reset page when filters change from user interaction
 watch(filters, () => {
-	page.value = 1
+	if (!syncingFromRoute) page.value = 1
 }, { deep: true })
 </script>
 

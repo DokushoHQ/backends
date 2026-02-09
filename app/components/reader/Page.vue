@@ -11,6 +11,7 @@ const emit = defineEmits<{
 
 const loaded = ref(false)
 const imgRef = ref<HTMLElement>()
+const observer = ref<IntersectionObserver>()
 
 function onLoad() {
 	loaded.value = true
@@ -20,7 +21,7 @@ function onLoad() {
 // Intersection observer for visibility tracking
 onMounted(() => {
 	if (!imgRef.value) return
-	const observer = new IntersectionObserver(
+	observer.value = new IntersectionObserver(
 		(entries) => {
 			if (entries[0]?.isIntersecting) {
 				emit("visible", props.index)
@@ -28,8 +29,11 @@ onMounted(() => {
 		},
 		{ threshold: 0.5 },
 	)
-	observer.observe(imgRef.value)
-	onUnmounted(() => observer.disconnect())
+	observer.value.observe(imgRef.value)
+})
+
+onUnmounted(() => {
+	observer.value?.disconnect()
 })
 </script>
 
