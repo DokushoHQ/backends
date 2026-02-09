@@ -79,8 +79,9 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		return Math.floor(parsed)
 	}
 
-	const pendingStartPage = ref<number | null>(routeRequestedPage())
-	const pendingStartAtLast = ref(routeWantsLastPage() && pendingStartPage.value === null)
+	const initialWantsLast = routeWantsLastPage()
+	const pendingStartAtLast = ref(initialWantsLast)
+	const pendingStartPage = ref<number | null>(initialWantsLast ? null : routeRequestedPage())
 	const pendingModeTranslation = ref<{
 		from: HorizontalReadingMode
 		to: HorizontalReadingMode
@@ -89,8 +90,9 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 
 	// Reset page and cached state on chapter change
 	watch(chapterId, () => {
-		pendingStartPage.value = routeRequestedPage()
-		pendingStartAtLast.value = routeWantsLastPage() && pendingStartPage.value === null
+		const wantsLast = routeWantsLastPage()
+		pendingStartAtLast.value = wantsLast
+		pendingStartPage.value = wantsLast ? null : routeRequestedPage()
 		currentPage.value = 0
 		pendingModeTranslation.value = null
 		imageDimensions.value = new Map()
@@ -128,6 +130,21 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 				img.src = page.url
 			}
 		}
+	}
+
+	function dimensionsReadyThroughPage(pageIndex: number) {
+		if (mode.value !== "double") return true
+		if (imagePages.value.length === 0) return false
+
+		const clampedPageIndex = Math.min(Math.max(pageIndex, 0), imagePages.value.length - 1)
+		const requiredCount = clampedPageIndex + 1
+		loadDimensions(imagePages.value, 0, requiredCount)
+
+		for (let i = 0; i < requiredCount; i++) {
+			const page = imagePages.value[i]
+			if (!page || !imageDimensions.value.has(page.index)) return false
+		}
+		return true
 	}
 
 	// Load initial batch when entering double mode or pages change
@@ -263,8 +280,9 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	})
 
 	// Optional chapter-entry hint: open the requested page/spread from query.
-	watch([chapterId, totalPages, mode], ([, count, m]) => {
+	watch([chapterId, totalPages, mode, () => dataQuery.isFetching.value, () => imageDimensions.value.size], ([, count, m, isFetching]) => {
 		if (pendingStartPage.value === null) return
+		if (isFetching) return
 		if (count <= 0) return
 
 		if (m === "paged") {
@@ -274,16 +292,22 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 			return
 		}
 
-		// In double mode, `page` query is the spread index (1-based) to match URL sync behavior.
-		const spreadIndex = Math.max(pendingStartPage.value - 1, 0)
+		// In double mode, `page` query is the individual page number (1-based).
+		const targetPageIndex = Math.max(pendingStartPage.value - 1, 0)
+		if (!dimensionsReadyThroughPage(targetPageIndex)) {
+			currentPage.value = clampTranslatedIndex(Math.floor(targetPageIndex / 2), "double")
+			return
+		}
+		const spreadIndex = translateIndexWithSpreads("paged", "double", targetPageIndex)
 		currentPage.value = clampTranslatedIndex(spreadIndex, "double")
 		pendingStartPage.value = null
 		pendingStartAtLast.value = false
 	}, { immediate: true })
 
 	// Optional chapter-entry hint: open the last page/spread (used when crossing to previous chapter).
-	watch([chapterId, totalPages, mode], ([, count, m]) => {
+	watch([chapterId, totalPages, mode, () => dataQuery.isFetching.value, () => imageDimensions.value.size], ([, count, m, isFetching]) => {
 		if (!pendingStartAtLast.value) return
+		if (isFetching) return
 		if (count <= 0) return
 
 		if (m === "paged") {
@@ -292,27 +316,15 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 			return
 		}
 
-		// In double mode, jump to provisional last spread and refine once spreads are ready.
-		currentPage.value = count - 1
+		const lastPageIndex = Math.max(imagePages.value.length - 1, 0)
+		if (!dimensionsReadyThroughPage(lastPageIndex)) {
+			currentPage.value = clampTranslatedIndex(Math.floor(lastPageIndex / 2), "double")
+			return
+		}
+		const spreadIndex = translateIndexWithSpreads("paged", "double", lastPageIndex)
+		currentPage.value = clampTranslatedIndex(spreadIndex, "double")
 		pendingStartAtLast.value = false
 	}, { immediate: true })
-
-	// Keep chapter progress in URL so reload restores current page/spread.
-	watch([currentPage, mode, totalPages], ([page, m, count]) => {
-		if (m !== "paged" && m !== "double") return
-		if (count <= 0) return
-		if (pendingStartAtLast.value || pendingStartPage.value !== null) return
-
-		const currentPageQuery = routeQueryValue(route.query.page)
-		const targetPageQuery = String(page + 1)
-		const currentAt = routeQueryValue(route.query.at)
-		if (currentPageQuery === targetPageQuery && currentAt !== "last") return
-
-		void navigateTo({
-			path: route.path,
-			query: { page: targetPageQuery },
-		}, { replace: true })
-	})
 
 	const currentSpreadPages = computed<Page[]>(() => {
 		if (mode.value !== "double") return []
@@ -333,6 +345,25 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 			start: pageIndex + 1,
 			end: pageIndex + spread.pages.length,
 		}
+	})
+
+	// Keep chapter progress in URL so reload restores current page.
+	watch([currentPage, mode, totalPages, currentSpreadPageRange], ([page, m, count, range]) => {
+		if (m !== "paged" && m !== "double") return
+		if (count <= 0) return
+		if (pendingStartAtLast.value || pendingStartPage.value !== null) return
+
+		const currentPageQuery = routeQueryValue(route.query.page)
+		const targetPageQuery = String(m === "double"
+			? Math.max(range.start, 1)
+			: page + 1)
+		const currentAt = routeQueryValue(route.query.at)
+		if (currentPageQuery === targetPageQuery && currentAt !== "last") return
+
+		void navigateTo({
+			path: route.path,
+			query: { page: targetPageQuery },
+		}, { replace: true })
 	})
 
 	function goToPage(page: number) {
