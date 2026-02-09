@@ -83,6 +83,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	const initialWantsLast = routeWantsLastPage()
 	const pendingStartAtLast = ref(initialWantsLast)
 	const pendingStartPage = ref<number | null>(initialWantsLast ? null : routeRequestedPage())
+	const chapterBoundaryNavigationInProgress = ref(false)
 	const pendingModeTranslation = ref<{
 		from: HorizontalReadingMode
 		to: HorizontalReadingMode
@@ -94,6 +95,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		const wantsLast = routeWantsLastPage()
 		pendingStartAtLast.value = wantsLast
 		pendingStartPage.value = wantsLast ? null : routeRequestedPage()
+		chapterBoundaryNavigationInProgress.value = false
 		currentPage.value = 0
 		pendingModeTranslation.value = null
 		imageDimensions.value = new Map()
@@ -373,13 +375,32 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		}
 	}
 
+	function goToNextChapter() {
+		if (!nextChapter.value || chapterBoundaryNavigationInProgress.value) return
+		chapterBoundaryNavigationInProgress.value = true
+		void navigateTo(`/read/${serieId.value}/${nextChapter.value.id}`)
+	}
+
+	function goToPrevChapter(atLast: boolean) {
+		if (!prevChapter.value || chapterBoundaryNavigationInProgress.value) return
+		chapterBoundaryNavigationInProgress.value = true
+		if (atLast) {
+			void navigateTo({
+				path: `/read/${serieId.value}/${prevChapter.value.id}`,
+				query: { at: "last" },
+			})
+			return
+		}
+		void navigateTo(`/read/${serieId.value}/${prevChapter.value.id}`)
+	}
+
 	function nextPage() {
 		if (currentPage.value < totalPages.value - 1) {
 			goToPage(currentPage.value + 1)
 			return
 		}
-		if ((mode.value === "paged" || mode.value === "double") && nextChapter.value) {
-			void navigateTo(`/read/${serieId.value}/${nextChapter.value.id}`)
+		if (mode.value === "paged" || mode.value === "double") {
+			goToNextChapter()
 		}
 	}
 
@@ -388,11 +409,8 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 			goToPage(currentPage.value - 1)
 			return
 		}
-		if ((mode.value === "paged" || mode.value === "double") && prevChapter.value) {
-			void navigateTo({
-				path: `/read/${serieId.value}/${prevChapter.value.id}`,
-				query: { at: "last" },
-			})
+		if (mode.value === "paged" || mode.value === "double") {
+			goToPrevChapter(true)
 		}
 	}
 
@@ -459,14 +477,10 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 				}
 				break
 			case "]":
-				if (nextChapter.value) {
-					navigateTo(`/read/${serieId.value}/${nextChapter.value.id}`)
-				}
+				goToNextChapter()
 				break
 			case "[":
-				if (prevChapter.value) {
-					navigateTo(`/read/${serieId.value}/${prevChapter.value.id}`)
-				}
+				goToPrevChapter(false)
 				break
 			case "f":
 			case "F":
@@ -475,6 +489,29 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 					toggleFullscreen()
 				}
 				break
+		}
+	}
+
+	let lastScrollY = 0
+	function handleVerticalScrollBoundary() {
+		if (!import.meta.client) return
+
+		const currentY = window.scrollY
+		const delta = currentY - lastScrollY
+		lastScrollY = currentY
+
+		if (mode.value !== "vertical") return
+		if (chapterBoundaryNavigationInProgress.value) return
+
+		const doc = document.documentElement
+		const atBottom = window.innerHeight + currentY >= doc.scrollHeight - 2
+		const atTop = currentY <= 0
+
+		if (delta > 0 && atBottom) {
+			goToNextChapter()
+		}
+		else if (delta < 0 && atTop) {
+			goToPrevChapter(true)
 		}
 	}
 
@@ -494,11 +531,14 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	}
 
 	onMounted(() => {
+		lastScrollY = window.scrollY
 		window.addEventListener("keydown", handleKeydown)
+		window.addEventListener("scroll", handleVerticalScrollBoundary, { passive: true })
 	})
 
 	onUnmounted(() => {
 		window.removeEventListener("keydown", handleKeydown)
+		window.removeEventListener("scroll", handleVerticalScrollBoundary)
 	})
 
 	return {
