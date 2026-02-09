@@ -286,11 +286,18 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	}
 
 	function toggleFullscreen() {
+		const toast = useToast()
 		if (document.fullscreenElement) {
-			document.exitFullscreen()
+			document.exitFullscreen().catch((e) => {
+				console.warn("Failed to exit fullscreen:", e)
+				toast.add({ title: "Could not exit fullscreen", color: "warning" })
+			})
 		}
 		else {
-			document.documentElement.requestFullscreen()
+			document.documentElement.requestFullscreen().catch((e) => {
+				console.warn("Failed to enter fullscreen:", e)
+				toast.add({ title: "Could not enter fullscreen", color: "warning" })
+			})
 		}
 	}
 

@@ -86,6 +86,7 @@ watch(filters, () => {
 			>
 				<button
 					class="browse-page__page-btn"
+					aria-label="Previous page"
 					:disabled="page <= 1"
 					@click="page--"
 				>
@@ -101,6 +102,7 @@ watch(filters, () => {
 
 				<button
 					class="browse-page__page-btn"
+					aria-label="Next page"
 					:disabled="page >= data.pagination.totalPages"
 					@click="page++"
 				>
