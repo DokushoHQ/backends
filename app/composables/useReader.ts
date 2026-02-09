@@ -61,9 +61,11 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	})
 	const currentPage = ref(0)
 
-	// Reset page on chapter change
+	// Reset page and cached state on chapter change
 	watch(chapterId, () => {
 		currentPage.value = 0
+		imageDimensions.value = new Map()
+		preloadedUrls.value = new Set()
 	})
 
 	// Translate position when switching between paged ↔ double

@@ -75,8 +75,11 @@ const pageCounter = computed(() => {
 })
 
 // Preload on vertical scroll visibility
-function handlePageVisible(index: number) {
-	preloadImages(index + 1)
+function handlePageVisible(pageIndex: number) {
+	const pos = imagePages.value.findIndex(p => p.index === pageIndex)
+	if (pos !== -1) {
+		preloadImages(pos + 1)
+	}
 }
 </script>
 
