@@ -1,3 +1,15 @@
+// Derive S3 host for image optimization from existing S3 config
+const s3BaseUrl = process.env.NUXT_S3_PUBLIC_BASE_URL || process.env.NUXT_S3_ENDPOINT || ""
+let s3Host = ""
+if (s3BaseUrl) {
+	try {
+		s3Host = new URL(s3BaseUrl).host
+	}
+	catch {
+		// Invalid URL, leave empty
+	}
+}
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
 	modules: ["@nuxt/ui", "@dokushohq/nuxt-processor", "@vueuse/nuxt", "@nuxt/eslint", "nuxt-nodemailer", "nuxt-email-renderer", "nuxt-charts", "@nuxt/test-utils/module", "@nuxt/image"],
@@ -26,6 +38,11 @@ export default defineNuxtConfig({
 	},
 	css: ["~/assets/css/main.css"],
 	runtimeConfig: {
+		ipx: {
+			http: {
+				domains: s3Host,
+			},
+		},
 		databaseUrl: "",
 		databaseMaxConnections: 10,
 		redisUrl: "",
@@ -35,7 +52,6 @@ export default defineNuxtConfig({
 		s3AccessKeyId: "",
 		s3SecretAccessKey: "",
 		s3BucketName: "",
-		s3PublicBaseUrl: "",
 		gifMaxSizeMb: 10,
 		authSecret: "",
 		enablePassword: false,
@@ -79,6 +95,7 @@ export default defineNuxtConfig({
 			baseUrl: "http://localhost:3000",
 			oidcProviderName: "",
 			allowedImageProxy: "", // Comma-separated hosts, e.g. "localhost:4567,uploads.mangadex.org"
+			s3PublicBaseUrl: s3BaseUrl, // Derived from NUXT_S3_PUBLIC_BASE_URL or NUXT_S3_ENDPOINT — used by image provider to detect S3 URLs
 		},
 	},
 	compatibilityDate: "2026-01-12",
@@ -98,7 +115,8 @@ export default defineNuxtConfig({
 		checker: true,
 	},
 	image: {
-		provider: "smart",
+		provider: "ipx",
+		domains: s3Host ? [s3Host] : [],
 		providers: {
 			smart: {
 				name: "smart",

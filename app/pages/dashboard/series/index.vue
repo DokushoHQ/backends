@@ -7,8 +7,7 @@ const route = useRoute()
 const router = useRouter()
 const { isAdmin } = await useAuth()
 
-// URL-based state
-const page = computed(() => Math.max(1, Number.parseInt(String(route.query.page || "1"), 10)))
+// URL-based state (no more page param)
 const searchQuery = computed(() => (route.query.q as string) || "")
 const filterType = computed(() => (route.query.filter as string) || "")
 const sourceFilter = computed(() => (route.query.source as string) || "")
@@ -36,35 +35,127 @@ const languageOptions = [
 // Debounced search
 const searchInput = ref(searchQuery.value)
 const debouncedSearch = useDebounceFn((value: string) => {
-	updateFilters({ q: value || undefined, page: undefined })
+	updateFilters({ q: value || undefined })
 }, 300)
 
 watch(searchInput, (value) => {
 	debouncedSearch(value)
 })
 
-// Fetch series data
-const { data, pending, error, refresh } = await useFetch("/api/v1/serie", {
-	query: computed(() => ({
-		page: page.value,
-		q: searchQuery.value || undefined,
-		filter: filterType.value || undefined,
-		source: sourceFilter.value || undefined,
-		genre: genreFilter.value || undefined,
-		author: authorFilter.value || undefined,
-		artist: artistFilter.value || undefined,
-		status: statusFilter.value || undefined,
-		type: typeFilter.value || undefined,
-		language: languageFilter.value || undefined,
-	})),
+// Build query params for fetching
+const fetchQuery = computed(() => ({
+	q: searchQuery.value || undefined,
+	filter: filterType.value || undefined,
+	source: sourceFilter.value || undefined,
+	genre: genreFilter.value || undefined,
+	author: authorFilter.value || undefined,
+	artist: artistFilter.value || undefined,
+	status: statusFilter.value || undefined,
+	type: typeFilter.value || undefined,
+	language: languageFilter.value || undefined,
+}))
+
+// A "filter key" that changes whenever any filter changes, used to reset infinite scroll
+const filterKey = computed(() => JSON.stringify(fetchQuery.value))
+
+// Fetch first page with useFetch for SSR
+const { data: initialData, pending, error, refresh } = await useFetch("/api/v1/serie", {
+	query: computed(() => ({ page: 1, ...fetchQuery.value })),
 })
 
 // Fetch sources for filter
 const { data: sources } = await useFetch("/api/v1/sources")
 
+// Series item type that covers both normal and failing-filter response shapes
+interface SeriesItem {
+	id: string
+	title: string
+	synopsis: string | null
+	cover: string | null
+	type: string
+	status: string[]
+	updated_at: string
+	_count: { chapters: number }
+	failureCount?: number
+	sources?: string[]
+	last_chapter_at?: string | null
+}
+
+// Infinite scroll state
+const allSeries = ref<SeriesItem[]>([])
+const currentPage = ref(1)
+const totalPages = ref(0)
+const totalCount = ref(0)
+const isFetchingNextPage = ref(false)
+
+// Sync initial data
+function syncInitialData() {
+	if (initialData.value) {
+		allSeries.value = initialData.value.data.filter((s): s is NonNullable<typeof s> => s !== null) as SeriesItem[]
+		currentPage.value = 1
+		totalPages.value = initialData.value.pagination.totalPages
+		totalCount.value = initialData.value.pagination.total
+	}
+}
+syncInitialData()
+
+// Watch for filter changes (useFetch auto-refetches) → reset accumulation
+watch(filterKey, () => {
+	// useFetch will re-fetch automatically. Wait for it to complete.
+	const unwatch = watch(pending, (isPending) => {
+		if (!isPending) {
+			syncInitialData()
+			unwatch()
+		}
+	})
+})
+
+const hasNextPage = computed(() => currentPage.value < totalPages.value)
+const series = computed(() => allSeries.value)
+
+async function loadNextPage() {
+	if (isFetchingNextPage.value || !hasNextPage.value) return
+	isFetchingNextPage.value = true
+	try {
+		const nextPage = currentPage.value + 1
+		const result = await $fetch("/api/v1/serie", {
+			query: { page: nextPage, ...fetchQuery.value },
+		})
+		const newSeries = (result.data ?? []).filter((s): s is NonNullable<typeof s> => s !== null) as SeriesItem[]
+		allSeries.value = [...allSeries.value, ...newSeries]
+		currentPage.value = nextPage
+		totalPages.value = result.pagination.totalPages
+		totalCount.value = result.pagination.total
+	}
+	finally {
+		isFetchingNextPage.value = false
+	}
+}
+
+// Infinite scroll sentinel
+const sentinelRef = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+	const observer = new IntersectionObserver(
+		(entries) => {
+			if (entries[0]?.isIntersecting && hasNextPage.value && !isFetchingNextPage.value) {
+				loadNextPage()
+			}
+		},
+		{ rootMargin: "200px" },
+	)
+
+	watch(sentinelRef, (el, _, onCleanup) => {
+		if (el) observer.observe(el)
+		onCleanup(() => {
+			if (el) observer.unobserve(el)
+		})
+	}, { immediate: true })
+
+	onUnmounted(() => observer.disconnect())
+})
+
 // Computed values
-const series = computed(() => (data.value?.data ?? []).filter((s): s is NonNullable<typeof s> => s !== null))
-const pagination = computed(() => data.value?.pagination ?? { page: 1, pageSize: 24, total: 0, totalPages: 0 })
 const isFailingFilter = computed(() => filterType.value === "failing")
 const isNoChaptersFilter = computed(() => filterType.value === "no-chapters")
 const isUnfilledGapsFilter = computed(() => filterType.value === "unfilled-gaps")
@@ -103,7 +194,7 @@ const currentLanguageLabel = computed(() => {
 
 // Page description
 const pageDescription = computed(() => {
-	const total = pagination.value.total.toLocaleString()
+	const total = totalCount.value.toLocaleString()
 	const filters: string[] = []
 
 	if (isFailingFilter.value) filters.push("failing")
@@ -146,10 +237,8 @@ function updateFilters(updates: Record<string, string | undefined>) {
 	// Apply updates
 	Object.assign(query, updates)
 
-	// Reset page when changing other filters
-	if (!("page" in updates) && Object.keys(updates).length > 0) {
-		query.page = undefined
-	}
+	// Remove page param (no longer used)
+	query.page = undefined
 
 	const cleanQuery = Object.fromEntries(
 		Object.entries(query).filter(([_, v]) => v !== undefined),
@@ -173,15 +262,6 @@ function clearAllFilters() {
 		type: undefined,
 		language: undefined,
 	})
-}
-
-function setPage(newPage: number) {
-	if (newPage === 1) {
-		updateFilters({ page: undefined })
-	}
-	else {
-		updateFilters({ page: String(newPage) })
-	}
 }
 </script>
 
@@ -581,13 +661,13 @@ function setPage(newPage: number) {
 			<template #body>
 				<!-- Loading state -->
 				<SeriesGridSkeleton
-					v-if="pending"
+					v-if="pending && allSeries.length === 0"
 					:count="24"
 				/>
 
 				<!-- Error state -->
 				<div
-					v-else-if="error"
+					v-else-if="error && allSeries.length === 0"
 					class="error-state"
 				>
 					<UIcon
@@ -610,7 +690,7 @@ function setPage(newPage: number) {
 
 				<!-- Empty state -->
 				<div
-					v-else-if="series.length === 0"
+					v-else-if="series.length === 0 && !pending"
 					class="empty-state-wrapper"
 				>
 					<SeriesEmptyState
@@ -626,19 +706,30 @@ function setPage(newPage: number) {
 					v-else
 					class="series-page-content"
 				>
-					<div class="series-grid">
+					<SeriesGrid>
 						<SeriesCard
 							v-for="serie in series"
 							:key="serie.id"
 							:serie="serie"
 						/>
-					</div>
+					</SeriesGrid>
 
-					<UiPagination
-						:page="page"
-						:total-pages="pagination.totalPages"
-						@update:page="setPage"
-					/>
+					<!-- Sentinel for infinite scroll -->
+					<div
+						v-if="hasNextPage || isFetchingNextPage"
+						ref="sentinelRef"
+						class="scroll-sentinel"
+					>
+						<div
+							v-if="isFetchingNextPage"
+							class="loading-more"
+						>
+							<UIcon
+								name="i-lucide-loader-2"
+								class="loading-spinner"
+							/>
+						</div>
+					</div>
 				</div>
 			</template>
 		</UDashboardPanel>
@@ -1117,44 +1208,6 @@ function setPage(newPage: number) {
 	height: 0.875rem;
 }
 
-/* Series grid */
-.series-grid {
-	display: grid;
-	gap: 1rem;
-	grid-template-columns: repeat(2, 1fr);
-	align-items: start;
-}
-
-@media (min-width: 640px) {
-	.series-grid {
-		grid-template-columns: repeat(3, 1fr);
-	}
-}
-
-@media (min-width: 768px) {
-	.series-grid {
-		grid-template-columns: repeat(4, 1fr);
-	}
-}
-
-@media (min-width: 1024px) {
-	.series-grid {
-		grid-template-columns: repeat(5, 1fr);
-	}
-}
-
-@media (min-width: 1280px) {
-	.series-grid {
-		grid-template-columns: repeat(6, 1fr);
-	}
-}
-
-@media (min-width: 1536px) {
-	.series-grid {
-		grid-template-columns: repeat(8, 1fr);
-	}
-}
-
 /* Empty state wrapper */
 .empty-state-wrapper {
 	display: flex;
@@ -1191,5 +1244,28 @@ function setPage(newPage: number) {
 	font-size: var(--font-size-base);
 	color: var(--ui-text-muted);
 	margin: 0 0 1rem;
+}
+
+/* Infinite scroll */
+.scroll-sentinel {
+	height: 1px;
+}
+
+.loading-more {
+	display: flex;
+	justify-content: center;
+	padding: 2rem 0;
+}
+
+.loading-spinner {
+	width: 1.5rem;
+	height: 1.5rem;
+	color: var(--ui-primary);
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
 }
 </style>

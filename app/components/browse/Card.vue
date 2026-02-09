@@ -74,7 +74,7 @@ defineProps<{
 .type-badge {
 	position: absolute;
 	top: 0.375rem;
-	right: calc(var(--card-cut, 0.5rem) + 0.25rem);
+	right: 0.375rem;
 	padding: 0.0625rem 0.25rem;
 	font-size: 0.5625rem;
 	font-weight: 600;
@@ -88,7 +88,7 @@ defineProps<{
 @media (min-width: 640px) {
 	.type-badge {
 		top: 0.5rem;
-		right: calc(0.75rem + 0.25rem);
+		right: 0.5rem;
 		padding: 0.125rem 0.375rem;
 		font-size: 0.6875rem;
 		border-radius: 0.25rem;
@@ -157,7 +157,7 @@ defineProps<{
 		display: block;
 		position: absolute;
 		bottom: 0.625rem;
-		right: calc(0.625rem + 0.25rem);
+		right: 0.625rem;
 		padding: 0.25rem 0.5rem;
 		font-size: var(--font-size-xs);
 		font-weight: 500;

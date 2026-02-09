@@ -90,7 +90,7 @@ defineProps<Props>()
 .status-stamp {
 	position: absolute;
 	top: 0.375rem;
-	right: calc(var(--card-cut, 0.5rem) + 0.25rem);
+	right: 0.375rem;
 	display: flex;
 	align-items: center;
 	gap: 0.125rem;
@@ -109,7 +109,7 @@ defineProps<Props>()
 @media (min-width: 640px) {
 	.status-stamp {
 		top: 0.5rem;
-		right: calc(0.75rem + 0.25rem);
+		right: 0.5rem;
 		gap: 0.25rem;
 		padding: 0.25rem 0.5rem;
 		font-size: var(--font-size-xs);
@@ -195,7 +195,7 @@ defineProps<Props>()
 		display: flex;
 		position: absolute;
 		bottom: 0.625rem;
-		right: calc(0.625rem + 0.25rem);
+		right: 0.625rem;
 		align-items: center;
 		gap: 0.25rem;
 		padding: 0.25rem 0.5rem;

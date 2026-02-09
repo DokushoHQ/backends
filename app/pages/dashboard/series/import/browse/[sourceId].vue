@@ -18,6 +18,10 @@ const selectedResultId = ref<string | null>(null)
 const mobileSheetOpen = ref(false)
 const searchFocused = ref(false)
 
+// Scroll area + infinite scroll sentinel
+const resultsAreaRef = ref<HTMLElement | null>(null)
+const sentinelRef = ref<HTMLElement | null>(null)
+
 // Hydrate cart on mount
 onMounted(async () => {
 	cart.hydrateFromStorage()
@@ -32,6 +36,26 @@ onMounted(async () => {
 
 	// Auto-fetch popular/latest
 	browse.fetchSearchResults(sourceId.value, "", 1, false)
+})
+
+onMounted(() => {
+	const observer = new IntersectionObserver(
+		(entries) => {
+			if (entries[0]?.isIntersecting && browse.hasMore.value && !browse.searching.value) {
+				browse.loadMore(sourceId.value)
+			}
+		},
+		{ root: resultsAreaRef.value, rootMargin: "200px" },
+	)
+
+	watch(sentinelRef, (el, _, onCleanup) => {
+		if (el) observer.observe(el)
+		onCleanup(() => {
+			if (el) observer.unobserve(el)
+		})
+	}, { immediate: true })
+
+	onUnmounted(() => observer.disconnect())
 })
 
 onUnmounted(() => {
@@ -157,16 +181,20 @@ function handlePanelToggle() {
 						</div>
 
 						<!-- Results Area -->
-						<div class="results-area">
+						<div
+							ref="resultsAreaRef"
+							class="results-area"
+						>
 							<!-- Loading -->
 							<SeriesGridSkeleton
 								v-if="browse.searching.value && browse.searchResults.value.length === 0"
 								:count="12"
+								compact
 							/>
 
-							<!-- Results Grid -->
+							<!-- Virtualized Results Grid -->
 							<template v-else-if="browse.searchResults.value.length > 0">
-								<div class="series-grid">
+								<SeriesGrid compact>
 									<SeriesImportSeriesCard
 										v-for="result in browse.searchResults.value"
 										:key="result.id"
@@ -176,40 +204,23 @@ function handlePanelToggle() {
 										:imported="result.imported"
 										@click="handleResultClick(result)"
 									/>
-								</div>
+								</SeriesGrid>
 
-								<!-- Load More -->
+								<!-- Sentinel for infinite scroll -->
 								<div
-									v-if="browse.hasMore.value"
-									class="load-more-section"
+									v-if="browse.hasMore.value || browse.searching.value"
+									ref="sentinelRef"
+									class="scroll-sentinel"
 								>
-									<div class="load-more-divider">
-										<span class="load-more-count">
-											{{ browse.searchResults.value.length }} loaded
-										</span>
-									</div>
-									<button
-										class="load-more-btn"
-										:class="{ 'is-loading': browse.searching.value }"
-										:disabled="browse.searching.value"
-										@click="browse.loadMore(sourceId)"
+									<div
+										v-if="browse.searching.value"
+										class="loading-more"
 									>
-										<span class="load-more-content">
-											<UIcon
-												v-if="browse.searching.value"
-												name="i-lucide-loader-2"
-												class="load-more-spinner"
-											/>
-											<template v-else>
-												<span class="load-more-text">Continue</span>
-												<UIcon
-													name="i-lucide-chevrons-down"
-													class="load-more-icon"
-												/>
-											</template>
-										</span>
-										<span class="load-more-bg" />
-									</button>
+										<UIcon
+											name="i-lucide-loader-2"
+											class="loading-spinner"
+										/>
+									</div>
 								</div>
 							</template>
 
@@ -471,171 +482,27 @@ function handlePanelToggle() {
 	min-height: 0;
 }
 
-.series-grid {
-	display: grid;
-	column-gap: 0.75rem;
-	row-gap: 1.5rem;
-	grid-template-columns: repeat(2, 1fr);
-	align-items: start;
-	padding-top: 1rem;
-}
-
-@media (min-width: 640px) {
-	.series-grid {
-		grid-template-columns: repeat(3, 1fr);
-	}
-}
-
-@media (min-width: 768px) {
-	.series-grid {
-		grid-template-columns: repeat(3, 1fr);
-	}
-}
-
-@media (min-width: 1024px) {
-	.series-grid {
-		grid-template-columns: repeat(3, 1fr);
-	}
-}
-
-@media (min-width: 1280px) {
-	.series-grid {
-		grid-template-columns: repeat(4, 1fr);
-	}
-}
-
-@media (min-width: 1536px) {
-	.series-grid {
-		grid-template-columns: repeat(6, 1fr);
-	}
-}
-
-/* Load More Section */
-.load-more-section {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 1rem;
-	margin-top: 2rem;
-	padding: 1rem 0;
-}
-
-.load-more-divider {
-	display: flex;
-	align-items: center;
-	gap: 1rem;
-	width: 100%;
-}
-
-.load-more-divider::before,
-.load-more-divider::after {
-	content: "";
-	flex: 1;
+/* Infinite scroll */
+.scroll-sentinel {
 	height: 1px;
-	background: linear-gradient(
-		90deg,
-		transparent,
-		var(--ui-border) 20%,
-		var(--ui-border) 80%,
-		transparent
-	);
 }
 
-.load-more-count {
-	font-size: var(--font-size-xs);
-	font-weight: 500;
-	color: var(--ui-text-dimmed);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	white-space: nowrap;
-}
-
-.load-more-btn {
-	position: relative;
+.loading-more {
 	display: flex;
-	align-items: center;
 	justify-content: center;
-	padding: 0.75rem 2rem;
-	border: none;
-	background: transparent;
-	cursor: pointer;
-	overflow: hidden;
-	border-radius: 0.5rem;
+	padding: 2rem 0;
 }
 
-.load-more-btn:disabled {
-	cursor: wait;
-}
-
-.load-more-bg {
-	position: absolute;
-	inset: 0;
-	background: var(--ui-bg-elevated);
-	border: 1px solid var(--ui-border);
-	border-radius: 0.5rem;
-	transition: all 0.2s ease;
-	z-index: 0;
-}
-
-.load-more-btn:hover:not(:disabled) .load-more-bg {
-	background: var(--ui-bg-muted);
-	border-color: color-mix(in oklch, var(--ui-primary) 40%, var(--ui-border));
-}
-
-.load-more-btn:active:not(:disabled) .load-more-bg {
-	background: color-mix(in oklch, var(--ui-primary) 10%, var(--ui-bg-muted));
-}
-
-.load-more-content {
-	position: relative;
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	z-index: 1;
-}
-
-.load-more-text {
-	font-size: var(--font-size-sm);
-	font-weight: 600;
-	color: var(--ui-text);
-	letter-spacing: 0.02em;
-}
-
-.load-more-icon {
-	width: 1rem;
-	height: 1rem;
-	color: var(--ui-text-muted);
-	transition: transform 0.2s ease, color 0.2s ease;
-}
-
-.load-more-btn:hover:not(:disabled) .load-more-icon {
-	color: var(--ui-primary);
-	animation: bounce-down 0.6s ease infinite;
-}
-
-.load-more-spinner {
-	width: 1.125rem;
-	height: 1.125rem;
+.loading-spinner {
+	width: 1.5rem;
+	height: 1.5rem;
 	color: var(--ui-primary);
 	animation: spin 0.8s linear infinite;
 }
 
-@keyframes bounce-down {
-	0%, 100% {
-		transform: translateY(0);
-	}
-	50% {
-		transform: translateY(3px);
-	}
-}
-
 @keyframes spin {
-	from {
-		transform: rotate(0deg);
-	}
-	to {
-		transform: rotate(360deg);
-	}
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
 }
 
 .empty-state {

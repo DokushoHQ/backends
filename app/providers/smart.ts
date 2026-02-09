@@ -1,12 +1,17 @@
 import { defineProvider } from "@nuxt/image/runtime"
 
 /**
- * Smart image provider that automatically detects URLs from allowed hosts and proxies them
- * through the backend API. All other URLs pass through unchanged.
+ * Smart image provider for non-S3 images:
+ * - Allowed proxy hosts → backend image proxy
+ * - Everything else → pass through unchanged
+ *
+ * S3 images use the default `ipx` provider directly.
  */
 export default defineProvider({
 	getImage(src) {
 		const runtimeConfig = useRuntimeConfig()
+
+		// Proxy images from allowed hosts
 		const allowedHosts = runtimeConfig.public.allowedImageProxy
 			.split(",")
 			.map(h => h.trim())

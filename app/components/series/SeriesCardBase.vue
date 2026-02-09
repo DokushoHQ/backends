@@ -11,10 +11,19 @@ interface Props {
 	showAccent?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
 	disabled: false,
 	accentColor: "primary",
 	showAccent: false,
+})
+
+const runtimeConfig = useRuntimeConfig()
+
+// S3 images use default `ipx` provider for resizing; external images use `smart` (proxy + passthrough)
+const imageProvider = computed(() => {
+	const s3Base = runtimeConfig.public.s3PublicBaseUrl
+	if (s3Base && props.cover?.startsWith(s3Base)) return undefined
+	return "smart"
 })
 </script>
 
@@ -33,8 +42,11 @@ withDefaults(defineProps<Props>(), {
 				v-if="cover"
 				:src="cover"
 				:alt="title"
+				:provider="imageProvider"
 				class="cover-image"
 				loading="lazy"
+				decoding="async"
+				sizes="140px sm:170px md:200px lg:180px xl:200px 2xl:220px"
 			/>
 			<div
 				v-else
@@ -68,8 +80,6 @@ withDefaults(defineProps<Props>(), {
 
 <style scoped>
 .series-card-base {
-	--card-cut: 0.5rem;
-
 	position: relative;
 	display: flex;
 	flex-direction: column;
@@ -78,24 +88,9 @@ withDefaults(defineProps<Props>(), {
 	border-radius: var(--radius-card);
 	overflow: hidden;
 
-	/* Angled corner cut - manga panel style */
-	clip-path: polygon(
-		0 0,
-		calc(100% - var(--card-cut)) 0,
-		100% var(--card-cut),
-		100% 100%,
-		0 100%
-	);
-
 	transition:
 		border-color 0.15s ease,
 		opacity 0.15s ease;
-}
-
-@media (min-width: 640px) {
-	.series-card-base {
-		--card-cut: 0.75rem;
-	}
 }
 
 .series-card-base.is-disabled {

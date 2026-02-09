@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useQuery } from "@tanstack/vue-query"
+import { useInfiniteQuery } from "@tanstack/vue-query"
 import type { Language } from "~~/prisma/generated/enums"
 
 definePageMeta({
@@ -17,8 +17,6 @@ const filters = ref({
 	language: (route.query.language as Language | undefined) || undefined,
 })
 
-const page = ref(Math.max(1, Number(route.query.page) || 1))
-
 // Sync refs back when route.query changes (browser back/forward)
 const syncingFromRoute = ref(false)
 watch(() => route.query, (query) => {
@@ -30,20 +28,27 @@ watch(() => route.query, (query) => {
 		genre: (query.genre as string) || undefined,
 		language: (query.language as Language | undefined) || undefined,
 	}
-	page.value = Math.max(1, Number(query.page) || 1)
 	nextTick(() => {
 		syncingFromRoute.value = false
 	})
 })
 
-const { data, isLoading } = useQuery(computed(() =>
-	orpc.serie.list.queryOptions({
-		input: { page: page.value, ...filters.value },
+const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery(computed(() =>
+	orpc.serie.list.infiniteOptions({
+		input: (pageParam: number) => ({ page: pageParam, ...filters.value }),
+		initialPageParam: 1,
+		getNextPageParam: (lastPage: { pagination: { page: number, totalPages: number } }) =>
+			lastPage.pagination.page < lastPage.pagination.totalPages
+				? lastPage.pagination.page + 1
+				: undefined,
 	}),
 ))
 
-// Push state → URL when refs change
-watch([filters, page], () => {
+const allSeries = computed(() => data.value?.pages.flatMap(p => p.data) ?? [])
+const totalCount = computed(() => data.value?.pages[0]?.pagination.total ?? 0)
+
+// Push state → URL when filters change
+watch(filters, () => {
 	if (syncingFromRoute.value) return
 	const query: Record<string, string> = {}
 	if (filters.value.q) query.q = filters.value.q
@@ -51,21 +56,31 @@ watch([filters, page], () => {
 	if (filters.value.status) query.status = filters.value.status
 	if (filters.value.genre) query.genre = filters.value.genre
 	if (filters.value.language) query.language = filters.value.language
-	if (page.value > 1) query.page = String(page.value)
 	navigateTo({ query }, { replace: true })
 }, { deep: true })
 
-function setPage(p: number) {
-	page.value = p
-	if (import.meta.client) {
-		window.scrollTo({ top: 0, behavior: "instant" })
-	}
-}
+// Infinite scroll sentinel
+const sentinelRef = ref<HTMLElement | null>(null)
 
-// Reset page when filters change from user interaction
-watch(filters, () => {
-	if (!syncingFromRoute.value) page.value = 1
-}, { deep: true })
+onMounted(() => {
+	const observer = new IntersectionObserver(
+		(entries) => {
+			if (entries[0]?.isIntersecting && hasNextPage.value && !isFetchingNextPage.value) {
+				fetchNextPage()
+			}
+		},
+		{ rootMargin: "200px" },
+	)
+
+	watch(sentinelRef, (el, _, onCleanup) => {
+		if (el) observer.observe(el)
+		onCleanup(() => {
+			if (el) observer.unobserve(el)
+		})
+	}, { immediate: true })
+
+	onUnmounted(() => observer.disconnect())
+})
 </script>
 
 <template>
@@ -77,20 +92,30 @@ watch(filters, () => {
 				v-if="data && !isLoading"
 				class="browse-page__count"
 			>
-				{{ data.pagination.total }} series
+				{{ totalCount }} series
 			</p>
 
 			<BrowseGrid
-				:series="data?.data ?? []"
+				:series="allSeries"
 				:loading="isLoading"
 			/>
 
-			<UiPagination
-				v-if="data"
-				:page="page"
-				:total-pages="data.pagination.totalPages"
-				@update:page="setPage"
-			/>
+			<!-- Sentinel for infinite scroll -->
+			<div
+				v-if="hasNextPage || isFetchingNextPage"
+				ref="sentinelRef"
+				class="scroll-sentinel"
+			>
+				<div
+					v-if="isFetchingNextPage"
+					class="loading-more"
+				>
+					<UIcon
+						name="i-lucide-loader-2"
+						class="loading-spinner"
+					/>
+				</div>
+			</div>
 		</div>
 	</div>
 </template>
@@ -123,5 +148,27 @@ watch(filters, () => {
 	font-size: var(--font-size-xs);
 	color: var(--ui-text-dimmed);
 	margin: -0.5rem 0;
+}
+
+.scroll-sentinel {
+	height: 1px;
+}
+
+.loading-more {
+	display: flex;
+	justify-content: center;
+	padding: 2rem 0;
+}
+
+.loading-spinner {
+	width: 1.5rem;
+	height: 1.5rem;
+	color: var(--ui-primary);
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
 }
 </style>
