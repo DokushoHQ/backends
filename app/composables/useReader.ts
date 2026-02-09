@@ -112,13 +112,15 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	// Paged/double mode state
 	const imagePages = computed(() => pages.value.filter(p => p.type === "image" && p.url))
 
-	// Spread detection for double mode
+	// Spread detection for double mode — load dimensions incrementally around current page
 	const imageDimensions = ref(new Map<number, { w: number, h: number }>())
+	const DIMENSION_LOOKAHEAD = 6
 
-	watch([imagePages, mode], ([imgs, m]) => {
+	function loadDimensions(imgs: Page[], startIdx: number, count: number) {
 		if (!import.meta.client) return
-		if (m !== "double") return
-		for (const page of imgs) {
+		const end = Math.min(startIdx + count, imgs.length)
+		for (let i = Math.max(0, startIdx); i < end; i++) {
+			const page = imgs[i]!
 			if (page.url && !imageDimensions.value.has(page.index)) {
 				const img = new Image()
 				const pageIndex = page.index
@@ -128,14 +130,27 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 				}
 				img.onerror = () => {
 					console.warn(`Failed to load dimensions for page ${pageIndex}`)
-					// Mark as loaded with 0x0 so we don't retry; will be treated as non-spread
 					imageDimensions.value.set(pageIndex, { w: 0, h: 0 })
 					imageDimensions.value = new Map(imageDimensions.value)
 				}
 				img.src = page.url
 			}
 		}
+	}
+
+	// Load initial batch when entering double mode or pages change
+	watch([imagePages, mode], ([imgs, m]) => {
+		if (m !== "double") return
+		loadDimensions(imgs, 0, DIMENSION_LOOKAHEAD)
 	}, { immediate: true })
+
+	// Load more dimensions as the user pages forward
+	watch(currentPage, (page) => {
+		if (mode.value !== "double") return
+		// Convert spread index to approximate image index (2 pages per spread)
+		const imgIdx = page * 2
+		loadDimensions(imagePages.value, imgIdx, DIMENSION_LOOKAHEAD)
+	})
 
 	function isSpread(pageIndex: number): boolean {
 		const dims = imageDimensions.value.get(pageIndex)

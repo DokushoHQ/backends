@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server"
 import { z } from "zod"
 import { authed } from "../middleware/auth"
 import { db } from "../../utils/db"
@@ -127,7 +128,7 @@ export const get = authed
 		})
 
 		if (!serie) {
-			throw new Error("Serie not found")
+			throw new ORPCError("NOT_FOUND", { message: "Serie not found" })
 		}
 
 		// Build external URLs

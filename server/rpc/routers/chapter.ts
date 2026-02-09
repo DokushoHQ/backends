@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server"
 import { z } from "zod"
 import { authed } from "../middleware/auth"
 import { db } from "../../utils/db"
@@ -20,7 +21,7 @@ export const getData = authed
 		})
 
 		if (!chapter) {
-			throw new Error("Chapter not found")
+			throw new ORPCError("NOT_FOUND", { message: "Chapter not found" })
 		}
 
 		return {
