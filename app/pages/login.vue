@@ -33,8 +33,8 @@ const lastUsedOidc = computed(() => oidcProviderId.value && lastLoginMethod.valu
 // Redirect destination after auth
 const route = useRoute()
 const redirectTo = computed(() => {
-	const redirect = route.query.redirect as string | undefined
-	if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+	const redirect = route.query.redirect
+	if (typeof redirect === "string" && redirect.startsWith("/") && !redirect.startsWith("//")) {
 		return redirect
 	}
 	return "/"

@@ -20,7 +20,8 @@ const userInitials = computed(() => {
 	if (name) {
 		return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
 	}
-	return (data.value.user.email[0] ?? "?").toUpperCase()
+	const emailInitial = typeof data.value.user.email === "string" ? data.value.user.email.charAt(0) : ""
+	return (emailInitial || "?").toUpperCase()
 })
 
 const roleLabel = computed(() => {

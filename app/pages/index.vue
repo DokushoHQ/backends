@@ -61,9 +61,10 @@ watch(filters, () => {
 
 // Infinite scroll sentinel
 const sentinelRef = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
 
 onMounted(() => {
-	const observer = new IntersectionObserver(
+	observer = new IntersectionObserver(
 		(entries) => {
 			if (entries[0]?.isIntersecting && hasNextPage.value && !isFetchingNextPage.value && !isError.value) {
 				fetchNextPage()
@@ -73,13 +74,16 @@ onMounted(() => {
 	)
 
 	watch(sentinelRef, (el, _, onCleanup) => {
-		if (el) observer.observe(el)
+		if (el) observer?.observe(el)
 		onCleanup(() => {
-			if (el) observer.unobserve(el)
+			if (el) observer?.unobserve(el)
 		})
 	}, { immediate: true })
+})
 
-	onUnmounted(() => observer.disconnect())
+onUnmounted(() => {
+	observer?.disconnect()
+	observer = null
 })
 </script>
 

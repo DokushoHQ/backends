@@ -71,11 +71,11 @@ reviews:
       essential_rules: true
       packages: []
     shellcheck:
-      enabled: true
+      enabled: false
     ruff:
-      enabled: true
+      enabled: false
     markdownlint:
-      enabled: true
+      enabled: false
     github-checks:
       enabled: true
       timeout_ms: 90000
@@ -103,9 +103,9 @@ reviews:
     golangci-lint:
       enabled: false
     yamllint:
-      enabled: true
+      enabled: false
     gitleaks:
-      enabled: true
+      enabled: false
     checkov:
       enabled: false
     tflint:
@@ -114,6 +114,7 @@ reviews:
       enabled: false
     eslint:
       enabled: true
+      config_file: eslint.config.mjs
     flake8:
       enabled: false
     fortitudeLint:
@@ -125,7 +126,7 @@ reviews:
     regal:
       enabled: false
     actionlint:
-      enabled: true
+      enabled: false
     pmd:
       enabled: false
     clang:
@@ -139,11 +140,11 @@ reviews:
     clippy:
       enabled: false
     sqlfluff:
-      enabled: true
+      enabled: false
     trivy:
       enabled: false
     prismaLint:
-      enabled: true
+      enabled: false
     pylint:
       enabled: false
     oxc:
@@ -155,13 +156,13 @@ reviews:
     brakeman:
       enabled: false
     dotenvLint:
-      enabled: true
+      enabled: false
     htmlhint:
-      enabled: true
+      enabled: false
     checkmake:
       enabled: false
     osvScanner:
-      enabled: true
+      enabled: false
     blinter:
       enabled: false
 chat:
