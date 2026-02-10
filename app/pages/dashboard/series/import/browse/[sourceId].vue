@@ -38,8 +38,10 @@ onMounted(async () => {
 	browse.fetchSearchResults(sourceId.value, "", 1, false)
 })
 
+let observer: IntersectionObserver | null = null
+
 onMounted(() => {
-	const observer = new IntersectionObserver(
+	observer = new IntersectionObserver(
 		(entries) => {
 			if (entries[0]?.isIntersecting && browse.hasMore.value && !browse.searching.value && !browse.searchError.value) {
 				browse.loadMore(sourceId.value)
@@ -49,13 +51,15 @@ onMounted(() => {
 	)
 
 	watch(sentinelRef, (el, _, onCleanup) => {
-		if (el) observer.observe(el)
+		if (el) observer!.observe(el)
 		onCleanup(() => {
-			if (el) observer.unobserve(el)
+			if (el) observer!.unobserve(el)
 		})
 	}, { immediate: true })
+})
 
-	onUnmounted(() => observer.disconnect())
+onUnmounted(() => {
+	observer?.disconnect()
 })
 
 onUnmounted(() => {

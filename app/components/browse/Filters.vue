@@ -32,6 +32,11 @@ watch(searchQuery, (val) => {
 	}, 300)
 })
 
+onUnmounted(() => {
+	clearTimeout(debounceTimer.value)
+	debounceTimer.value = undefined
+})
+
 const typeOptions = [
 	{ label: "All Types", value: "" },
 	{ label: "Manga", value: "Manga" },

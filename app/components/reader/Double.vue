@@ -13,7 +13,8 @@ const emit = defineEmits<{
 	prev: []
 }>()
 
-const isPair = computed(() => props.spreadPages.length === 2)
+const validSpreadPages = computed(() => props.spreadPages.filter(p => p.url !== null))
+const isPair = computed(() => validSpreadPages.value.length === 2)
 
 function handleClick(e: MouseEvent) {
 	const target = e.currentTarget as HTMLElement
@@ -38,14 +39,14 @@ function handleClick(e: MouseEvent) {
 		@click="handleClick"
 	>
 		<div
-			v-if="spreadPages.length > 0"
+			v-if="validSpreadPages.length > 0"
 			class="reader-double__container"
 			:class="{ 'reader-double__container--pair': isPair, 'reader-double__container--rtl': direction === 'rtl' }"
 		>
 			<img
-				v-for="page in spreadPages"
+				v-for="page in validSpreadPages"
 				:key="page.index"
-				:src="page.url!"
+				:src="page.url"
 				:alt="`Page ${page.index + 1}`"
 				class="reader-double__image"
 				:class="{ 'reader-double__image--half': isPair }"
