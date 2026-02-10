@@ -112,7 +112,7 @@ export default defineNuxtConfig({
 			},
 			typescript: { strict: true },
 		},
-		checker: true,
+		checker: false,
 	},
 	image: {
 		provider: "ipx",

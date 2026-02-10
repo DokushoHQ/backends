@@ -1,6 +1,7 @@
 import { betterAuth, type BetterAuthOptions } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
 import { APIError, createAuthMiddleware } from "better-auth/api"
+import { expo } from "@better-auth/expo"
 import { admin, apiKey, bearer, genericOAuth, lastLoginMethod, openAPI, twoFactor } from "better-auth/plugins"
 import { z } from "zod"
 import emailQueue from "../queues/email"
@@ -71,6 +72,7 @@ function createAuth() {
 			issuer: "Tsundoku",
 		}),
 		openAPI(),
+		expo(),
 	]
 
 	// Parse role map from config if provided
@@ -183,7 +185,7 @@ function createAuth() {
 		},
 		secret: config.authSecret,
 		baseURL: config.public.baseUrl,
-		trustedOrigins: config.corsOrigins?.split(",") || [],
+		trustedOrigins: [...(config.corsOrigins?.split(",") || []), "tsundoku://"],
 		plugins: oidcPlugin ? [...basePlugins, oidcPlugin] : basePlugins,
 		databaseHooks: {
 			account: {
