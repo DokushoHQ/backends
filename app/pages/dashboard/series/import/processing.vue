@@ -172,6 +172,7 @@ function handleClose() {
 										<NuxtImg
 											v-if="serie.cover"
 											:src="serie.cover"
+											provider="smart"
 											:alt="serie.title"
 											class="cover-image"
 										/>
@@ -237,6 +238,7 @@ function handleClose() {
 										<NuxtImg
 											v-if="serie.cover"
 											:src="serie.cover"
+											provider="smart"
 											:alt="serie.title"
 											class="cover-image"
 										/>
@@ -301,6 +303,7 @@ function handleClose() {
 										<NuxtImg
 											v-if="serie.cover"
 											:src="serie.cover"
+											provider="smart"
 											:alt="serie.title"
 											class="cover-image"
 										/>

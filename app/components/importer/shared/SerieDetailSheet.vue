@@ -59,6 +59,7 @@ defineEmits<{
 						<NuxtImg
 							v-if="detail.cover"
 							:src="detail.cover"
+							provider="smart"
 							:alt="detail.title"
 							class="w-full h-full object-cover"
 						/>

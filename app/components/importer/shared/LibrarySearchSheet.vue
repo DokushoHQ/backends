@@ -169,6 +169,7 @@ watch(open, (isOpen) => {
 									<NuxtImg
 										v-if="serie.cover"
 										:src="serie.cover"
+										provider="smart"
 										:alt="serie.title"
 										class="cover-image"
 									/>
@@ -243,6 +244,7 @@ watch(open, (isOpen) => {
 									<NuxtImg
 										v-if="serie.cover"
 										:src="serie.cover"
+										provider="smart"
 										:alt="serie.title"
 										class="cover-image"
 									/>

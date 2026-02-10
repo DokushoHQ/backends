@@ -149,6 +149,7 @@ function selectSource(source: { id: string }) {
 								<NuxtImg
 									v-if="source.icon"
 									:src="source.icon"
+									provider="smart"
 									:alt="source.name"
 									class="source-icon"
 								/>
@@ -197,6 +198,7 @@ function selectSource(source: { id: string }) {
 								<NuxtImg
 									v-if="source.icon"
 									:src="source.icon"
+									provider="smart"
 									:alt="source.name"
 									class="source-icon"
 								/>
