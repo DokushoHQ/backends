@@ -13,7 +13,7 @@ const emit = defineEmits<{
 	prev: []
 }>()
 
-const validSpreadPages = computed(() => props.spreadPages.filter(p => p.url !== null))
+const validSpreadPages = computed(() => props.spreadPages.filter((p): p is typeof p & { url: string } => p.url !== null))
 const isPair = computed(() => validSpreadPages.value.length === 2)
 
 function handleClick(e: MouseEvent) {
