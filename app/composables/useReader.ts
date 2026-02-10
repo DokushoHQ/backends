@@ -363,9 +363,11 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		const currentAt = routeQueryValue(route.query.at)
 		if (currentPageQuery === targetPageQuery && currentAt !== "last") return
 
+		const newQuery: Record<string, string | string[] | undefined> = { ...route.query, page: targetPageQuery }
+		delete newQuery.at
 		void navigateTo({
 			path: route.path,
-			query: { page: targetPageQuery },
+			query: newQuery,
 		}, { replace: true })
 	})
 

@@ -87,6 +87,7 @@ const currentPage = ref(1)
 const totalPages = ref(0)
 const totalCount = ref(0)
 const isFetchingNextPage = ref(false)
+const nextPageError = ref(false)
 
 // Sync initial data
 function syncInitialData() {
@@ -114,7 +115,7 @@ const hasNextPage = computed(() => currentPage.value < totalPages.value)
 const series = computed(() => allSeries.value)
 
 async function loadNextPage() {
-	if (isFetchingNextPage.value || !hasNextPage.value) return
+	if (isFetchingNextPage.value || !hasNextPage.value || nextPageError.value) return
 	isFetchingNextPage.value = true
 	try {
 		const nextPage = currentPage.value + 1
@@ -127,9 +128,17 @@ async function loadNextPage() {
 		totalPages.value = result.pagination.totalPages
 		totalCount.value = result.pagination.total
 	}
+	catch {
+		nextPageError.value = true
+	}
 	finally {
 		isFetchingNextPage.value = false
 	}
+}
+
+function retryNextPage() {
+	nextPageError.value = false
+	loadNextPage()
 }
 
 // Infinite scroll sentinel
@@ -138,7 +147,7 @@ const sentinelRef = ref<HTMLElement | null>(null)
 onMounted(() => {
 	const observer = new IntersectionObserver(
 		(entries) => {
-			if (entries[0]?.isIntersecting && hasNextPage.value && !isFetchingNextPage.value) {
+			if (entries[0]?.isIntersecting && hasNextPage.value && !isFetchingNextPage.value && !nextPageError.value) {
 				loadNextPage()
 			}
 		},
@@ -729,6 +738,18 @@ function clearAllFilters() {
 								class="loading-spinner"
 							/>
 						</div>
+						<div
+							v-else-if="nextPageError"
+							class="load-error"
+						>
+							<span>Failed to load more</span>
+							<button
+								class="retry-btn"
+								@click="retryNextPage"
+							>
+								Retry
+							</button>
+						</div>
 					</div>
 				</div>
 			</template>
@@ -1262,6 +1283,32 @@ function clearAllFilters() {
 	height: 1.5rem;
 	color: var(--ui-primary);
 	animation: spin 0.8s linear infinite;
+}
+
+.load-error {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	padding: 1.5rem 0;
+	font-size: var(--font-size-sm);
+	color: var(--ui-text-muted);
+}
+
+.retry-btn {
+	padding: 0.25rem 0.75rem;
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-primary);
+	background: transparent;
+	border: 1px solid var(--ui-primary);
+	border-radius: 0.25rem;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.retry-btn:hover {
+	background: var(--ui-primary-soft);
 }
 
 @keyframes spin {

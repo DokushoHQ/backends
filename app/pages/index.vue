@@ -33,7 +33,7 @@ watch(() => route.query, (query) => {
 	})
 })
 
-const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery(computed(() =>
+const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery(computed(() =>
 	orpc.serie.list.infiniteOptions({
 		input: (pageParam: number) => ({ page: pageParam, ...filters.value }),
 		initialPageParam: 1,
@@ -65,7 +65,7 @@ const sentinelRef = ref<HTMLElement | null>(null)
 onMounted(() => {
 	const observer = new IntersectionObserver(
 		(entries) => {
-			if (entries[0]?.isIntersecting && hasNextPage.value && !isFetchingNextPage.value) {
+			if (entries[0]?.isIntersecting && hasNextPage.value && !isFetchingNextPage.value && !isError.value) {
 				fetchNextPage()
 			}
 		},
@@ -102,7 +102,7 @@ onMounted(() => {
 
 			<!-- Sentinel for infinite scroll -->
 			<div
-				v-if="hasNextPage || isFetchingNextPage"
+				v-if="(hasNextPage || isFetchingNextPage) && !isError"
 				ref="sentinelRef"
 				class="scroll-sentinel"
 			>
@@ -115,6 +115,24 @@ onMounted(() => {
 						class="loading-spinner"
 					/>
 				</div>
+			</div>
+
+			<!-- Error retry for failed page loads -->
+			<div
+				v-if="isError && allSeries.length > 0"
+				class="next-page-error"
+			>
+				<span>Failed to load more series</span>
+				<button
+					class="retry-btn"
+					@click="fetchNextPage()"
+				>
+					<UIcon
+						name="i-lucide-refresh-cw"
+						class="retry-icon"
+					/>
+					Retry
+				</button>
 			</div>
 		</div>
 	</div>
@@ -170,5 +188,42 @@ onMounted(() => {
 @keyframes spin {
 	from { transform: rotate(0deg); }
 	to { transform: rotate(360deg); }
+}
+
+.next-page-error {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	padding: 1rem;
+	margin-top: 0.5rem;
+	font-size: var(--font-size-sm);
+	color: var(--ui-error);
+	background: var(--ui-error-soft);
+	border-radius: 0.5rem;
+}
+
+.retry-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.375rem 0.75rem;
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.375rem;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.retry-btn:hover {
+	background: var(--ui-bg-muted);
+}
+
+.retry-icon {
+	width: 0.875rem;
+	height: 0.875rem;
 }
 </style>

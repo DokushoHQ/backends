@@ -41,7 +41,7 @@ onMounted(async () => {
 onMounted(() => {
 	const observer = new IntersectionObserver(
 		(entries) => {
-			if (entries[0]?.isIntersecting && browse.hasMore.value && !browse.searching.value) {
+			if (entries[0]?.isIntersecting && browse.hasMore.value && !browse.searching.value && !browse.searchError.value) {
 				browse.loadMore(sourceId.value)
 			}
 		},
@@ -208,7 +208,7 @@ function handlePanelToggle() {
 
 								<!-- Sentinel for infinite scroll -->
 								<div
-									v-if="browse.hasMore.value || browse.searching.value"
+									v-if="(browse.hasMore.value || browse.searching.value) && !browse.searchError.value"
 									ref="sentinelRef"
 									class="scroll-sentinel"
 								>
@@ -221,6 +221,24 @@ function handlePanelToggle() {
 											class="loading-spinner"
 										/>
 									</div>
+								</div>
+
+								<!-- Error retry for failed page loads -->
+								<div
+									v-if="browse.searchError.value && browse.searchResults.value.length > 0"
+									class="next-page-error"
+								>
+									<span>Failed to load more results</span>
+									<button
+										class="retry-btn"
+										@click="browse.searchError.value = null; browse.loadMore(sourceId)"
+									>
+										<UIcon
+											name="i-lucide-refresh-cw"
+											class="retry-icon"
+										/>
+										Retry
+									</button>
 								</div>
 							</template>
 
@@ -503,6 +521,43 @@ function handlePanelToggle() {
 @keyframes spin {
 	from { transform: rotate(0deg); }
 	to { transform: rotate(360deg); }
+}
+
+.next-page-error {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	padding: 1rem;
+	margin-top: 1rem;
+	font-size: var(--font-size-sm);
+	color: var(--ui-error);
+	background: var(--ui-error-soft);
+	border-radius: 0.5rem;
+}
+
+.retry-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.375rem 0.75rem;
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: var(--ui-text);
+	background: var(--ui-bg-elevated);
+	border: 1px solid var(--ui-border);
+	border-radius: 0.375rem;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.retry-btn:hover {
+	background: var(--ui-bg-muted);
+}
+
+.retry-icon {
+	width: 0.875rem;
+	height: 0.875rem;
 }
 
 .empty-state {
