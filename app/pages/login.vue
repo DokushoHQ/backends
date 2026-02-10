@@ -30,12 +30,22 @@ onMounted(() => {
 const lastUsedEmail = computed(() => lastLoginMethod.value === "email")
 const lastUsedOidc = computed(() => oidcProviderId.value && lastLoginMethod.value === oidcProviderId.value)
 
+// Redirect destination after auth
+const route = useRoute()
+const redirectTo = computed(() => {
+	const redirect = route.query.redirect
+	if (typeof redirect === "string" && redirect.startsWith("/") && !redirect.startsWith("//")) {
+		return redirect
+	}
+	return "/"
+})
+
 // Redirect if already authenticated
 watch(
 	isAuthenticated,
 	(authenticated) => {
 		if (authenticated) {
-			navigateTo("/")
+			navigateTo(redirectTo.value)
 		}
 	},
 	{ immediate: true },
@@ -76,10 +86,10 @@ async function handleEmailLogin() {
 		else if ((result.data as { twoFactorRedirect?: boolean })?.twoFactorRedirect) {
 			// 2FA is required - the twoFactorClient plugin will handle the redirect
 			// via onTwoFactorRedirect callback, but we can also navigate explicitly
-			await navigateTo("/two-factor")
+			await navigateTo(`/two-factor?redirect=${encodeURIComponent(redirectTo.value)}`)
 		}
 		else {
-			await navigateTo("/", { external: true })
+			await navigateTo(redirectTo.value)
 		}
 	}
 	catch (e: unknown) {
@@ -125,7 +135,7 @@ async function handleOAuthLogin() {
 	try {
 		await authClient.signIn.oauth2({
 			providerId: oidcProviderId.value,
-			callbackURL: "/",
+			callbackURL: redirectTo.value,
 		})
 	}
 	catch {

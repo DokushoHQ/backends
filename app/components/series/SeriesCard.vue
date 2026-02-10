@@ -17,7 +17,7 @@ defineProps<Props>()
 
 <template>
 	<NuxtLink
-		:to="`/series/${serie.id}`"
+		:to="`/dashboard/series/${serie.id}`"
 		class="series-card"
 	>
 		<SeriesCardBase
@@ -70,27 +70,14 @@ defineProps<Props>()
 	transition: box-shadow 0.25s ease;
 }
 
-.series-card:hover {
-	box-shadow:
-		0 12px 28px -8px color-mix(in oklch, var(--ui-text) 15%, transparent),
-		0 4px 12px -4px color-mix(in oklch, var(--ui-text) 8%, transparent);
-}
+@media (hover: hover) {
+	.series-card:hover :deep(.series-card-base) {
+		border-color: var(--ui-primary);
+	}
 
-.series-card:hover :deep(.series-card-base) {
-	transform: translateY(-6px) scale(1.02);
-}
-
-.series-card:active :deep(.series-card-base) {
-	transform: translateY(-2px) scale(1.01);
-	transition-duration: 0.1s;
-}
-
-.series-card:hover :deep(.cover-image) {
-	transform: scale(1.08);
-}
-
-.series-card:hover :deep(.spine-accent) {
-	height: 100%;
+	.series-card:hover :deep(.spine-accent) {
+		height: 100%;
+	}
 }
 
 /* Focus state for accessibility */
@@ -102,26 +89,44 @@ defineProps<Props>()
 /* Status stamp - ink seal style */
 .status-stamp {
 	position: absolute;
-	top: 0.5rem;
-	right: calc(0.75rem + 0.25rem);
+	top: 0.375rem;
+	right: 0.375rem;
 	display: flex;
 	align-items: center;
-	gap: 0.25rem;
-	padding: 0.25rem 0.5rem;
+	gap: 0.125rem;
+	padding: 0.125rem 0.375rem;
 	background: var(--ui-error);
 	color: white;
-	font-size: var(--font-size-xs);
+	font-size: 0.5625rem;
 	font-weight: 700;
-	border-radius: 0.25rem;
+	border-radius: 0.1875rem;
 	box-shadow:
 		0 2px 4px color-mix(in oklch, var(--ui-error) 40%, transparent),
 		inset 0 1px 0 color-mix(in oklch, white 20%, transparent);
 	transform: rotate(-2deg);
 }
 
+@media (min-width: 640px) {
+	.status-stamp {
+		top: 0.5rem;
+		right: 0.5rem;
+		gap: 0.25rem;
+		padding: 0.25rem 0.5rem;
+		font-size: var(--font-size-xs);
+		border-radius: 0.25rem;
+	}
+}
+
 .stamp-icon {
-	width: 0.75rem;
-	height: 0.75rem;
+	width: 0.625rem;
+	height: 0.625rem;
+}
+
+@media (min-width: 640px) {
+	.stamp-icon {
+		width: 0.75rem;
+		height: 0.75rem;
+	}
 }
 
 .stamp-count {
@@ -131,46 +136,74 @@ defineProps<Props>()
 /* Chapter badge - magazine issue number style */
 .chapter-badge {
 	position: absolute;
-	bottom: 0.625rem;
-	left: 0.625rem;
+	bottom: 0.375rem;
+	left: 0.375rem;
 	display: flex;
 	align-items: baseline;
-	gap: 0.125rem;
-	padding: 0.25rem 0.5rem;
+	gap: 0.0625rem;
+	padding: 0.125rem 0.375rem;
 	background: color-mix(in oklch, var(--ui-bg-elevated) 95%, transparent);
 	backdrop-filter: blur(8px);
-	border-radius: 0.25rem;
+	border-radius: 0.1875rem;
 	border: 1px solid var(--ui-border-muted);
 }
 
+@media (min-width: 640px) {
+	.chapter-badge {
+		bottom: 0.625rem;
+		left: 0.625rem;
+		gap: 0.125rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.25rem;
+	}
+}
+
 .chapter-label {
-	font-size: 0.625rem;
+	font-size: 0.5rem;
 	font-weight: 500;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 	color: var(--ui-text-muted);
 }
 
+@media (min-width: 640px) {
+	.chapter-label {
+		font-size: 0.625rem;
+	}
+}
+
 .chapter-number {
-	font-size: var(--font-size-sm);
+	font-size: var(--font-size-xs);
 	font-weight: 700;
 	color: var(--ui-text);
 	font-variant-numeric: tabular-nums;
 }
 
-/* Update time badge */
+@media (min-width: 640px) {
+	.chapter-number {
+		font-size: var(--font-size-sm);
+	}
+}
+
+/* Update time badge - hidden on mobile to prevent crowding */
 .update-badge {
-	position: absolute;
-	bottom: 0.625rem;
-	right: calc(0.625rem + 0.25rem); /* Account for corner cut */
-	display: flex;
-	align-items: center;
-	gap: 0.25rem;
-	padding: 0.25rem 0.5rem;
-	background: color-mix(in oklch, var(--ui-bg-elevated) 95%, transparent);
-	backdrop-filter: blur(8px);
-	border-radius: 0.25rem;
-	border: 1px solid var(--ui-border-muted);
+	display: none;
+}
+
+@media (min-width: 640px) {
+	.update-badge {
+		display: flex;
+		position: absolute;
+		bottom: 0.625rem;
+		right: 0.625rem;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.25rem 0.5rem;
+		background: color-mix(in oklch, var(--ui-bg-elevated) 95%, transparent);
+		backdrop-filter: blur(8px);
+		border-radius: 0.25rem;
+		border: 1px solid var(--ui-border-muted);
+	}
 }
 
 .update-icon {

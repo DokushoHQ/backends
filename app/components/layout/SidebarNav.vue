@@ -4,6 +4,7 @@ export interface NavItem {
 	icon: string
 	to: string
 	active: boolean
+	separator?: boolean
 }
 
 defineProps<{
@@ -18,27 +19,35 @@ const emit = defineEmits<{
 
 <template>
 	<nav class="sidebar-nav">
-		<NuxtLink
+		<template
 			v-for="item in items"
 			:key="item.to"
-			:to="item.to"
-			class="nav-item"
-			:class="{ active: item.active }"
-			@click="emit('navigate')"
 		>
-			<UIcon
-				:name="item.icon"
-				class="nav-icon"
+			<NuxtLink
+				:to="item.to"
+				:aria-label="item.label"
+				class="nav-item"
+				:class="{ active: item.active }"
+				@click="emit('navigate')"
+			>
+				<UIcon
+					:name="item.icon"
+					class="nav-icon"
+				/>
+				<span
+					class="nav-label"
+					:class="{ 'collapsed-label': collapsed }"
+				>{{ item.label }}</span>
+				<span
+					v-if="collapsed"
+					class="nav-tooltip"
+				>{{ item.label }}</span>
+			</NuxtLink>
+			<div
+				v-if="item.separator"
+				class="nav-separator"
 			/>
-			<span
-				class="nav-label"
-				:class="{ 'collapsed-label': collapsed }"
-			>{{ item.label }}</span>
-			<span
-				v-if="collapsed"
-				class="nav-tooltip"
-			>{{ item.label }}</span>
-		</NuxtLink>
+		</template>
 	</nav>
 </template>
 
@@ -130,7 +139,14 @@ const emit = defineEmits<{
 	z-index: 50;
 }
 
-.nav-item:hover .nav-tooltip {
+.nav-item:hover .nav-tooltip,
+.nav-item:focus-visible .nav-tooltip {
 	opacity: 1;
+}
+
+.nav-separator {
+	height: 1px;
+	margin: 0.375rem 0.875rem;
+	background: var(--ui-border);
 }
 </style>

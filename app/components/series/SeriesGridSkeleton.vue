@@ -1,13 +1,15 @@
 <script setup lang="ts">
 withDefaults(defineProps<{
 	count?: number
+	compact?: boolean
 }>(), {
 	count: 12,
+	compact: false,
 })
 </script>
 
 <template>
-	<div class="series-grid">
+	<SeriesGrid :compact="compact">
 		<div
 			v-for="i in count"
 			:key="i"
@@ -24,65 +26,15 @@ withDefaults(defineProps<{
 				<div class="skeleton-subtitle" />
 			</div>
 		</div>
-	</div>
+	</SeriesGrid>
 </template>
 
 <style scoped>
-/* Series grid */
-.series-grid {
-	display: grid;
-	gap: 1rem;
-	grid-template-columns: repeat(2, 1fr);
-	align-items: start;
-}
-
-@media (min-width: 640px) {
-	.series-grid {
-		grid-template-columns: repeat(3, 1fr);
-	}
-}
-
-@media (min-width: 768px) {
-	.series-grid {
-		grid-template-columns: repeat(4, 1fr);
-	}
-}
-
-@media (min-width: 1024px) {
-	.series-grid {
-		grid-template-columns: repeat(5, 1fr);
-	}
-}
-
-@media (min-width: 1280px) {
-	.series-grid {
-		grid-template-columns: repeat(6, 1fr);
-	}
-}
-
-@media (min-width: 1536px) {
-	.series-grid {
-		grid-template-columns: repeat(8, 1fr);
-	}
-}
-
 .skeleton-card {
-	--card-radius: 0.5rem;
-	--card-cut: 0.75rem;
-
 	background: var(--ui-bg-elevated);
 	border: 1px solid var(--ui-border);
-	border-radius: var(--card-radius);
+	border-radius: 0.5rem;
 	overflow: hidden;
-
-	/* Match the angled corner cut of real cards */
-	clip-path: polygon(
-		0 0,
-		calc(100% - var(--card-cut)) 0,
-		100% var(--card-cut),
-		100% 100%,
-		0 100%
-	);
 
 	animation: skeleton-fade 1.5s ease-in-out infinite;
 	animation-delay: var(--delay);
@@ -141,12 +93,20 @@ withDefaults(defineProps<{
 }
 
 .skeleton-spine {
-	padding: 0.625rem 0.75rem;
-	min-height: 3.25rem;
+	padding: 0.375rem 0.5rem;
+	min-height: 2.75rem;
 	display: flex;
 	flex-direction: column;
-	gap: 0.375rem;
+	gap: 0.25rem;
 	justify-content: center;
+}
+
+@media (min-width: 640px) {
+	.skeleton-spine {
+		padding: 0.625rem 0.75rem;
+		min-height: 3.25rem;
+		gap: 0.375rem;
+	}
 }
 
 .skeleton-title {

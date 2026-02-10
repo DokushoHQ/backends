@@ -11,10 +11,19 @@ interface Props {
 	showAccent?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
 	disabled: false,
 	accentColor: "primary",
 	showAccent: false,
+})
+
+const runtimeConfig = useRuntimeConfig()
+
+// S3 images use default `ipx` provider for resizing; external images use `smart` (proxy + passthrough)
+const imageProvider = computed(() => {
+	const s3Base = runtimeConfig.public.s3PublicBaseUrl
+	if (s3Base && props.cover?.startsWith(s3Base)) return undefined
+	return "smart"
 })
 </script>
 
@@ -33,8 +42,11 @@ withDefaults(defineProps<Props>(), {
 				v-if="cover"
 				:src="cover"
 				:alt="title"
+				:provider="imageProvider"
 				class="cover-image"
 				loading="lazy"
+				decoding="async"
+				sizes="140px sm:170px md:200px lg:180px xl:200px 2xl:220px"
 			/>
 			<div
 				v-else
@@ -68,8 +80,6 @@ withDefaults(defineProps<Props>(), {
 
 <style scoped>
 .series-card-base {
-	--card-cut: 0.75rem;
-
 	position: relative;
 	display: flex;
 	flex-direction: column;
@@ -78,18 +88,7 @@ withDefaults(defineProps<Props>(), {
 	border-radius: var(--radius-card);
 	overflow: hidden;
 
-	/* Angled corner cut - manga panel style */
-	clip-path: polygon(
-		0 0,
-		calc(100% - var(--card-cut)) 0,
-		100% var(--card-cut),
-		100% 100%,
-		0 100%
-	);
-
 	transition:
-		transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-		box-shadow 0.25s ease,
 		border-color 0.15s ease,
 		opacity 0.15s ease;
 }
@@ -111,7 +110,6 @@ withDefaults(defineProps<Props>(), {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
-	transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .cover-placeholder {
@@ -150,16 +148,23 @@ withDefaults(defineProps<Props>(), {
 /* Title spine - book spine aesthetic */
 .card-spine {
 	position: relative;
-	padding: 0.625rem 0.75rem;
-	height: 3.5rem;
+	padding: 0.375rem 0.5rem;
+	min-height: 2.75rem;
 	flex-shrink: 0;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
 }
 
+@media (min-width: 640px) {
+	.card-spine {
+		padding: 0.625rem 0.75rem;
+		min-height: 3.5rem;
+	}
+}
+
 .series-title {
-	font-size: var(--font-size-sm);
+	font-size: var(--font-size-xs);
 	font-weight: 600;
 	color: var(--ui-text);
 	line-height: 1.3;
@@ -170,6 +175,12 @@ withDefaults(defineProps<Props>(), {
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
 	overflow: hidden;
+}
+
+@media (min-width: 640px) {
+	.series-title {
+		font-size: var(--font-size-sm);
+	}
 }
 
 /* Accent line - like a bookmark ribbon */

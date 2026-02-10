@@ -30,6 +30,9 @@
 	--radius-panel: 0.375rem; /* 6px - panels, small cards */
 	--radius-card: 0.75rem; /* 12px - content cards, large cards */
 
+	/* Reader layout */
+	--reader-bottom-nav-height: 3.5rem;
+
 	/* Sidebar dimensions */
 	--sidebar-width: 15rem; /* 240px expanded */
 	--sidebar-collapsed-width: 4rem; /* 64px - matches icon center position */
@@ -46,12 +49,12 @@
 	}
 }
 
-/* Hide sidebar text immediately when collapsed (before Vue hydration) */
-html.sidebar-collapsed .sidebar-title,
-html.sidebar-collapsed .nav-label,
-html.sidebar-collapsed .user-info,
-html.sidebar-collapsed .footer-btn-label,
-html.sidebar-collapsed .theme-btn-label {
+/* Hide sidebar text immediately when collapsed (before Vue hydration) — scoped to desktop sidebar only */
+html.sidebar-collapsed .sidebar .sidebar-title,
+html.sidebar-collapsed .sidebar .nav-label,
+html.sidebar-collapsed .sidebar .user-info,
+html.sidebar-collapsed .sidebar .footer-btn-label,
+html.sidebar-collapsed .sidebar .theme-btn-label {
 	opacity: 0;
 	visibility: hidden;
 	width: 0;

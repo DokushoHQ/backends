@@ -26,7 +26,7 @@ function getIssueColor(issue: string) {
 
 <template>
 	<NuxtLink
-		:to="`/series/${serie.id}`"
+		:to="`/dashboard/series/${serie.id}`"
 		class="issue-row"
 	>
 		<div class="serie-cover">

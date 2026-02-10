@@ -1,3 +1,12 @@
+import { useQuery } from "@tanstack/vue-query"
+
+type JobStatus = {
+	id: string
+	state: string
+	progress: number | object | undefined
+	failedReason?: string
+}
+
 export function useDuplicateDetection() {
 	const toast = useToast()
 
@@ -5,85 +14,72 @@ export function useDuplicateDetection() {
 	const progress = ref(0)
 	const jobId = ref<string | null>(null)
 
-	let pollInterval: ReturnType<typeof setInterval> | null = null
+	// Poll job status via useQuery when actively detecting
+	const jobQuery = useQuery(computed(() => ({
+		queryKey: ["duplicate-detection-job", jobId.value],
+		queryFn: async (): Promise<JobStatus> => {
+			const url: string = `/api/jobs/duplicateDetector/${jobId.value}`
+			return apiFetch(url)
+		},
+		enabled: detecting.value && !!jobId.value,
+		refetchInterval: 2000,
+		retry: false,
+	})))
 
-	function startPolling() {
-		if (pollInterval) return
-		pollInterval = setInterval(pollJobStatus, 2000)
-	}
+	// React to job status updates
+	watch(() => jobQuery.data.value, (job) => {
+		if (!job) return
 
-	function stopPolling() {
-		if (pollInterval) {
-			clearInterval(pollInterval)
-			pollInterval = null
+		if (typeof job.progress === "number") {
+			progress.value = job.progress
 		}
-	}
-
-	async function pollJobStatus() {
-		if (!jobId.value) return
-
-		try {
-			const job = await $fetch(`/api/jobs/duplicateDetector/${jobId.value}`) as {
-				id: string
-				state: string
-				progress: number | object | undefined
-				failedReason?: string
-			}
-
-			if (typeof job.progress === "number") {
-				progress.value = job.progress
-			}
-			else if (job.progress && typeof job.progress === "object" && "percent" in job.progress) {
-				progress.value = (job.progress as { percent: number }).percent
-			}
-
-			if (job.state === "completed" || job.state === "failed") {
-				stopPolling()
-				detecting.value = false
-				jobId.value = null
-
-				if (job.state === "completed") {
-					toast.add({
-						title: "Detection complete",
-						description: "Duplicate detection has finished",
-						color: "success",
-					})
-					return { completed: true }
-				}
-				else {
-					toast.add({
-						title: "Detection failed",
-						description: job.failedReason ?? "Unknown error",
-						color: "error",
-					})
-					return { completed: false, error: job.failedReason }
-				}
-			}
-		}
-		catch (err: unknown) {
-			const error = err as { statusCode?: number }
-			if (error.statusCode === 404) {
-				stopPolling()
-				detecting.value = false
-				jobId.value = null
-			}
+		else if (job.progress && typeof job.progress === "object" && "percent" in job.progress) {
+			progress.value = (job.progress as { percent: number }).percent
 		}
 
-		return { completed: false }
-	}
+		if (job.state === "completed" || job.state === "failed") {
+			detecting.value = false
+			jobId.value = null
+
+			if (job.state === "completed") {
+				toast.add({
+					title: "Detection complete",
+					description: "Duplicate detection has finished",
+					color: "success",
+				})
+			}
+			else {
+				toast.add({
+					title: "Detection failed",
+					description: job.failedReason ?? "Unknown error",
+					color: "error",
+				})
+			}
+		}
+	})
+
+	// Stop on 404 (job expired/removed)
+	watch(() => jobQuery.error.value, (err) => {
+		if (!err) return
+		const fetchErr = err as { statusCode?: number }
+		if (fetchErr.statusCode === 404) {
+			detecting.value = false
+			jobId.value = null
+		}
+	})
 
 	async function startDetection() {
 		try {
 			detecting.value = true
 			progress.value = 0
 
-			const result = await $fetch("/api/v1/duplicates/detect", {
+			const url: string = "/api/v1/duplicates/detect"
+			const result = await apiFetch(url, {
 				method: "POST",
 				body: { forceRefresh: true },
 			}) as { jobId: string }
 
 			jobId.value = result.jobId
-			startPolling()
 
 			toast.add({
 				title: "Detection started",
@@ -107,7 +103,8 @@ export function useDuplicateDetection() {
 
 	async function checkActiveJob() {
 		try {
-			const status = await $fetch("/api/v1/duplicates/status") as {
+			const url: string = "/api/v1/duplicates/status"
+			const status = await apiFetch(url) as {
 				jobId: string | null
 				progress: number | null
 			}
@@ -115,7 +112,6 @@ export function useDuplicateDetection() {
 				jobId.value = status.jobId
 				detecting.value = true
 				progress.value = status.progress ?? 0
-				startPolling()
 				return true
 			}
 		}
@@ -125,16 +121,10 @@ export function useDuplicateDetection() {
 		return false
 	}
 
-	onUnmounted(() => {
-		stopPolling()
-	})
-
 	return {
 		detecting: readonly(detecting),
 		progress: readonly(progress),
-		jobId: readonly(jobId),
 		startDetection,
 		checkActiveJob,
-		pollJobStatus,
 	}
 }

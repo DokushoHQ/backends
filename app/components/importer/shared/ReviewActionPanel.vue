@@ -107,6 +107,7 @@ watch(() => props.serie?.externalId, () => {
 					<NuxtImg
 						v-if="serie.cover"
 						:src="serie.cover"
+						provider="smart"
 						:alt="serie.title"
 						class="w-full h-full object-cover"
 					/>
@@ -217,6 +218,7 @@ watch(() => props.serie?.externalId, () => {
 							<NuxtImg
 								v-if="dup.cover"
 								:src="dup.cover"
+								provider="smart"
 								:alt="dup.title"
 								class="w-full h-full object-cover"
 							/>
@@ -382,6 +384,7 @@ watch(() => props.serie?.externalId, () => {
 								<NuxtImg
 									v-if="serie.linkToSerieCover"
 									:src="serie.linkToSerieCover"
+									provider="smart"
 									:alt="serie.linkToSerieTitle"
 									class="w-full h-full object-cover"
 								/>

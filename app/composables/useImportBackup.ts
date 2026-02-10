@@ -248,7 +248,7 @@ export function useImportBackup() {
 
 				// Fetch detail to get full info using database source ID
 				try {
-					const detail = await $fetch(`/api/v1/sources/${dbSource.id}/detail`, {
+					const detail = await apiFetch(`/api/v1/sources/${dbSource.id}/detail`, {
 						query: { serieId: manga.serieId },
 					}) as SerieDetail
 

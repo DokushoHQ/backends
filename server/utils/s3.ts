@@ -20,7 +20,7 @@ function getS3Config() {
 		accessKeyId: config.s3AccessKeyId,
 		secretAccessKey: config.s3SecretAccessKey,
 		bucketName: config.s3BucketName,
-		publicBaseUrl: config.s3PublicBaseUrl,
+		publicBaseUrl: config.public.s3PublicBaseUrl,
 	}
 }
 

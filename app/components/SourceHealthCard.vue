@@ -160,7 +160,7 @@ const hasQueueActivity = computed(() =>
 		>
 			<NuxtLink
 				v-if="health.failingCount > 0"
-				:to="`/series?filter=failing&source=${source.id}`"
+				:to="`/dashboard/series?filter=failing&source=${source.id}`"
 				class="action-button secondary"
 			>
 				<UIcon

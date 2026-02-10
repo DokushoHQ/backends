@@ -29,7 +29,7 @@ const emit = defineEmits<{
 		<div class="series-comparison">
 			<!-- First series -->
 			<NuxtLink
-				:to="`/series/${group.series[0]?.id}`"
+				:to="`/dashboard/series/${group.series[0]?.id}`"
 				class="series-card"
 				:class="{
 					'is-primary': group.series[0]?.id === group.suggestedPrimaryId,
@@ -87,7 +87,7 @@ const emit = defineEmits<{
 
 			<!-- Second series -->
 			<NuxtLink
-				:to="`/series/${group.series[1]?.id}`"
+				:to="`/dashboard/series/${group.series[1]?.id}`"
 				class="series-card"
 				:class="{
 					'is-primary': group.series[1]?.id === group.suggestedPrimaryId,

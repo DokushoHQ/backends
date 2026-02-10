@@ -30,7 +30,7 @@ defineProps<{
 			<div class="info-item">
 				<span class="info-label">Type</span>
 				<NuxtLink
-					:to="`/series?type=${encodeURIComponent(type)}`"
+					:to="`/dashboard/series?type=${encodeURIComponent(type)}`"
 					class="info-value type-value clickable-value"
 				>
 					{{ type }}
@@ -42,7 +42,7 @@ defineProps<{
 					<NuxtLink
 						v-for="s in status"
 						:key="s"
-						:to="`/series?status=${encodeURIComponent(s)}`"
+						:to="`/dashboard/series?status=${encodeURIComponent(s)}`"
 						class="badge-status clickable-badge"
 					>
 						{{ s }}
@@ -60,7 +60,7 @@ defineProps<{
 						:key="author.name"
 					>
 						<NuxtLink
-							:to="`/series?author=${encodeURIComponent(author.name)}`"
+							:to="`/dashboard/series?author=${encodeURIComponent(author.name)}`"
 							class="clickable-name"
 						>{{ author.name }}</NuxtLink><span v-if="index < authors.length - 1">, </span>
 					</template>
@@ -77,7 +77,7 @@ defineProps<{
 						:key="artist.name"
 					>
 						<NuxtLink
-							:to="`/series?artist=${encodeURIComponent(artist.name)}`"
+							:to="`/dashboard/series?artist=${encodeURIComponent(artist.name)}`"
 							class="clickable-name"
 						>{{ artist.name }}</NuxtLink><span v-if="index < artists.length - 1">, </span>
 					</template>
@@ -103,7 +103,7 @@ defineProps<{
 				<NuxtLink
 					v-for="g in genres"
 					:key="g.id"
-					:to="`/series?genre=${encodeURIComponent(g.title)}`"
+					:to="`/dashboard/series?genre=${encodeURIComponent(g.title)}`"
 					class="genre-tag"
 				>
 					{{ g.title }}

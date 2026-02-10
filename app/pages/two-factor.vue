@@ -24,6 +24,15 @@ const verifyCode = ref("")
 const useBackupCode = ref(false)
 const backupCodeInput = ref("")
 
+const route = useRoute()
+const redirectTo = computed(() => {
+	const redirect = route.query.redirect
+	if (typeof redirect === "string" && redirect.startsWith("/") && !redirect.startsWith("//")) {
+		return redirect
+	}
+	return "/"
+})
+
 // Copy feedback
 const copied = ref(false)
 
@@ -153,7 +162,7 @@ async function verifyLogin() {
 		}
 
 		// Navigate to home on success
-		await navigateTo("/")
+		await navigateTo(redirectTo.value)
 	}
 	catch (e: unknown) {
 		error.value = e instanceof Error ? e.message : "Verification failed"
@@ -171,7 +180,7 @@ function toggleBackupCode() {
 }
 
 function finishSetup() {
-	navigateTo("/")
+	navigateTo(redirectTo.value)
 }
 
 function copyBackupCodes() {

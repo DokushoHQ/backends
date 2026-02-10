@@ -73,6 +73,7 @@ const isActionComplete = computed(() => {
 					<NuxtImg
 						v-if="serie.cover"
 						:src="serie.cover"
+						provider="smart"
 						:alt="serie.title"
 						class="cover-image"
 					/>
@@ -362,6 +363,7 @@ const isActionComplete = computed(() => {
 						<NuxtImg
 							v-if="serie.linkToSerieCover"
 							:src="serie.linkToSerieCover"
+							provider="smart"
 							:alt="serie.linkToSerieTitle"
 							class="preview-image"
 						/>
