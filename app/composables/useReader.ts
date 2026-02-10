@@ -295,7 +295,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		if (isFetching) return
 		if (count <= 0) return
 
-		if (m === "paged") {
+		if (m === "paged" || m === "vertical") {
 			currentPage.value = Math.min(Math.max(pendingStartPage.value - 1, 0), count - 1)
 			pendingStartPage.value = null
 			pendingStartAtLast.value = false
@@ -320,7 +320,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		if (isFetching) return
 		if (count <= 0) return
 
-		if (m === "paged") {
+		if (m === "paged" || m === "vertical") {
 			currentPage.value = count - 1
 			pendingStartAtLast.value = false
 			return
@@ -359,7 +359,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 
 	// Keep chapter progress in URL so reload restores current page.
 	watch([currentPage, mode, totalPages, currentSpreadPageRange], ([page, m, count, range]) => {
-		if (m !== "paged" && m !== "double") return
+		if (m !== "paged" && m !== "double" && m !== "vertical") return
 		if (count <= 0) return
 		if (pendingStartAtLast.value || pendingStartPage.value !== null) return
 

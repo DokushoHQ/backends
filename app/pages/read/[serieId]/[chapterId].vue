@@ -60,7 +60,8 @@ const chapterInfo = computed(() => {
 
 // Page counter for toolbar
 const pageCounter = computed(() => {
-	if (mode.value === "paged") {
+	if (imagePages.value.length === 0) return null
+	if (mode.value === "vertical" || mode.value === "paged") {
 		return `${currentPage.value + 1} / ${imagePages.value.length}`
 	}
 	if (mode.value === "double") {
@@ -78,6 +79,48 @@ function handlePageVisible(pageIndex: number) {
 	if (pos !== -1) {
 		preloadImages(pos + 1)
 	}
+}
+
+// Vertical mode: track current page via scroll position
+function updateVerticalCurrentPage() {
+	if (mode.value !== "vertical") return
+	const pages = document.querySelectorAll(".reader-page")
+	if (pages.length === 0) return
+
+	const toolbarBottom = 48
+	let current = 0
+	for (let i = 0; i < pages.length; i++) {
+		if ((pages[i] as HTMLElement).getBoundingClientRect().top <= toolbarBottom) {
+			current = i
+		}
+		else {
+			break
+		}
+	}
+	currentPage.value = current
+}
+
+if (import.meta.client) {
+	watch(mode, (m, oldM) => {
+		if (m === "vertical") {
+			window.addEventListener("scroll", updateVerticalCurrentPage, { passive: true })
+			nextTick(updateVerticalCurrentPage)
+		}
+		else if (oldM === "vertical") {
+			window.removeEventListener("scroll", updateVerticalCurrentPage)
+		}
+	})
+
+	onMounted(() => {
+		if (mode.value === "vertical") {
+			window.addEventListener("scroll", updateVerticalCurrentPage, { passive: true })
+			nextTick(updateVerticalCurrentPage)
+		}
+	})
+
+	onUnmounted(() => {
+		window.removeEventListener("scroll", updateVerticalCurrentPage)
+	})
 }
 </script>
 
