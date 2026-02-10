@@ -1,5 +1,5 @@
 export default defineEventHandler(() => {
 	const config = useRuntimeConfig()
-	const enabled = config.enabledLanguages?.split(",").map(l => l.trim()).filter(Boolean) || ["En"]
-	return { languages: enabled, primary: config.primaryLanguage || "En" }
+	const enabled = config.enabledLanguages?.split(",").map(l => l.trim()).filter(Boolean)
+	return { languages: enabled?.length ? enabled : ["En"], primary: config.primaryLanguage || "En" }
 })

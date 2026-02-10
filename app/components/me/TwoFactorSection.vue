@@ -328,7 +328,7 @@ async function disable2FA() {
 
 				<UButton
 					variant="outline"
-					@click="navigateTo('/two-factor')"
+					to="/two-factor"
 				>
 					Set Up 2FA
 				</UButton>
