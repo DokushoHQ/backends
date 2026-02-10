@@ -1,6 +1,8 @@
 import {
 	VueQueryPlugin,
 	QueryClient,
+	QueryCache,
+	MutationCache,
 	hydrate,
 	dehydrate,
 	type DehydratedState,
@@ -12,7 +14,21 @@ export default defineNuxtPlugin((nuxt) => {
 
 	const serializer = new StandardRPCJsonSerializer()
 
+	// Redirect to login on 401/UNAUTHORIZED errors from API calls
+	let isRedirecting = false
+	function handleAuthError(error: unknown) {
+		if (!import.meta.client || isRedirecting) return
+		const err = error as Record<string, unknown> | null | undefined
+		if (!err || typeof err !== "object") return
+		if (err.status === 401 || err.statusCode === 401 || err.code === "UNAUTHORIZED") {
+			isRedirecting = true
+			navigateTo(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+		}
+	}
+
 	const queryClient = new QueryClient({
+		queryCache: new QueryCache({ onError: handleAuthError }),
+		mutationCache: new MutationCache({ onError: handleAuthError }),
 		defaultOptions: {
 			queries: {
 				queryKeyHashFn(queryKey) {

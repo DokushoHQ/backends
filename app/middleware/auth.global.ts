@@ -5,7 +5,25 @@ export default defineNuxtRouteMiddleware(async (to) => {
 		return
 	}
 
-	// Fetch session directly - disable caching to always get fresh session
+	if (import.meta.client) {
+		// On client-side navigation, use $fetch directly to bypass Nuxt's useFetch cache.
+		// useFetch caches by URL key and returns stale session data even after server-side expiry.
+		const session = await $fetch<{ user?: { twoFactorEnabled?: boolean } }>("/api/auth/get-session").catch(() => null)
+
+		if (!session?.user) {
+			return navigateTo(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
+		}
+
+		if (!to.path.startsWith("/api/") && !session.user.twoFactorEnabled) {
+			const data = await $fetch<{ required?: boolean }>("/api/auth/two-factor-required").catch(() => null)
+			if (data?.required) {
+				return navigateTo("/two-factor")
+			}
+		}
+		return
+	}
+
+	// SSR: use authClient.useSession(useFetch) for hydration compatibility
 	const { data: session } = await authClient.useSession(useFetch)
 
 	if (!session.value?.user) {
