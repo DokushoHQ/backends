@@ -17,7 +17,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 		if (!to.path.startsWith("/api/") && !session.user.twoFactorEnabled) {
 			const data = await $fetch<{ required?: boolean }>("/api/auth/two-factor-required").catch(() => null)
 			if (data?.required) {
-				return navigateTo("/two-factor")
+				return navigateTo({ path: "/two-factor", query: { redirect: to.fullPath } })
 			}
 		}
 		return
@@ -41,7 +41,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 			const { data } = await useFetch("/api/auth/two-factor-required")
 
 			if (data.value?.required) {
-				return navigateTo("/two-factor")
+				return navigateTo({ path: "/two-factor", query: { redirect: to.fullPath } })
 			}
 		}
 	}

@@ -25,6 +25,7 @@ const emit = defineEmits<{
 		>
 			<NuxtLink
 				:to="item.to"
+				:aria-label="item.label"
 				class="nav-item"
 				:class="{ active: item.active }"
 				@click="emit('navigate')"
@@ -138,7 +139,8 @@ const emit = defineEmits<{
 	z-index: 50;
 }
 
-.nav-item:hover .nav-tooltip {
+.nav-item:hover .nav-tooltip,
+.nav-item:focus-visible .nav-tooltip {
 	opacity: 1;
 }
 

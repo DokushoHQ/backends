@@ -114,7 +114,6 @@ reviews:
       enabled: false
     eslint:
       enabled: true
-      config_file: eslint.config.mjs
     flake8:
       enabled: false
     fortitudeLint:

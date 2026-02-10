@@ -42,6 +42,12 @@ watch(searchInput, (value) => {
 	debouncedSearch(value)
 })
 
+watch(searchQuery, (value) => {
+	if (value !== searchInput.value) {
+		searchInput.value = value
+	}
+})
+
 // Build query params for fetching
 const fetchQuery = computed(() => ({
 	q: searchQuery.value || undefined,
