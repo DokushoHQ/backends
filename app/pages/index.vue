@@ -33,7 +33,7 @@ watch(() => route.query, (query) => {
 	})
 })
 
-const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery(computed(() =>
+const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useInfiniteQuery(computed(() =>
 	orpc.serie.list.infiniteOptions({
 		input: (pageParam: number) => ({ page: pageParam, ...filters.value }),
 		initialPageParam: 1,
@@ -95,7 +95,32 @@ onMounted(() => {
 				{{ totalCount }} series
 			</p>
 
+			<!-- Initial load error -->
+			<div
+				v-if="isError && allSeries.length === 0"
+				class="initial-error"
+			>
+				<UIcon
+					name="i-lucide-alert-circle"
+					class="initial-error__icon"
+				/>
+				<p class="initial-error__text">
+					Failed to load series
+				</p>
+				<button
+					class="retry-btn"
+					@click="refetch()"
+				>
+					<UIcon
+						name="i-lucide-refresh-cw"
+						class="retry-icon"
+					/>
+					Retry
+				</button>
+			</div>
+
 			<BrowseGrid
+				v-else
 				:series="allSeries"
 				:loading="isLoading"
 			/>
@@ -188,6 +213,27 @@ onMounted(() => {
 @keyframes spin {
 	from { transform: rotate(0deg); }
 	to { transform: rotate(360deg); }
+}
+
+.initial-error {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	padding: 4rem 1rem;
+	text-align: center;
+}
+
+.initial-error__icon {
+	width: 3rem;
+	height: 3rem;
+	color: var(--ui-error);
+}
+
+.initial-error__text {
+	font-size: var(--font-size-base);
+	color: var(--ui-text-muted);
 }
 
 .next-page-error {

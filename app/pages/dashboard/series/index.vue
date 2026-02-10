@@ -55,9 +55,6 @@ const fetchQuery = computed(() => ({
 	language: languageFilter.value || undefined,
 }))
 
-// A "filter key" that changes whenever any filter changes, used to reset infinite scroll
-const filterKey = computed(() => JSON.stringify(fetchQuery.value))
-
 // Fetch first page with useFetch for SSR
 const { data: initialData, pending, error, refresh } = await useFetch("/api/v1/serie", {
 	query: computed(() => ({ page: 1, ...fetchQuery.value })),
@@ -98,18 +95,11 @@ function syncInitialData() {
 		totalCount.value = initialData.value.pagination.total
 	}
 }
-syncInitialData()
-
-// Watch for filter changes (useFetch auto-refetches) → reset accumulation
-watch(filterKey, () => {
-	// useFetch will re-fetch automatically. Wait for it to complete.
-	const unwatch = watch(pending, (isPending) => {
-		if (!isPending) {
-			syncInitialData()
-			unwatch()
-		}
-	})
-})
+// Sync whenever initialData updates (SSR, filter changes, refresh/retry)
+watch(initialData, () => {
+	syncInitialData()
+	nextPageError.value = false
+}, { immediate: true })
 
 const hasNextPage = computed(() => currentPage.value < totalPages.value)
 const series = computed(() => allSeries.value)

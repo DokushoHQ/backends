@@ -187,7 +187,7 @@ const synopsisExpanded = ref(false)
 							class="serie-hero__sources"
 						>
 							<a
-								v-for="source in serie.sources.filter((s: any) => s.external_url)"
+								v-for="source in serie.sources.filter((s: any) => typeof s.external_url === 'string' && (s.external_url.startsWith('https://') || s.external_url.startsWith('http://')))"
 								:key="source.id"
 								:href="source.external_url!"
 								target="_blank"
@@ -236,6 +236,17 @@ const synopsisExpanded = ref(false)
 						name="i-lucide-loader-2"
 						class="serie-page__spinner"
 					/>
+				</div>
+
+				<div
+					v-else-if="chaptersQuery.error.value"
+					class="serie-chapters__error"
+				>
+					<UIcon
+						name="i-lucide-alert-circle"
+						class="size-8"
+					/>
+					<p>{{ chaptersQuery.error.value instanceof Error ? chaptersQuery.error.value.message : 'Failed to load chapters' }}</p>
 				</div>
 
 				<div
@@ -613,7 +624,8 @@ const synopsisExpanded = ref(false)
 }
 
 .serie-chapters__loading,
-.serie-chapters__empty {
+.serie-chapters__empty,
+.serie-chapters__error {
 	display: flex;
 	flex-direction: column;
 	align-items: center;

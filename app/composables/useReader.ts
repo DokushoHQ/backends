@@ -90,6 +90,9 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		sourceIndex: number
 	} | null>(null)
 
+	// Generation token to ignore stale dimension loads from previous chapters
+	const dimensionLoadToken = ref(0)
+
 	// Reset page and cached state on chapter change
 	watch(chapterId, () => {
 		const wantsLast = routeWantsLastPage()
@@ -100,6 +103,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 		pendingModeTranslation.value = null
 		imageDimensions.value = new Map()
 		preloadedUrls.value = new Set()
+		dimensionLoadToken.value++
 	})
 
 	// Paged/double mode state
@@ -115,6 +119,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 
 	function loadDimensions(imgs: Page[], startIdx: number, count: number) {
 		if (!import.meta.client) return
+		const token = dimensionLoadToken.value
 		const end = Math.min(startIdx + count, imgs.length)
 		for (let i = Math.max(0, startIdx); i < end; i++) {
 			const page = imgs[i]!
@@ -122,10 +127,12 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 				const img = new Image()
 				const pageIndex = page.index
 				img.onload = () => {
+					if (dimensionLoadToken.value !== token) return
 					imageDimensions.value.set(pageIndex, { w: img.naturalWidth, h: img.naturalHeight })
 					imageDimensions.value = new Map(imageDimensions.value)
 				}
 				img.onerror = () => {
+					if (dimensionLoadToken.value !== token) return
 					console.warn(`Failed to load dimensions for page ${pageIndex}`)
 					imageDimensions.value.set(pageIndex, { w: 0, h: 0 })
 					imageDimensions.value = new Map(imageDimensions.value)
@@ -420,6 +427,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 	const preloadedUrls = ref<Set<string>>(new Set())
 
 	function preloadImages(startIndex: number, count: number = 3) {
+		if (!import.meta.client) return
 		if (mode.value === "double") {
 			// In double mode, preload from next N spreads
 			const spreadList = spreads.value
@@ -429,7 +437,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 					if (page.url && !preloadedUrls.value.has(page.url)) {
 						const img = new Image()
 						img.src = page.url
-						preloadedUrls.value = new Set([...preloadedUrls.value, page.url])
+						preloadedUrls.value.add(page.url)
 					}
 				}
 				preloaded++
@@ -442,7 +450,7 @@ export function useReader(serieId: Ref<string>, chapterId: Ref<string>, serieTyp
 				if (url && !preloadedUrls.value.has(url)) {
 					const img = new Image()
 					img.src = url
-					preloadedUrls.value = new Set([...preloadedUrls.value, url])
+					preloadedUrls.value.add(url)
 				}
 			}
 		}
