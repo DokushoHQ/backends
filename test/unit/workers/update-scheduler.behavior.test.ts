@@ -4,6 +4,7 @@ import chapterDedupQueue, { JOB_PRIORITY as DEDUP_PRIORITY } from "../../../serv
 import indexerQueue from "../../../server/queues/indexer"
 import pageRetryQueue from "../../../server/queues/page-retry"
 import serieInserterQueue, { JOB_PRIORITY as INSERTER_PRIORITY } from "../../../server/queues/serie-inserter"
+import { getSourceById } from "../../../server/utils/sources"
 import { createMockJob } from "./helpers"
 
 vi.mock("#processor", () => ({
@@ -13,7 +14,7 @@ vi.mock("#processor", () => ({
 
 vi.mock("../../../server/utils/db", () => ({
 	db: {
-		source: { findMany: vi.fn() },
+		source: { findMany: vi.fn(), update: vi.fn() },
 		serieSource: { findMany: vi.fn() },
 		chapter: { findMany: vi.fn() },
 		serie: { findMany: vi.fn() },
@@ -168,5 +169,72 @@ describe("update-scheduler worker behavior", () => {
 			{ source_id: "source-1", source_serie_id: "serie-c" },
 			{ delay: 5000, priority: INSERTER_PRIORITY.NORMAL },
 		)
+	})
+
+	it("queues FETCH_LATEST updates only for tracked stale series and updates fingerprint", async () => {
+		vi.stubGlobal("useRuntimeConfig", () => ({
+			schedulerMaxPages: 3,
+			schedulerFingerprintSize: 3,
+			schedulerRecentlyCheckedMs: 60 * 60 * 1000,
+		}))
+		vi.stubGlobal("getSources", vi.fn().mockResolvedValue([]))
+
+		vi.mocked(db.source.findMany).mockResolvedValue([
+			{
+				id: "source-1",
+				external_id: "source-ext-1",
+				rate_limit_max: 2,
+				rate_limit_duration: 5000,
+				last_fetch_fingerprint: ["old-1", "old-2"],
+			},
+		] as never)
+
+		vi.mocked(db.serieSource.findMany).mockResolvedValue([
+			{
+				id: "ss-1",
+				external_id: "new-tracked",
+				last_checked_at: null,
+				consecutive_failures: 0,
+			},
+			{
+				id: "ss-2",
+				external_id: "recent-tracked",
+				last_checked_at: new Date(),
+				consecutive_failures: 0,
+			},
+		] as never)
+
+		vi.mocked(getSourceById).mockReturnValue({
+			fetchLatestUpdates: vi.fn().mockResolvedValue({
+				hasNextPage: false,
+				series: [
+					{ id: "new-tracked" },
+					{ id: "recent-tracked" },
+					{ id: "untracked" },
+					{ id: "old-1" },
+					{ id: "old-2" },
+				],
+			}),
+		} as never)
+		vi.mocked(db.source.update).mockResolvedValue({} as never)
+
+		const worker = await loadWorker()
+		const job = createMockJob({ data: { type: "FETCH_LATEST" } })
+
+		await worker.processor(job as never)
+
+		expect(serieInserterQueue.add).toHaveBeenCalledTimes(1)
+		expect(serieInserterQueue.add).toHaveBeenCalledWith(
+			"serie-inserter",
+			{ source_id: "source-1", source_serie_id: "new-tracked", expect_new_chapters: true },
+			{ priority: INSERTER_PRIORITY.HIGH },
+		)
+
+		expect(db.source.update).toHaveBeenCalledWith({
+			where: { id: "source-1" },
+			data: {
+				last_fetch_fingerprint: ["new-tracked", "recent-tracked", "untracked"],
+			},
+		})
 	})
 })
