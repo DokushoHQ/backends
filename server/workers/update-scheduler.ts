@@ -9,15 +9,8 @@ import { QUEUE_NAME, updateSchedulerJobDataSchema } from "../queues/update-sched
 import { db } from "../utils/db"
 import { findFingerprintPosition } from "../utils/fingerprint"
 import { getSourceById } from "../utils/sources"
-
-// Failure backoff configuration (days to skip based on consecutive failures)
-const FAILURE_BACKOFF_DAYS: Record<number, number> = {
-	1: 0, // No skip on first failure
-	2: 1, // Skip 1 day
-	3: 3, // Skip 3 days
-	4: 7, // Skip 1 week
-	5: 14, // Skip 2 weeks
-}
+import type { SourceProvider } from "../utils/sources/core"
+import { calculateStaggerIntervalMs, isEligibleForRefresh } from "../utils/workers/update-scheduler-policy"
 
 /**
  * FETCH_LATEST task: Check latest updates from each source and queue matching series.
@@ -59,7 +52,7 @@ async function handleFetchLatest(
 	for (const dbSource of dbSources) {
 		job.log(`Processing source: ${dbSource.external_id}`)
 
-		let source
+		let source: SourceProvider
 		try {
 			source = getSourceById(sources, dbSource.external_id)
 		}
@@ -208,24 +201,21 @@ async function handleRefreshAll(job: Job<UpdateSchedulerJobData>) {
 
 		const now = new Date()
 		const seriesToRefresh = trackedSerieSources.filter((serieSource) => {
-			if (serieSource.consecutive_failures > 0) {
-				const skipDays = FAILURE_BACKOFF_DAYS[Math.min(serieSource.consecutive_failures, 5)] ?? 14
-				if (serieSource.last_checked_at) {
-					const daysSinceLastCheck
-						= (now.getTime() - serieSource.last_checked_at.getTime()) / (24 * 60 * 60 * 1000)
-					if (daysSinceLastCheck < skipDays) {
-						return false
-					}
-				}
-			}
-			return true
+			return isEligibleForRefresh({
+				lastCheckedAt: serieSource.last_checked_at,
+				consecutiveFailures: serieSource.consecutive_failures,
+				now,
+			})
 		})
 
 		job.log(`${seriesToRefresh.length} series pass backoff filter`)
 
-		const minInterval = dbSource.rate_limit_duration / dbSource.rate_limit_max
-		const spreadInterval = SPREAD_MS / Math.max(seriesToRefresh.length, 1)
-		const actualInterval = Math.max(minInterval, spreadInterval)
+		const actualInterval = calculateStaggerIntervalMs({
+			rateLimitDurationMs: dbSource.rate_limit_duration,
+			rateLimitMax: dbSource.rate_limit_max,
+			spreadMs: SPREAD_MS,
+			totalItems: seriesToRefresh.length,
+		})
 
 		job.log(`Stagger interval: ${Math.round(actualInterval / 1000)}s between updates`)
 
