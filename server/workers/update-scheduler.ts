@@ -11,6 +11,11 @@ import { findFingerprintPosition } from "../utils/fingerprint"
 import { getSourceById } from "../utils/sources"
 import type { SourceProvider } from "../utils/sources/core"
 import { calculateStaggerIntervalMs, isEligibleForRefresh } from "../utils/workers/update-scheduler-policy"
+import {
+	calculateRecomputeDedupDelayMs,
+	calculateRecomputeDedupEstimatedMs,
+	calculateRecomputeIndexDelayMs,
+} from "../utils/workers/update-scheduler-recompute"
 
 /**
  * FETCH_LATEST task: Check latest updates from each source and queue matching series.
@@ -299,7 +304,7 @@ async function handleRecomputeAll(job: Job<UpdateSchedulerJobData>) {
 		await chapterDedupQueue.add(
 			`recompute-dedup-${serie.id}`,
 			{ serie_id: serie.id },
-			{ delay: i * 50, priority: DEDUP_PRIORITY.LOW },
+			{ delay: calculateRecomputeDedupDelayMs(i), priority: DEDUP_PRIORITY.LOW },
 		)
 	}
 	job.log(`Queued ${series.length} dedup jobs`)
@@ -307,14 +312,14 @@ async function handleRecomputeAll(job: Job<UpdateSchedulerJobData>) {
 
 	// Phase 2: Queue indexer jobs with offset to run after dedup completes
 	// Add base delay to allow dedup jobs to finish first
-	const dedupEstimatedMs = series.length * 50 + 5000 // dedup delay spread + buffer
+	const dedupEstimatedMs = calculateRecomputeDedupEstimatedMs(series.length)
 	job.log(`Phase 2: Queuing indexer jobs (starting after ${Math.round(dedupEstimatedMs / 1000)}s)...`)
 
 	for (const [i, serie] of series.entries()) {
 		await indexerQueue.add(
 			`recompute-index-${serie.id}`,
 			{ serie_id: serie.id, type: "UPDATE" },
-			{ delay: dedupEstimatedMs + (i * 100) },
+			{ delay: calculateRecomputeIndexDelayMs(i, dedupEstimatedMs) },
 		)
 	}
 	job.log(`Queued ${series.length} indexer jobs`)
