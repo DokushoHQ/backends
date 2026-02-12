@@ -1,9 +1,5 @@
 import { defineWorker } from "#processor"
 import { DelayedError, MetricsTime } from "bullmq"
-import type { ChapterDataJobData } from "../queues/chapter-data"
-import type { ChapterDedupJobData } from "../queues/chapter-dedup"
-import type { CoverUpdateJobData } from "../queues/cover-update"
-import type { IndexerJobData } from "../queues/indexer"
 import type { SerieInserterJobData, SerieInserterJobResult } from "../queues/serie-inserter"
 import { JOB_PRIORITY, QUEUE_NAME, serieInserterJobDataSchema } from "../queues/serie-inserter"
 import type { Language, Prisma } from "../utils/db"
@@ -17,6 +13,7 @@ import {
 	getCacheRetryDelayMs,
 	MAX_CACHE_RETRIES,
 } from "../utils/workers/cache-retry"
+import { buildSerieInserterFlow } from "../utils/workers/serie-inserter-flow"
 
 export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInserterJobResult>({
 	name: QUEUE_NAME,
@@ -361,95 +358,17 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 			// Inherit priority from parent job, default to NORMAL
 			const priority = job.opts.priority ?? JOB_PRIORITY.NORMAL
 
-			// Early jobs: cover update and optimistic deduplication
-			const earlyChildren = [
-				{
-					name: `cover-${serie_source_id}`,
-					queueName: "cover-update",
-					data: {
-						type: "SOURCE",
-						serie_source_id,
-					} as CoverUpdateJobData,
-					opts: { priority },
-				},
-				{
-					name: `dedup-early-${serie_id}`,
-					queueName: "chapter-dedup",
-					data: { serie_id } as ChapterDedupJobData,
-					opts: { priority },
-				},
-			]
-
-			if (chapter_ids.length > 0) {
-				// Full flow: indexer-final <- dedup-final <- chapters <- indexer-middle <- (cover + dedup-early)
-				// Two dedup passes: early (optimistic) and final (accurate after chapters complete)
-				await flowProducer.add({
-					name: `indexer-final-${serie_id}`,
-					queueName: "indexer",
-					data: { serie_id, type: "UPDATE" } as IndexerJobData,
-					opts: { priority },
-					children: [
-						{
-							name: `dedup-final-${serie_id}`,
-							queueName: "chapter-dedup",
-							data: { serie_id } as ChapterDedupJobData,
-							opts: { priority },
-							children: chapter_ids.map((chapter_id, index) => ({
-								name: `chapter-${chapter_id}`,
-								queueName: "chapter-data",
-								data: {
-									serie_id,
-									source_id: sourceId,
-									chapter_id,
-									type: "UPDATE",
-								} as ChapterDataJobData,
-								opts: { priority },
-								// First chapter waits for middle indexer (which waits for cover+dedup-early)
-								...(index === 0 && {
-									children: [
-										{
-											name: `indexer-middle-${serie_id}`,
-											queueName: "indexer",
-											data: { serie_id, type: "UPDATE" } as IndexerJobData,
-											opts: { priority },
-											children: earlyChildren,
-										},
-									],
-								}),
-							})),
-						},
-					],
-				})
-			}
-			else {
-				// No chapters to update: indexer-final <- dedup <- cover
-				// Single dedup is enough when no new chapters
-				await flowProducer.add({
-					name: `indexer-final-${serie_id}`,
-					queueName: "indexer",
-					data: { serie_id, type: "UPDATE" } as IndexerJobData,
-					opts: { priority },
-					children: [
-						{
-							name: `dedup-${serie_id}`,
-							queueName: "chapter-dedup",
-							data: { serie_id } as ChapterDedupJobData,
-							opts: { priority },
-							children: [
-								{
-									name: `cover-${serie_source_id}`,
-									queueName: "cover-update",
-									data: {
-										type: "SOURCE",
-										serie_source_id,
-									} as CoverUpdateJobData,
-									opts: { priority },
-								},
-							],
-						},
-					],
-				})
-			}
+			// Full flow when chapters exist:
+			// indexer-final <- dedup-final <- chapters <- indexer-middle <- (cover + dedup-early)
+			// Compact flow when no chapter jobs:
+			// indexer-final <- dedup <- cover
+			await flowProducer.add(buildSerieInserterFlow({
+				serieId: serie_id,
+				serieSourceId: serie_source_id,
+				chapterIds: chapter_ids,
+				sourceId,
+				priority,
+			}))
 
 			// Update last_checked_at and reset consecutive_failures
 			await db.serieSource.update({

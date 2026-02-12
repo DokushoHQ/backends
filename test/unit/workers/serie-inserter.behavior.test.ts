@@ -137,4 +137,101 @@ describe("serie-inserter worker behavior", () => {
 			}),
 		)
 	})
+
+	it("builds the chapter flow with middle indexer attached to first chapter", async () => {
+		vi.mocked(db.$transaction).mockResolvedValue({
+			chapter_ids: ["chapter-1", "chapter-2"],
+			serie_id: "serie-1",
+			serie_source_id: "serie-source-1",
+			has_new_chapters: true,
+		})
+
+		const worker = await loadWorker()
+		const job = createMockJob({
+			data: {
+				source_id: "source-db-id",
+				source_serie_id: "source-serie-id",
+			},
+		})
+
+		await worker.processor(job as never, "token")
+
+		expect(flowAdd).toHaveBeenCalledTimes(1)
+		const payload = vi.mocked(flowAdd).mock.calls[0]?.[0] as Record<string, unknown>
+		expect(payload).toMatchObject({
+			name: "indexer-final-serie-1",
+			queueName: "indexer",
+			data: { serie_id: "serie-1", type: "UPDATE" },
+		})
+
+		const firstLevelChildren = payload.children as Array<Record<string, unknown>>
+		expect(firstLevelChildren).toHaveLength(1)
+		expect(firstLevelChildren[0]).toMatchObject({
+			name: "dedup-final-serie-1",
+			queueName: "chapter-dedup",
+		})
+
+		const chapterJobs = firstLevelChildren[0]?.children as Array<Record<string, unknown>>
+		expect(chapterJobs).toHaveLength(2)
+		expect(chapterJobs[0]).toMatchObject({
+			name: "chapter-chapter-1",
+			queueName: "chapter-data",
+		})
+		expect(chapterJobs[1]).toMatchObject({
+			name: "chapter-chapter-2",
+			queueName: "chapter-data",
+		})
+
+		const firstChapterChildren = chapterJobs[0]?.children as Array<Record<string, unknown>>
+		expect(firstChapterChildren).toHaveLength(1)
+		expect(firstChapterChildren[0]).toMatchObject({
+			name: "indexer-middle-serie-1",
+			queueName: "indexer",
+		})
+
+		const earlyChildren = firstChapterChildren[0]?.children as Array<Record<string, unknown>>
+		expect(earlyChildren).toHaveLength(2)
+		expect(earlyChildren).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ name: "cover-serie-source-1", queueName: "cover-update" }),
+				expect.objectContaining({ name: "dedup-early-serie-1", queueName: "chapter-dedup" }),
+			]),
+		)
+	})
+
+	it("builds compact flow when there are no chapter jobs", async () => {
+		vi.mocked(db.$transaction).mockResolvedValue({
+			chapter_ids: [],
+			serie_id: "serie-1",
+			serie_source_id: "serie-source-1",
+			has_new_chapters: false,
+		})
+
+		const worker = await loadWorker()
+		const job = createMockJob({
+			data: {
+				source_id: "source-db-id",
+				source_serie_id: "source-serie-id",
+			},
+		})
+
+		await worker.processor(job as never, "token")
+
+		expect(flowAdd).toHaveBeenCalledTimes(1)
+		const payload = vi.mocked(flowAdd).mock.calls[0]?.[0] as Record<string, unknown>
+		const firstLevelChildren = payload.children as Array<Record<string, unknown>>
+		expect(firstLevelChildren).toHaveLength(1)
+		expect(firstLevelChildren[0]).toMatchObject({
+			name: "dedup-serie-1",
+			queueName: "chapter-dedup",
+		})
+
+		const leafChildren = firstLevelChildren[0]?.children as Array<Record<string, unknown>>
+		expect(leafChildren).toHaveLength(1)
+		expect(leafChildren[0]).toMatchObject({
+			name: "cover-serie-source-1",
+			queueName: "cover-update",
+			data: { type: "SOURCE", serie_source_id: "serie-source-1" },
+		})
+	})
 })
