@@ -201,9 +201,6 @@ export default defineWorker<typeof QUEUE_NAME, DuplicateDetectorJobData, undefin
 		const duplicatePairs = new Map<string, Map<string, number>>()
 		const config = useRuntimeConfig()
 
-		// Cache for series metadata (authors/artists)
-		const seriesMetadata = new Map<string, { authors: string[], artists: string[] }>()
-
 		// Helper to check if two sets have any overlap
 		function hasOverlap(arr1: string[], arr2: string[]): boolean {
 			const set1 = new Set(arr1.map(s => s.toLowerCase()))
@@ -246,7 +243,6 @@ export default defineWorker<typeof QUEUE_NAME, DuplicateDetectorJobData, undefin
 				// Extract and cache authors/artists for this serie
 				const authors = serie.authors.map(a => a.name)
 				const artists = serie.artists.map(a => a.name)
-				seriesMetadata.set(serie.id, { authors, artists })
 
 				// Search Meilisearch for similar series using hybrid search if available
 				const searchQuery = allTitles.slice(0, 5).join(" ")
