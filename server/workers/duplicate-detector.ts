@@ -72,7 +72,7 @@ async function finalize(
 	for (const group of existingGroups) {
 		const members = group.members as DuplicateGroupMember[]
 		if (members.length === 2) {
-			const [id1, id2] = [members[0].serieId, members[1].serieId].sort()
+			const [id1, id2] = [members[0]!.serieId, members[1]!.serieId].sort()
 			handledPairs.add(`${id1}:${id2}`)
 		}
 	}
@@ -288,11 +288,11 @@ export default defineWorker<typeof QUEUE_NAME, DuplicateDetectorJobData, undefin
 
 					// Store the pair (normalize order to avoid duplicates)
 					const [id1, id2] = [serie.id, hit.id].sort()
-					if (!duplicatePairs.has(id1)) {
-						duplicatePairs.set(id1, new Map())
+					if (!duplicatePairs.has(id1!)) {
+						duplicatePairs.set(id1!, new Map())
 					}
-					const existing = duplicatePairs.get(id1)!.get(id2) ?? 0
-					duplicatePairs.get(id1)!.set(id2, Math.max(existing, similarity))
+					const existing = duplicatePairs.get(id1!)!.get(id2!) ?? 0
+					duplicatePairs.get(id1!)!.set(id2!, Math.max(existing, similarity))
 				}
 
 				processedCount++

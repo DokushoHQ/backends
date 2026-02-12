@@ -34,7 +34,7 @@ export type ChapterDedupJobResult = {
 	same_source_disabled: number
 }
 
-export default defineQueue<ChapterDedupJobData, ChapterDedupJobResult, typeof QUEUE_NAME>({
+export default defineQueue<ChapterDedupJobData, ChapterDedupJobResult, typeof QUEUE_NAME | `recompute-dedup-${string}`>({
 	name: QUEUE_NAME,
 	options: {
 		defaultJobOptions: {

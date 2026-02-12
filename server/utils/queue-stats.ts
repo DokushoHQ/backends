@@ -109,9 +109,9 @@ export async function getQueueStats(name: QueueName) {
 	])
 
 	// Combine all "waiting" type states for display
-	const waiting = counts.waiting
-	const prioritized = counts.prioritized
-	const waitingChildren = counts["waiting-children"]
+	const waiting = counts.waiting ?? 0
+	const prioritized = counts.prioritized ?? 0
+	const waitingChildren = counts["waiting-children"] ?? 0
 
 	return {
 		name,
@@ -119,12 +119,12 @@ export async function getQueueStats(name: QueueName) {
 		waiting,
 		prioritized,
 		waitingChildren,
-		active: counts.active,
-		completed: counts.completed,
-		failed: counts.failed,
-		delayed: counts.delayed,
+		active: counts.active ?? 0,
+		completed: counts.completed ?? 0,
+		failed: counts.failed ?? 0,
+		delayed: counts.delayed ?? 0,
 		paused,
-		total: waiting + prioritized + waitingChildren + counts.active + counts.completed + counts.failed + counts.delayed,
+		total: waiting + prioritized + waitingChildren + (counts.active ?? 0) + (counts.completed ?? 0) + (counts.failed ?? 0) + (counts.delayed ?? 0),
 	}
 }
 

@@ -12,6 +12,11 @@ import { getFlowProducer } from "../utils/flow-producer"
 import { resolveMultiLanguage, resolveSerieTitle } from "../utils/serie"
 import { getSourceById } from "../utils/sources"
 import { RateLimitError } from "../utils/sources/core"
+import {
+	getCacheRetryDelayLabel,
+	getCacheRetryDelayMs,
+	MAX_CACHE_RETRIES,
+} from "../utils/workers/cache-retry"
 
 export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInserterJobResult>({
 	name: QUEUE_NAME,
@@ -324,17 +329,10 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 			// Only retry for updates (existingSerieSource), not new imports
 			if (!has_new_chapters && job.data.expect_new_chapters && existingSerieSource) {
 				const retryAttempt = job.data.cache_retry_attempt ?? 0
-				const MAX_CACHE_RETRIES = 4
-				const RETRY_DELAYS_MS = [
-					10 * 60 * 1000, // 10 minutes
-					60 * 60 * 1000, // 1 hour
-					2 * 60 * 60 * 1000, // 2 hours
-					6 * 60 * 60 * 1000, // 6 hours
-				]
 
 				if (retryAttempt < MAX_CACHE_RETRIES) {
-					const delayMs = RETRY_DELAYS_MS[retryAttempt] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]!
-					const delayDesc = retryAttempt === 0 ? "10 min" : retryAttempt === 1 ? "1h" : retryAttempt === 2 ? "2h" : "6h"
+					const delayMs = getCacheRetryDelayMs(retryAttempt)
+					const delayDesc = getCacheRetryDelayLabel(retryAttempt)
 					log(`No new chapters found but expected (source cache issue?). Retry ${retryAttempt + 1}/${MAX_CACHE_RETRIES} in ${delayDesc}`)
 
 					// Update job data with incremented retry count, then move to delayed
