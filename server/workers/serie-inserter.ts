@@ -8,17 +8,13 @@ import { getFlowProducer } from "../utils/flow-producer"
 import { resolveMultiLanguage } from "../utils/serie"
 import { getSourceById } from "../utils/sources"
 import { RateLimitError } from "../utils/sources/core"
-import {
-	getCacheRetryDelayLabel,
-	getCacheRetryDelayMs,
-	MAX_CACHE_RETRIES,
-} from "../utils/workers/cache-retry"
 import { buildSerieInserterFlow } from "../utils/workers/serie-inserter-flow"
 import {
 	buildSerieCreateData,
 	buildSerieSourceCreateData,
 	buildSerieSourceUpdateData,
 } from "../utils/workers/serie-inserter-payloads"
+import { maybeDelayForCacheRetry } from "../utils/workers/serie-inserter-retry"
 
 export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInserterJobResult>({
 	name: QUEUE_NAME,
@@ -301,30 +297,13 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 
 			// Handle source cache issues with delayed retry (applicable to any source)
 			// Only retry for updates (existingSerieSource), not new imports
-			if (!has_new_chapters && job.data.expect_new_chapters && existingSerieSource) {
-				const retryAttempt = job.data.cache_retry_attempt ?? 0
-
-				if (retryAttempt < MAX_CACHE_RETRIES) {
-					const delayMs = getCacheRetryDelayMs(retryAttempt)
-					const delayDesc = getCacheRetryDelayLabel(retryAttempt)
-					log(`No new chapters found but expected (source cache issue?). Retry ${retryAttempt + 1}/${MAX_CACHE_RETRIES} in ${delayDesc}`)
-
-					// Update job data with incremented retry count, then move to delayed
-					// This preserves job metadata (logs, ID, parent/children relationships)
-					await job.updateData({
-						...job.data,
-						cache_retry_attempt: retryAttempt + 1,
-					})
-					await job.moveToDelayed(Date.now() + delayMs, token)
-
-					// Throw DelayedError to signal worker the job was intentionally deferred
-					// Don't update last_checked_at yet, don't spawn child jobs
-					throw new DelayedError()
-				}
-				else {
-					log(`No new chapters after ${MAX_CACHE_RETRIES} cache retries`)
-				}
-			}
+			await maybeDelayForCacheRetry({
+				job,
+				token,
+				hasNewChapters: has_new_chapters,
+				hasExistingSerieSource: !!existingSerieSource,
+				log,
+			})
 
 			const mode = existingSerieSource ? "Updated" : targetSerieId ? "Linked to" : "Created"
 			log(`${mode} serie ${serie_id} with ${chapter_ids.length} chapters to process`)
