@@ -2,6 +2,7 @@ import type { Job } from "bullmq"
 import chapterDedupQueue, { JOB_PRIORITY as DEDUP_PRIORITY } from "../../queues/chapter-dedup"
 import indexerQueue from "../../queues/indexer"
 import pageRetryQueue from "../../queues/page-retry"
+import serieInserterQueue, { JOB_PRIORITY } from "../../queues/serie-inserter"
 import type { UpdateSchedulerJobData } from "../../queues/update-scheduler"
 import { db } from "../db"
 import {
@@ -9,6 +10,85 @@ import {
 	calculateRecomputeDedupEstimatedMs,
 	calculateRecomputeIndexDelayMs,
 } from "./update-scheduler-recompute"
+import { calculateStaggerIntervalMs, isEligibleForRefresh } from "./update-scheduler-policy"
+
+/**
+ * REFRESH_ALL task: Queue all tracked series with staggered delays.
+ */
+export async function handleRefreshAllTask(job: Job<UpdateSchedulerJobData>) {
+	const config = useRuntimeConfig()
+	const SPREAD_MS = config.schedulerRefreshSpreadMs
+
+	job.log("Starting REFRESH_ALL task")
+	await job.updateProgress(5)
+
+	const dbSources = await db.source.findMany({
+		where: { enabled: true },
+		select: {
+			id: true,
+			external_id: true,
+			rate_limit_max: true,
+			rate_limit_duration: true,
+		},
+	})
+
+	job.log(`Found ${dbSources.length} sources`)
+	let totalQueued = 0
+
+	for (const dbSource of dbSources) {
+		job.log(`Processing source: ${dbSource.external_id}`)
+
+		// Get tracked SerieSources for this source with their scheduling info
+		const trackedSerieSources = await db.serieSource.findMany({
+			where: { source_id: dbSource.id },
+			select: {
+				id: true,
+				external_id: true,
+				last_checked_at: true,
+				consecutive_failures: true,
+			},
+		})
+
+		job.log(`Source ${dbSource.external_id} has ${trackedSerieSources.length} tracked series`)
+
+		const now = new Date()
+		const seriesToRefresh = trackedSerieSources.filter((serieSource) => {
+			return isEligibleForRefresh({
+				lastCheckedAt: serieSource.last_checked_at,
+				consecutiveFailures: serieSource.consecutive_failures,
+				now,
+			})
+		})
+
+		job.log(`${seriesToRefresh.length} series pass backoff filter`)
+
+		const actualInterval = calculateStaggerIntervalMs({
+			rateLimitDurationMs: dbSource.rate_limit_duration,
+			rateLimitMax: dbSource.rate_limit_max,
+			spreadMs: SPREAD_MS,
+			totalItems: seriesToRefresh.length,
+		})
+
+		job.log(`Stagger interval: ${Math.round(actualInterval / 1000)}s between updates`)
+
+		for (const [i, serieSource] of seriesToRefresh.entries()) {
+			const delay = i * actualInterval
+
+			await serieInserterQueue.add(
+				"serie-inserter",
+				{ source_id: dbSource.id, source_serie_id: serieSource.external_id },
+				{ delay, priority: JOB_PRIORITY.NORMAL },
+			)
+
+			totalQueued++
+		}
+
+		job.log(`Queued ${seriesToRefresh.length} series from ${dbSource.external_id}`)
+	}
+
+	job.log(`REFRESH_ALL complete. Total queued: ${totalQueued}`)
+	await job.updateProgress(100)
+}
 
 /**
  * RETRY_FAILED_PAGES task: Queue page-retry jobs for chapters with failed pages.

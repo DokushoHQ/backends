@@ -3,6 +3,7 @@ import { db } from "../../../server/utils/db"
 import chapterDedupQueue, { JOB_PRIORITY as DEDUP_PRIORITY } from "../../../server/queues/chapter-dedup"
 import indexerQueue from "../../../server/queues/indexer"
 import pageRetryQueue from "../../../server/queues/page-retry"
+import serieInserterQueue, { JOB_PRIORITY as INSERTER_PRIORITY } from "../../../server/queues/serie-inserter"
 import { createMockJob } from "./helpers"
 
 vi.mock("#processor", () => ({
@@ -111,6 +112,61 @@ describe("update-scheduler worker behavior", () => {
 			"scheduled-retry-chapter-2",
 			{ chapter_id: "chapter-2" },
 			{ delay: 5000 },
+		)
+	})
+
+	it("queues REFRESH_ALL jobs with backoff filtering and stagger delay", async () => {
+		vi.stubGlobal("useRuntimeConfig", () => ({
+			schedulerRefreshSpreadMs: 10000,
+		}))
+
+		vi.mocked(db.source.findMany).mockResolvedValue([
+			{
+				id: "source-1",
+				external_id: "source-ext-1",
+				rate_limit_max: 2,
+				rate_limit_duration: 5000,
+			},
+		] as never)
+
+		vi.mocked(db.serieSource.findMany).mockResolvedValue([
+			{
+				id: "ss-1",
+				external_id: "serie-a",
+				last_checked_at: new Date("2026-01-01T00:00:00.000Z"),
+				consecutive_failures: 2,
+			},
+			{
+				id: "ss-2",
+				external_id: "serie-b",
+				last_checked_at: new Date(),
+				consecutive_failures: 3,
+			},
+			{
+				id: "ss-3",
+				external_id: "serie-c",
+				last_checked_at: null,
+				consecutive_failures: 0,
+			},
+		] as never)
+
+		const worker = await loadWorker()
+		const job = createMockJob({ data: { type: "REFRESH_ALL" } })
+
+		await worker.processor(job as never)
+
+		expect(serieInserterQueue.add).toHaveBeenCalledTimes(2)
+		expect(serieInserterQueue.add).toHaveBeenNthCalledWith(
+			1,
+			"serie-inserter",
+			{ source_id: "source-1", source_serie_id: "serie-a" },
+			{ delay: 0, priority: INSERTER_PRIORITY.NORMAL },
+		)
+		expect(serieInserterQueue.add).toHaveBeenNthCalledWith(
+			2,
+			"serie-inserter",
+			{ source_id: "source-1", source_serie_id: "serie-c" },
+			{ delay: 5000, priority: INSERTER_PRIORITY.NORMAL },
 		)
 	})
 })
