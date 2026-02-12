@@ -15,6 +15,7 @@ import {
 	buildSerieSourceUpdateData,
 } from "../utils/workers/serie-inserter-payloads"
 import { maybeDelayForCacheRetry } from "../utils/workers/serie-inserter-retry"
+import { upsertScanlationGroupsAndBuildMap } from "../utils/workers/serie-inserter-groups"
 
 export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInserterJobResult>({
 	name: QUEUE_NAME,
@@ -98,40 +99,12 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					where: { name: { in: serieData.authors } },
 				})
 
-				// Upsert scanlation groups
-				const allGroups = chaptersResult.chapters.flatMap(c => c.groups)
-				const uniqueGroups = new Map(allGroups.map(g => [g.id, g]))
-
-				for (const group of uniqueGroups.values()) {
-					await tx.scanlationGroup.upsert({
-						where: {
-							source_id_external_id: {
-								source_id: sourceId,
-								external_id: group.id,
-							},
-						},
-						update: {
-							name: group.name,
-							...(group.url && { url: group.url.toString() }),
-						},
-						create: {
-							source_id: sourceId,
-							external_id: group.id,
-							name: group.name,
-							...(group.url && { url: group.url.toString() }),
-						},
-					})
-				}
-
-				// Build group ID map (external_id -> db id)
-				const groupRecords = await tx.scanlationGroup.findMany({
-					where: {
-						source_id: sourceId,
-						external_id: { in: [...uniqueGroups.keys()] },
-					},
-					select: { id: true, external_id: true },
-				})
-				const groupMap = new Map(groupRecords.map(g => [g.external_id, g.id]))
+				// Upsert scanlation groups and build group ID map (external_id -> db id)
+				const groupMap = await upsertScanlationGroupsAndBuildMap(
+					tx,
+					sourceId,
+					chaptersResult,
+				)
 
 				let serieId: string
 				let serieSourceId: string
