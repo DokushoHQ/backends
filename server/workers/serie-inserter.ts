@@ -2,10 +2,10 @@ import { defineWorker } from "#processor"
 import { DelayedError, MetricsTime } from "bullmq"
 import type { SerieInserterJobData, SerieInserterJobResult } from "../queues/serie-inserter"
 import { JOB_PRIORITY, QUEUE_NAME, serieInserterJobDataSchema } from "../queues/serie-inserter"
-import type { Language, Prisma } from "../utils/db"
+import type { Language } from "../utils/db"
 import { db } from "../utils/db"
 import { getFlowProducer } from "../utils/flow-producer"
-import { resolveMultiLanguage, resolveSerieTitle } from "../utils/serie"
+import { resolveMultiLanguage } from "../utils/serie"
 import { getSourceById } from "../utils/sources"
 import { RateLimitError } from "../utils/sources/core"
 import {
@@ -14,6 +14,11 @@ import {
 	MAX_CACHE_RETRIES,
 } from "../utils/workers/cache-retry"
 import { buildSerieInserterFlow } from "../utils/workers/serie-inserter-flow"
+import {
+	buildSerieCreateData,
+	buildSerieSourceCreateData,
+	buildSerieSourceUpdateData,
+} from "../utils/workers/serie-inserter-payloads"
 
 export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInserterJobResult>({
 	name: QUEUE_NAME,
@@ -142,16 +147,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 
 					await tx.serieSource.update({
 						where: { id: existingSerieSource.id },
-						data: {
-							title: serieData.title as Prisma.InputJsonValue,
-							alternates_titles: serieData.alternatesTitles as Prisma.InputJsonValue,
-							synopsis: serieData.synopsis as Prisma.InputJsonValue,
-							cover_source_url: serieData.cover.toString(),
-							status: serieData.status,
-							type: serieData.type,
-							updated_at: new Date(),
-							...(serieData.externalUrl && { external_url: serieData.externalUrl.toString() }),
-						},
+						data: buildSerieSourceUpdateData(serieData),
 					})
 				}
 				else if (targetSerieId) {
@@ -168,51 +164,32 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					serieId = targetSerieId
 					const isPrimaryValue = isPrimary ?? false
 					const newSerieSource = await tx.serieSource.create({
-						data: {
-							serie_id: targetSerieId,
-							source_id: sourceId,
-							external_id: sourceSerieId,
-							title: serieData.title as Prisma.InputJsonValue,
-							alternates_titles: serieData.alternatesTitles as Prisma.InputJsonValue,
-							synopsis: serieData.synopsis as Prisma.InputJsonValue,
-							cover_source_url: serieData.cover.toString(),
-							status: serieData.status,
-							type: serieData.type,
-							is_primary: isPrimaryValue,
-							priority: isPrimaryValue ? 1 : 5,
-							...(serieData.externalUrl && { external_url: serieData.externalUrl.toString() }),
-						},
+						data: buildSerieSourceCreateData({
+							serieId: targetSerieId,
+							sourceId,
+							sourceSerieId,
+							serieData,
+							isPrimary: isPrimaryValue,
+						}),
 					})
 					serieSourceId = newSerieSource.id
 				}
 				else {
 					// CREATE PATH - New Serie + SerieSource
 					const newSerie = await tx.serie.create({
-						data: {
-							title: resolveSerieTitle(serieData.title, serieData.alternatesTitles),
-							synopsis: resolveMultiLanguage(serieData.synopsis, "") || null,
-							type: serieData.type,
-							status: serieData.status,
-						},
+						data: buildSerieCreateData(serieData),
 					})
 					serieId = newSerie.id
 
 					const isPrimaryValue = isPrimary ?? true
 					const newSerieSource = await tx.serieSource.create({
-						data: {
-							serie_id: newSerie.id,
-							source_id: sourceId,
-							external_id: sourceSerieId,
-							title: serieData.title as Prisma.InputJsonValue,
-							alternates_titles: serieData.alternatesTitles as Prisma.InputJsonValue,
-							synopsis: serieData.synopsis as Prisma.InputJsonValue,
-							cover_source_url: serieData.cover.toString(),
-							status: serieData.status,
-							type: serieData.type,
-							is_primary: isPrimaryValue,
-							priority: isPrimaryValue ? 1 : 5,
-							...(serieData.externalUrl && { external_url: serieData.externalUrl.toString() }),
-						},
+						data: buildSerieSourceCreateData({
+							serieId: newSerie.id,
+							sourceId,
+							sourceSerieId,
+							serieData,
+							isPrimary: isPrimaryValue,
+						}),
 					})
 					serieSourceId = newSerieSource.id
 				}
