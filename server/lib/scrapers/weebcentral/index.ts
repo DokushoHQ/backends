@@ -1,4 +1,5 @@
 import { load } from "cheerio"
+import type { Impit } from "impit"
 import { assignSeasonedChapterNumbers, calculateMissingChapters } from "~~/shared/utils/chapters"
 import {
 	ChapterNotFoundError,
@@ -42,7 +43,9 @@ export class WeebCentral implements SourceProvider {
 
 	#apiInformation: SourceApiInformation
 
-	constructor(env: SourceEnv) {
+	#impit: Impit
+
+	constructor(env: SourceEnv, impit: Impit) {
 		const enabledLanguages = env.ENABLED_LANGUAGE.filter(enabled_lang =>
 			[SourceLanguage.En].some(lang => enabled_lang === lang),
 		)
@@ -82,7 +85,7 @@ export class WeebCentral implements SourceProvider {
 		this.#apiInformation = {
 			api_url: new URL("https://weebcentral.com"),
 			headers: new Map([
-				["User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/77.0"],
+				["User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0"],
 			]),
 			canBlockScraping: true,
 			minimumUpdateInterval: 300 * 60,
@@ -90,6 +93,8 @@ export class WeebCentral implements SourceProvider {
 			rateLimitMax: 1,
 			rateLimitDuration: 10_000, // 1 request per 10 seconds (HTML scraping)
 		}
+
+		this.#impit = impit
 	}
 
 	sourceApiInformation(): SourceApiInformation {
@@ -194,7 +199,7 @@ export class WeebCentral implements SourceProvider {
 		}
 
 		const url = new URL(`/search/data?${params}`, this.#apiInformation.api_url)
-		const data = await fetch(url, { method: "GET" })
+		const data = await this.#impit.fetch(url)
 
 		if (!data.ok) {
 			throw new Error(`WeebCentral HTTP error: ${data.status} ${data.statusText}`)
@@ -273,7 +278,7 @@ export class WeebCentral implements SourceProvider {
 	async fetchSerieDetail(serieId: SourceSerieId): Promise<SourceSerie> {
 		const url = this.serieUrl(serieId)
 
-		const data = await fetch(url, { method: "GET" })
+		const data = await this.#impit.fetch(url)
 
 		if (!data.ok) {
 			throw new Error(`WeebCentral HTTP error: ${data.status} ${data.statusText}`)
@@ -376,7 +381,7 @@ export class WeebCentral implements SourceProvider {
 		const url = new URL(`series/${serieId}/chapter-select`, this.#information.url)
 		url.searchParams.append("current_chapter", latestKnownChapterId)
 
-		const data = await fetch(url, { method: "GET" })
+		const data = await this.#impit.fetch(url)
 		if (!data.ok) return []
 
 		const html = await data.text()
@@ -407,7 +412,7 @@ export class WeebCentral implements SourceProvider {
 	async fetchSerieChapters(serieId: SourceSerieId): Promise<SourceChapters> {
 		const url = new URL(`series/${serieId}/full-chapter-list`, this.#information.url)
 
-		const data = await fetch(url, { method: "GET" })
+		const data = await this.#impit.fetch(url)
 
 		if (!data.ok) {
 			throw new Error(`WeebCentral HTTP error: ${data.status} ${data.statusText}`)
@@ -519,7 +524,7 @@ export class WeebCentral implements SourceProvider {
 		url.searchParams.append("is_prev", "False")
 		url.searchParams.append("reading_style", "long_strip")
 
-		const data = await fetch(url, { method: "GET" })
+		const data = await this.#impit.fetch(url)
 
 		if (!data.ok) {
 			if (data.status === 404) {

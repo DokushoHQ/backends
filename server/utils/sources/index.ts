@@ -1,4 +1,5 @@
 // Core types and enums
+import { Impit } from "impit"
 import { Japscan } from "../../lib/scrapers/japscan"
 import { Mangadex } from "../../lib/scrapers/mangadex"
 import { createSuwayomiSources } from "../../lib/scrapers/suwayomi/factory"
@@ -30,7 +31,8 @@ export const createSources = async (env: SourceEnvWithSuwayomi): Promise<SourceP
 		return cachedSources
 	}
 
-	const nativeSources: SourceProvider[] = [new WeebCentral(env), new Mangadex(env), new Japscan(env)]
+	const impit = new Impit({ browser: "chrome" })
+	const nativeSources: SourceProvider[] = [new WeebCentral(env, impit), new Mangadex(env, impit), new Japscan(env)]
 
 	// Optionally add Suwayomi sources if configured
 	if (env.SUWAYOMI_URL) {
