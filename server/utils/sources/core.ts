@@ -266,7 +266,6 @@ export type SourceInformation = {
 
 export type SourceApiInformation = {
 	api_url: URL
-	headers: Map<string, string>
 	minimumUpdateInterval: number
 	timeout: number
 	canBlockScraping: boolean

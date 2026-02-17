@@ -65,7 +65,6 @@ export class SuwayomiSource implements SourceProvider {
 
 		this.#apiInformation = {
 			api_url: new URL(client.baseUrl),
-			headers: new Map(),
 			minimumUpdateInterval: 3600,
 			timeout: 30,
 			canBlockScraping: false,

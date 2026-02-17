@@ -73,10 +73,6 @@ export class Japscan implements SourceProvider {
 
 		this.#apiInformation = {
 			api_url: new URL(BASE_URL),
-			headers: new Map([
-				["User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/77.0"],
-				["Referer", `${BASE_URL}/`],
-			]),
 			canBlockScraping: true,
 			minimumUpdateInterval: 300 * 60,
 			timeout: 60,

@@ -1,5 +1,6 @@
 import { setTimeout } from "node:timers/promises"
 
+import type { Impit } from "impit"
 import {
 	ChapterNotFoundError,
 	type FetchSearchSerieFilter,
@@ -54,7 +55,9 @@ export class Mangadex implements SourceProvider {
 
 	#apiInformation: SourceApiInformation
 
-	constructor(env: SourceEnv) {
+	#impit: Impit
+
+	constructor(env: SourceEnv, impit: Impit) {
 		const enabledLanguages = env.ENABLED_LANGUAGE.filter(enabled_lang =>
 			MANGADEX_LANGUAGE.some(lang => enabled_lang === lang),
 		)
@@ -93,15 +96,14 @@ export class Mangadex implements SourceProvider {
 
 		this.#apiInformation = {
 			api_url: new URL("https://api.mangadex.org"),
-			headers: new Map([
-				["User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/77.0"],
-			]),
 			canBlockScraping: true,
 			minimumUpdateInterval: 300 * 60,
 			timeout: 30,
 			rateLimitMax: 5,
 			rateLimitDuration: 60_000, // 5 requests per minute
 		}
+
+		this.#impit = impit
 	}
 
 	sourceApiInformation(): SourceApiInformation {
@@ -197,7 +199,7 @@ export class Mangadex implements SourceProvider {
 
 		const url = new URL(`manga?${params}`, this.#apiInformation.api_url)
 
-		const data = await fetch(url, { method: "GET" })
+		const data = await this.#impit.fetch(url)
 
 		if (!data.ok) {
 			throw new Error(`MangaDex API HTTP error: ${data.status} ${data.statusText}`)
@@ -246,7 +248,7 @@ export class Mangadex implements SourceProvider {
 		}
 
 		const chapterUrl = new URL(`chapter?${chapterParams}`, this.#apiInformation.api_url)
-		const chapterData = await fetch(chapterUrl, { method: "GET" })
+		const chapterData = await this.#impit.fetch(chapterUrl)
 
 		if (!chapterData.ok) {
 			throw new Error(`MangaDex API HTTP error: ${chapterData.status} ${chapterData.statusText}`)
@@ -285,7 +287,7 @@ export class Mangadex implements SourceProvider {
 		}
 
 		const mangaUrl = new URL(`manga?${mangaParams}`, this.#apiInformation.api_url)
-		const mangaData = await fetch(mangaUrl, { method: "GET" })
+		const mangaData = await this.#impit.fetch(mangaUrl)
 
 		if (!mangaData.ok) {
 			throw new Error(`MangaDex API HTTP error: ${mangaData.status} ${mangaData.statusText}`)
@@ -321,7 +323,7 @@ export class Mangadex implements SourceProvider {
 
 		const url = new URL(`manga/${serie_id}?${params}`, this.#apiInformation.api_url)
 
-		const data = await fetch(url, { method: "GET" })
+		const data = await this.#impit.fetch(url)
 
 		if (!data.ok) {
 			throw new Error(`MangaDex API HTTP error: ${data.status} ${data.statusText}`)
@@ -366,7 +368,7 @@ export class Mangadex implements SourceProvider {
 			params.set("offset", offset.toString())
 			const url = new URL(`manga/${serieId}/feed?${params}`, this.#apiInformation.api_url)
 
-			const data = await fetch(url, { method: "GET" })
+			const data = await this.#impit.fetch(url)
 
 			if (!data.ok) {
 				throw new Error(`MangaDex API HTTP error: ${data.status} ${data.statusText}`)
@@ -402,7 +404,7 @@ export class Mangadex implements SourceProvider {
 
 		const url = new URL(`at-home/server/${chapterId}?${params}`, this.#apiInformation.api_url)
 
-		const data = await fetch(url, { method: "GET" })
+		const data = await this.#impit.fetch(url)
 
 		if (!data.ok) {
 			if (data.status === 404) {
