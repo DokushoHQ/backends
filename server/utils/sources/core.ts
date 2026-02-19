@@ -300,3 +300,51 @@ export class ChapterNotFoundError extends Error {
 		this.name = "ChapterNotFoundError"
 	}
 }
+
+export class RateLimitError extends Error {
+	retryAfterMs: number
+
+	constructor(retryAfterMs: number, message?: string) {
+		super(message ?? `Rate limited, retry after ${retryAfterMs}ms`)
+		this.name = "RateLimitError"
+		this.retryAfterMs = retryAfterMs
+	}
+}
+
+/**
+ * Parse a Retry-After header value into milliseconds.
+ * Handles both integer seconds ("120") and HTTP-date formats per RFC 9110.
+ * Clamps between 1s and 1h. Returns defaultMs if header is null/unparseable.
+ */
+export function parseRetryAfter(header: string | null, defaultMs = 60_000): number {
+	if (!header) return defaultMs
+
+	const MIN_MS = 1_000
+	const MAX_MS = 3_600_000
+
+	// Try integer seconds first
+	const seconds = Number(header)
+	if (!Number.isNaN(seconds) && Number.isFinite(seconds)) {
+		return Math.min(Math.max(seconds * 1000, MIN_MS), MAX_MS)
+	}
+
+	// Try HTTP-date
+	const date = new Date(header)
+	if (!Number.isNaN(date.getTime())) {
+		const delayMs = date.getTime() - Date.now()
+		return Math.min(Math.max(delayMs, MIN_MS), MAX_MS)
+	}
+
+	return defaultMs
+}
+
+/**
+ * Throw a RateLimitError if the response has status 429.
+ * Accepts any response-like object (works with both fetch Response and ImpitResponse).
+ */
+export function assertNotRateLimited(response: { status: number, headers: Headers }): void {
+	if (response.status === 429) {
+		const retryAfterMs = parseRetryAfter(response.headers.get("retry-after"))
+		throw new RateLimitError(retryAfterMs)
+	}
+}

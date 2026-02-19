@@ -17,6 +17,7 @@ export const chapterDataJobDataSchema = z.object({
 	source_id: z.string().uuid(),
 	chapter_id: z.string().uuid(),
 	type: z.enum(["UPDATE"]),
+	rate_limit_retry_attempt: z.number().optional(), // Track retry attempts for 429 rate limits
 })
 
 export type ChapterDataJobData = z.infer<typeof chapterDataJobDataSchema>
