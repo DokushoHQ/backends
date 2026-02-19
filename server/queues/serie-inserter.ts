@@ -19,6 +19,7 @@ export const serieInserterJobDataSchema = z.object({
 	is_primary: z.boolean().optional(), // For linking, whether this should be the primary source
 	expect_new_chapters: z.boolean().optional(), // Set by FETCH_LATEST when serie appeared in latest updates
 	cache_retry_attempt: z.number().optional(), // Track retry attempts for source cache issues
+	rate_limit_retry_attempt: z.number().optional(), // Track retry attempts for 429 rate limits
 })
 
 export type SerieInserterJobData = z.infer<typeof serieInserterJobDataSchema>

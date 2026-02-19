@@ -2,6 +2,7 @@ import { load } from "cheerio"
 import type { Impit } from "impit"
 import { assignSeasonedChapterNumbers, calculateMissingChapters } from "~~/shared/utils/chapters"
 import {
+	assertNotRateLimited,
 	ChapterNotFoundError,
 	type FetchSearchSerieFilter,
 	type SourceProvider,
@@ -92,6 +93,12 @@ export class WeebCentral implements SourceProvider {
 		}
 
 		this.#impit = impit
+	}
+
+	async #fetch(url: URL) {
+		const response = await this.#impit.fetch(url)
+		assertNotRateLimited(response)
+		return response
 	}
 
 	sourceApiInformation(): SourceApiInformation {
@@ -196,7 +203,7 @@ export class WeebCentral implements SourceProvider {
 		}
 
 		const url = new URL(`/search/data?${params}`, this.#apiInformation.api_url)
-		const data = await this.#impit.fetch(url)
+		const data = await this.#fetch(url)
 
 		if (!data.ok) {
 			throw new Error(`WeebCentral HTTP error: ${data.status} ${data.statusText}`)
@@ -275,7 +282,7 @@ export class WeebCentral implements SourceProvider {
 	async fetchSerieDetail(serieId: SourceSerieId): Promise<SourceSerie> {
 		const url = this.serieUrl(serieId)
 
-		const data = await this.#impit.fetch(url)
+		const data = await this.#fetch(url)
 
 		if (!data.ok) {
 			throw new Error(`WeebCentral HTTP error: ${data.status} ${data.statusText}`)
@@ -378,7 +385,7 @@ export class WeebCentral implements SourceProvider {
 		const url = new URL(`series/${serieId}/chapter-select`, this.#information.url)
 		url.searchParams.append("current_chapter", latestKnownChapterId)
 
-		const data = await this.#impit.fetch(url)
+		const data = await this.#fetch(url)
 		if (!data.ok) return []
 
 		const html = await data.text()
@@ -409,7 +416,7 @@ export class WeebCentral implements SourceProvider {
 	async fetchSerieChapters(serieId: SourceSerieId): Promise<SourceChapters> {
 		const url = new URL(`series/${serieId}/full-chapter-list`, this.#information.url)
 
-		const data = await this.#impit.fetch(url)
+		const data = await this.#fetch(url)
 
 		if (!data.ok) {
 			throw new Error(`WeebCentral HTTP error: ${data.status} ${data.statusText}`)
@@ -521,7 +528,7 @@ export class WeebCentral implements SourceProvider {
 		url.searchParams.append("is_prev", "False")
 		url.searchParams.append("reading_style", "long_strip")
 
-		const data = await this.#impit.fetch(url)
+		const data = await this.#fetch(url)
 
 		if (!data.ok) {
 			if (data.status === 404) {

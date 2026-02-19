@@ -11,6 +11,7 @@ import { db } from "../utils/db"
 import { getFlowProducer } from "../utils/flow-producer"
 import { resolveMultiLanguage, resolveSerieTitle } from "../utils/serie"
 import { getSourceById } from "../utils/sources"
+import { RateLimitError } from "../utils/sources/core"
 
 export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInserterJobResult>({
 	name: QUEUE_NAME,
@@ -21,6 +22,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 	},
 	async processor(job, token) {
 		const log = (msg: string) => job.log(`[Attempt ${job.attemptsMade + 1}] ${msg}`)
+		const rateLimitMaxRetries = Number(useRuntimeConfig().rateLimitMaxRetries) || 5
 		const {
 			source_id: sourceId,
 			source_serie_id: sourceSerieId,
@@ -472,6 +474,23 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 			// Re-throw DelayedError without treating it as a failure
 			if (error instanceof DelayedError) {
 				throw error
+			}
+
+			// Handle 429 rate limits — delay the job without counting as a failure attempt
+			if (error instanceof RateLimitError) {
+				const retryAttempt = job.data.rate_limit_retry_attempt ?? 0
+
+				if (retryAttempt < rateLimitMaxRetries) {
+					log(`Rate limited (${error.retryAfterMs}ms). Retry ${retryAttempt + 1}/${rateLimitMaxRetries}`)
+					await job.updateData({
+						...job.data,
+						rate_limit_retry_attempt: retryAttempt + 1,
+					})
+					await job.moveToDelayed(Date.now() + error.retryAfterMs, token)
+					throw new DelayedError()
+				}
+
+				log(`Rate limited but exhausted ${rateLimitMaxRetries} retries, failing`)
 			}
 
 			// Increment consecutive_failures on error

@@ -1,5 +1,5 @@
 import { defineWorker } from "#processor"
-import { MetricsTime, type Job } from "bullmq"
+import { DelayedError, MetricsTime, type Job } from "bullmq"
 import { join } from "node:path"
 import pLimit from "p-limit"
 import type { ChapterDataJobData } from "../queues/chapter-data"
@@ -8,7 +8,7 @@ import type { Chapter, PageFetchStatus, Prisma } from "../utils/db"
 import { db } from "../utils/db"
 import { deleteByPrefix, GifTooLargeError, uploadImageFile } from "../utils/s3"
 import { getSourceById } from "../utils/sources"
-import { ChapterNotFoundError } from "../utils/sources/core"
+import { ChapterNotFoundError, RateLimitError } from "../utils/sources/core"
 
 type PageUploadResult = {
 	success: boolean
@@ -48,6 +48,9 @@ async function processChapterUpdate(
 		images = data.filter((c): c is { type: "image", url: URL, index: number } => c.type === "image")
 	}
 	catch (error) {
+		// Rate limit errors must propagate to the worker for moveToDelayed handling
+		if (error instanceof RateLimitError) throw error
+
 		job.log(`Failed to fetch chapter data: ${error}`)
 
 		// Chapter not found errors are permanent - mark as failed but don't fail the job
@@ -213,7 +216,8 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDataJobData, undefined>({
 		limiter: { max: 2, duration: 5000 },
 		metrics: { maxDataPoints: MetricsTime.ONE_WEEK * 2 },
 	},
-	async processor(job) {
+	async processor(job, token) {
+		const rateLimitMaxRetries = Number(useRuntimeConfig().rateLimitMaxRetries) || 5
 		const data = chapterDataJobDataSchema.parse(job.data)
 
 		await job.updateProgress(5)
@@ -239,17 +243,38 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDataJobData, undefined>({
 		await job.updateProgress(10)
 
 		if (data.type === "UPDATE") {
-			const status = await processChapterUpdate(job, chapter)
+			try {
+				const status = await processChapterUpdate(job, chapter)
 
-			// Update final status
-			await db.chapter.update({
-				where: { id: chapter.id },
-				data: { page_fetch_status: status },
-			})
+				// Update final status
+				await db.chapter.update({
+					where: { id: chapter.id },
+					data: { page_fetch_status: status },
+				})
 
-			// Throw if completely failed so job is marked as failed
-			if (status === "Failed") {
-				throw new Error("Chapter page fetch failed completely")
+				// Throw if completely failed so job is marked as failed
+				if (status === "Failed") {
+					throw new Error("Chapter page fetch failed completely")
+				}
+			}
+			catch (error) {
+				if (error instanceof RateLimitError) {
+					const retryAttempt = job.data.rate_limit_retry_attempt ?? 0
+
+					if (retryAttempt < rateLimitMaxRetries) {
+						job.log(`Rate limited (${error.retryAfterMs}ms). Retry ${retryAttempt + 1}/${rateLimitMaxRetries}`)
+						await job.updateData({
+							...job.data,
+							rate_limit_retry_attempt: retryAttempt + 1,
+						})
+						await job.moveToDelayed(Date.now() + error.retryAfterMs, token)
+						throw new DelayedError()
+					}
+
+					job.log(`Rate limited but exhausted ${rateLimitMaxRetries} retries, failing`)
+				}
+
+				throw error
 			}
 		}
 	},

@@ -1,3 +1,5 @@
+import { parseRetryAfter, RateLimitError } from "./core"
+
 export type ByparrCookie = {
 	name: string
 	value: string
@@ -77,6 +79,10 @@ export class ByparrClient {
 		if (data.status !== "ok") {
 			throw new Error(`Byparr error: ${data.message}`)
 		}
+		if (data.solution.status === 429) {
+			const retryHeader = Object.entries(data.solution.headers).find(([k]) => k.toLowerCase() === "retry-after")?.[1] ?? null
+			throw new RateLimitError(parseRetryAfter(retryHeader))
+		}
 		return data
 	}
 
@@ -107,6 +113,10 @@ export class ByparrClient {
 		const data = (await res.json()) as ByparrResponse
 		if (data.status !== "ok") {
 			throw new Error(`Byparr error: ${data.message}`)
+		}
+		if (data.solution.status === 429) {
+			const retryHeader = Object.entries(data.solution.headers).find(([k]) => k.toLowerCase() === "retry-after")?.[1] ?? null
+			throw new RateLimitError(parseRetryAfter(retryHeader))
 		}
 		return data
 	}
