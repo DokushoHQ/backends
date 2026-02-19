@@ -22,6 +22,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 	},
 	async processor(job, token) {
 		const log = (msg: string) => job.log(`[Attempt ${job.attemptsMade + 1}] ${msg}`)
+		const rateLimitMaxRetries = Number(useRuntimeConfig().rateLimitMaxRetries) || 5
 		const {
 			source_id: sourceId,
 			source_serie_id: sourceSerieId,
@@ -477,11 +478,10 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 
 			// Handle 429 rate limits — delay the job without counting as a failure attempt
 			if (error instanceof RateLimitError) {
-				const MAX_RATE_LIMIT_RETRIES = 5
 				const retryAttempt = job.data.rate_limit_retry_attempt ?? 0
 
-				if (retryAttempt < MAX_RATE_LIMIT_RETRIES) {
-					log(`Rate limited (${error.retryAfterMs}ms). Retry ${retryAttempt + 1}/${MAX_RATE_LIMIT_RETRIES}`)
+				if (retryAttempt < rateLimitMaxRetries) {
+					log(`Rate limited (${error.retryAfterMs}ms). Retry ${retryAttempt + 1}/${rateLimitMaxRetries}`)
 					await job.updateData({
 						...job.data,
 						rate_limit_retry_attempt: retryAttempt + 1,
@@ -490,7 +490,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					throw new DelayedError()
 				}
 
-				log(`Rate limited but exhausted ${MAX_RATE_LIMIT_RETRIES} retries, failing`)
+				log(`Rate limited but exhausted ${rateLimitMaxRetries} retries, failing`)
 			}
 
 			// Increment consecutive_failures on error

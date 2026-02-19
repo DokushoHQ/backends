@@ -217,6 +217,7 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDataJobData, undefined>({
 		metrics: { maxDataPoints: MetricsTime.ONE_WEEK * 2 },
 	},
 	async processor(job, token) {
+		const rateLimitMaxRetries = Number(useRuntimeConfig().rateLimitMaxRetries) || 5
 		const data = chapterDataJobDataSchema.parse(job.data)
 
 		await job.updateProgress(5)
@@ -258,11 +259,10 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDataJobData, undefined>({
 			}
 			catch (error) {
 				if (error instanceof RateLimitError) {
-					const MAX_RATE_LIMIT_RETRIES = 5
 					const retryAttempt = job.data.rate_limit_retry_attempt ?? 0
 
-					if (retryAttempt < MAX_RATE_LIMIT_RETRIES) {
-						job.log(`Rate limited (${error.retryAfterMs}ms). Retry ${retryAttempt + 1}/${MAX_RATE_LIMIT_RETRIES}`)
+					if (retryAttempt < rateLimitMaxRetries) {
+						job.log(`Rate limited (${error.retryAfterMs}ms). Retry ${retryAttempt + 1}/${rateLimitMaxRetries}`)
 						await job.updateData({
 							...job.data,
 							rate_limit_retry_attempt: retryAttempt + 1,
@@ -271,7 +271,7 @@ export default defineWorker<typeof QUEUE_NAME, ChapterDataJobData, undefined>({
 						throw new DelayedError()
 					}
 
-					job.log(`Rate limited but exhausted ${MAX_RATE_LIMIT_RETRIES} retries, failing`)
+					job.log(`Rate limited but exhausted ${rateLimitMaxRetries} retries, failing`)
 				}
 
 				throw error

@@ -87,6 +87,7 @@ export default defineNuxtConfig({
 		experimentalSearchLocalizedAttributes: false,
 		searchMaxTotalHits: 10000,
 		searchMaxValuesPerFacet: 200,
+		rateLimitMaxRetries: 5,
 		byparrUrl: "",
 		apiKeyRateLimitEnabled: "true",
 		apiKeyRateLimitMaxRequests: 10000,

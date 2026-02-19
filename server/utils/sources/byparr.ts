@@ -80,7 +80,7 @@ export class ByparrClient {
 			throw new Error(`Byparr error: ${data.message}`)
 		}
 		if (data.solution.status === 429) {
-			const retryHeader = data.solution.headers["retry-after"] ?? data.solution.headers["Retry-After"] ?? null
+			const retryHeader = Object.entries(data.solution.headers).find(([k]) => k.toLowerCase() === "retry-after")?.[1] ?? null
 			throw new RateLimitError(parseRetryAfter(retryHeader))
 		}
 		return data
@@ -115,7 +115,7 @@ export class ByparrClient {
 			throw new Error(`Byparr error: ${data.message}`)
 		}
 		if (data.solution.status === 429) {
-			const retryHeader = data.solution.headers["retry-after"] ?? data.solution.headers["Retry-After"] ?? null
+			const retryHeader = Object.entries(data.solution.headers).find(([k]) => k.toLowerCase() === "retry-after")?.[1] ?? null
 			throw new RateLimitError(parseRetryAfter(retryHeader))
 		}
 		return data
