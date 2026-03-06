@@ -7,6 +7,7 @@ import { QUEUE_NAME, pageRetryJobDataSchema } from "../queues/page-retry"
 import { db } from "../utils/db"
 import type { PageFetchStatus } from "../utils/db"
 import { GifTooLargeError, uploadImageFile } from "../utils/s3"
+import { resolvePageFetchStatusFromCounts } from "../utils/workers/page-fetch-status"
 
 export default defineWorker<typeof QUEUE_NAME, PageRetryJobData, undefined>({
 	name: QUEUE_NAME,
@@ -118,23 +119,11 @@ export default defineWorker<typeof QUEUE_NAME, PageRetryJobData, undefined>({
 			db.chapterData.count({ where: { chapter_id, OR: [{ url: null }, { url: "" }], permanently_failed: true } }),
 		])
 
-		// Determine status based on success/retryable/permanent failures
-		let status: PageFetchStatus
-		if (retryableFailedPages === 0 && permanentlyFailedPages === 0) {
-			status = "Success"
-		}
-		else if (successfulPages === 0 && permanentlyFailedPages === 0) {
-			status = "Failed"
-		}
-		else if (successfulPages === 0 && retryableFailedPages === 0) {
-			status = "PermanentlyFailed"
-		}
-		else if (permanentlyFailedPages > 0) {
-			status = "Incomplete"
-		}
-		else {
-			status = "Partial"
-		}
+		const status: PageFetchStatus = resolvePageFetchStatusFromCounts({
+			successCount: successfulPages,
+			retryableFailedCount: retryableFailedPages,
+			permanentlyFailedCount: permanentlyFailedPages,
+		})
 
 		await db.chapter.update({
 			where: { id: chapter_id },

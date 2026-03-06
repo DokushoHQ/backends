@@ -6,6 +6,7 @@ import type { ChapterDataJobData } from "../queues/chapter-data"
 import { chapterDataJobDataSchema, QUEUE_NAME } from "../queues/chapter-data"
 import type { Chapter, PageFetchStatus, Prisma } from "../utils/db"
 import { db } from "../utils/db"
+import { resolvePageFetchStatusFromCounts } from "../utils/workers/page-fetch-status"
 import { deleteByPrefix, GifTooLargeError, uploadImageFile } from "../utils/s3"
 import { getSourceById } from "../utils/sources"
 import { ChapterNotFoundError, RateLimitError } from "../utils/sources/core"
@@ -170,43 +171,38 @@ async function processChapterUpdate(
 
 	await job.updateProgress(100)
 
-	// Determine final status based on success/retryable/permanent failures
-	// All success → Success
-	// All retryable failures → Failed
-	// All permanent failures → PermanentlyFailed
-	// Some success + some retryable → Partial
-	// Some success + some permanent → Incomplete
-	// Mix of all three → Incomplete
+	const finalStatus = resolvePageFetchStatusFromCounts({
+		successCount,
+		retryableFailedCount,
+		permanentlyFailedCount,
+	})
 
-	if (retryableFailedCount === 0 && permanentlyFailedCount === 0) {
+	if (finalStatus === "Success") {
 		job.log(`Successfully uploaded all ${successCount} pages`)
-		return "Success"
+		return finalStatus
 	}
 
-	if (successCount === 0 && permanentlyFailedCount === 0) {
+	if (finalStatus === "Failed") {
 		job.log(`All ${retryableFailedCount} pages failed to upload (retryable)`)
-		return "Failed"
+		return finalStatus
 	}
 
-	if (successCount === 0 && retryableFailedCount === 0) {
+	if (finalStatus === "PermanentlyFailed") {
 		job.log(`All ${permanentlyFailedCount} pages permanently failed`)
 		job.log(`Permanently failed pages: ${permanentlyFailedIndexes.join(", ")}`)
-		return "PermanentlyFailed"
+		return finalStatus
 	}
 
-	// Mixed results
-	if (permanentlyFailedCount > 0) {
-		// Any permanent failure means Incomplete
+	if (finalStatus === "Incomplete") {
 		job.log(`Incomplete: ${successCount} uploaded, ${retryableFailedCount} failed (retryable), ${permanentlyFailedCount} permanently failed`)
 		if (failedIndexes.length > 0) job.log(`Retryable failed pages: ${failedIndexes.join(", ")}`)
 		if (permanentlyFailedIndexes.length > 0) job.log(`Permanently failed pages: ${permanentlyFailedIndexes.join(", ")}`)
-		return "Incomplete"
+		return finalStatus
 	}
 
-	// Only retryable failures mixed with success
 	job.log(`Partial success: ${successCount} uploaded, ${retryableFailedCount} failed (retryable)`)
 	job.log(`Failed pages: ${failedIndexes.join(", ")}`)
-	return "Partial"
+	return finalStatus
 }
 
 export default defineWorker<typeof QUEUE_NAME, ChapterDataJobData, undefined>({

@@ -72,7 +72,7 @@ async function finalize(
 	for (const group of existingGroups) {
 		const members = group.members as DuplicateGroupMember[]
 		if (members.length === 2) {
-			const [id1, id2] = [members[0].serieId, members[1].serieId].sort()
+			const [id1, id2] = [members[0]!.serieId, members[1]!.serieId].sort()
 			handledPairs.add(`${id1}:${id2}`)
 		}
 	}
@@ -201,9 +201,6 @@ export default defineWorker<typeof QUEUE_NAME, DuplicateDetectorJobData, undefin
 		const duplicatePairs = new Map<string, Map<string, number>>()
 		const config = useRuntimeConfig()
 
-		// Cache for series metadata (authors/artists)
-		const seriesMetadata = new Map<string, { authors: string[], artists: string[] }>()
-
 		// Helper to check if two sets have any overlap
 		function hasOverlap(arr1: string[], arr2: string[]): boolean {
 			const set1 = new Set(arr1.map(s => s.toLowerCase()))
@@ -246,7 +243,6 @@ export default defineWorker<typeof QUEUE_NAME, DuplicateDetectorJobData, undefin
 				// Extract and cache authors/artists for this serie
 				const authors = serie.authors.map(a => a.name)
 				const artists = serie.artists.map(a => a.name)
-				seriesMetadata.set(serie.id, { authors, artists })
 
 				// Search Meilisearch for similar series using hybrid search if available
 				const searchQuery = allTitles.slice(0, 5).join(" ")
@@ -288,11 +284,11 @@ export default defineWorker<typeof QUEUE_NAME, DuplicateDetectorJobData, undefin
 
 					// Store the pair (normalize order to avoid duplicates)
 					const [id1, id2] = [serie.id, hit.id].sort()
-					if (!duplicatePairs.has(id1)) {
-						duplicatePairs.set(id1, new Map())
+					if (!duplicatePairs.has(id1!)) {
+						duplicatePairs.set(id1!, new Map())
 					}
-					const existing = duplicatePairs.get(id1)!.get(id2) ?? 0
-					duplicatePairs.get(id1)!.set(id2, Math.max(existing, similarity))
+					const existing = duplicatePairs.get(id1!)!.get(id2!) ?? 0
+					duplicatePairs.get(id1!)!.set(id2!, Math.max(existing, similarity))
 				}
 
 				processedCount++

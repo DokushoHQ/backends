@@ -1,17 +1,21 @@
 import { defineWorker } from "#processor"
 import { DelayedError, MetricsTime } from "bullmq"
-import type { ChapterDataJobData } from "../queues/chapter-data"
-import type { ChapterDedupJobData } from "../queues/chapter-dedup"
-import type { CoverUpdateJobData } from "../queues/cover-update"
-import type { IndexerJobData } from "../queues/indexer"
 import type { SerieInserterJobData, SerieInserterJobResult } from "../queues/serie-inserter"
 import { JOB_PRIORITY, QUEUE_NAME, serieInserterJobDataSchema } from "../queues/serie-inserter"
-import type { Language, Prisma } from "../utils/db"
+import type { Language } from "../utils/db"
 import { db } from "../utils/db"
 import { getFlowProducer } from "../utils/flow-producer"
-import { resolveMultiLanguage, resolveSerieTitle } from "../utils/serie"
+import { resolveMultiLanguage } from "../utils/serie"
 import { getSourceById } from "../utils/sources"
 import { RateLimitError } from "../utils/sources/core"
+import { buildSerieInserterFlow } from "../utils/workers/serie-inserter-flow"
+import {
+	buildSerieCreateData,
+	buildSerieSourceCreateData,
+	buildSerieSourceUpdateData,
+} from "../utils/workers/serie-inserter-payloads"
+import { maybeDelayForCacheRetry } from "../utils/workers/serie-inserter-retry"
+import { upsertScanlationGroupsAndBuildMap } from "../utils/workers/serie-inserter-groups"
 
 export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInserterJobResult>({
 	name: QUEUE_NAME,
@@ -95,40 +99,12 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					where: { name: { in: serieData.authors } },
 				})
 
-				// Upsert scanlation groups
-				const allGroups = chaptersResult.chapters.flatMap(c => c.groups)
-				const uniqueGroups = new Map(allGroups.map(g => [g.id, g]))
-
-				for (const group of uniqueGroups.values()) {
-					await tx.scanlationGroup.upsert({
-						where: {
-							source_id_external_id: {
-								source_id: sourceId,
-								external_id: group.id,
-							},
-						},
-						update: {
-							name: group.name,
-							...(group.url && { url: group.url.toString() }),
-						},
-						create: {
-							source_id: sourceId,
-							external_id: group.id,
-							name: group.name,
-							...(group.url && { url: group.url.toString() }),
-						},
-					})
-				}
-
-				// Build group ID map (external_id -> db id)
-				const groupRecords = await tx.scanlationGroup.findMany({
-					where: {
-						source_id: sourceId,
-						external_id: { in: [...uniqueGroups.keys()] },
-					},
-					select: { id: true, external_id: true },
-				})
-				const groupMap = new Map(groupRecords.map(g => [g.external_id, g.id]))
+				// Upsert scanlation groups and build group ID map (external_id -> db id)
+				const groupMap = await upsertScanlationGroupsAndBuildMap(
+					tx,
+					sourceId,
+					chaptersResult,
+				)
 
 				let serieId: string
 				let serieSourceId: string
@@ -140,16 +116,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 
 					await tx.serieSource.update({
 						where: { id: existingSerieSource.id },
-						data: {
-							title: serieData.title as Prisma.InputJsonValue,
-							alternates_titles: serieData.alternatesTitles as Prisma.InputJsonValue,
-							synopsis: serieData.synopsis as Prisma.InputJsonValue,
-							cover_source_url: serieData.cover.toString(),
-							status: serieData.status,
-							type: serieData.type,
-							updated_at: new Date(),
-							...(serieData.externalUrl && { external_url: serieData.externalUrl.toString() }),
-						},
+						data: buildSerieSourceUpdateData(serieData),
 					})
 				}
 				else if (targetSerieId) {
@@ -166,51 +133,32 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					serieId = targetSerieId
 					const isPrimaryValue = isPrimary ?? false
 					const newSerieSource = await tx.serieSource.create({
-						data: {
-							serie_id: targetSerieId,
-							source_id: sourceId,
-							external_id: sourceSerieId,
-							title: serieData.title as Prisma.InputJsonValue,
-							alternates_titles: serieData.alternatesTitles as Prisma.InputJsonValue,
-							synopsis: serieData.synopsis as Prisma.InputJsonValue,
-							cover_source_url: serieData.cover.toString(),
-							status: serieData.status,
-							type: serieData.type,
-							is_primary: isPrimaryValue,
-							priority: isPrimaryValue ? 1 : 5,
-							...(serieData.externalUrl && { external_url: serieData.externalUrl.toString() }),
-						},
+						data: buildSerieSourceCreateData({
+							serieId: targetSerieId,
+							sourceId,
+							sourceSerieId,
+							serieData,
+							isPrimary: isPrimaryValue,
+						}),
 					})
 					serieSourceId = newSerieSource.id
 				}
 				else {
 					// CREATE PATH - New Serie + SerieSource
 					const newSerie = await tx.serie.create({
-						data: {
-							title: resolveSerieTitle(serieData.title, serieData.alternatesTitles),
-							synopsis: resolveMultiLanguage(serieData.synopsis, "") || null,
-							type: serieData.type,
-							status: serieData.status,
-						},
+						data: buildSerieCreateData(serieData),
 					})
 					serieId = newSerie.id
 
 					const isPrimaryValue = isPrimary ?? true
 					const newSerieSource = await tx.serieSource.create({
-						data: {
-							serie_id: newSerie.id,
-							source_id: sourceId,
-							external_id: sourceSerieId,
-							title: serieData.title as Prisma.InputJsonValue,
-							alternates_titles: serieData.alternatesTitles as Prisma.InputJsonValue,
-							synopsis: serieData.synopsis as Prisma.InputJsonValue,
-							cover_source_url: serieData.cover.toString(),
-							status: serieData.status,
-							type: serieData.type,
-							is_primary: isPrimaryValue,
-							priority: isPrimaryValue ? 1 : 5,
-							...(serieData.externalUrl && { external_url: serieData.externalUrl.toString() }),
-						},
+						data: buildSerieSourceCreateData({
+							serieId: newSerie.id,
+							sourceId,
+							sourceSerieId,
+							serieData,
+							isPrimary: isPrimaryValue,
+						}),
 					})
 					serieSourceId = newSerieSource.id
 				}
@@ -322,37 +270,13 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 
 			// Handle source cache issues with delayed retry (applicable to any source)
 			// Only retry for updates (existingSerieSource), not new imports
-			if (!has_new_chapters && job.data.expect_new_chapters && existingSerieSource) {
-				const retryAttempt = job.data.cache_retry_attempt ?? 0
-				const MAX_CACHE_RETRIES = 4
-				const RETRY_DELAYS_MS = [
-					10 * 60 * 1000, // 10 minutes
-					60 * 60 * 1000, // 1 hour
-					2 * 60 * 60 * 1000, // 2 hours
-					6 * 60 * 60 * 1000, // 6 hours
-				]
-
-				if (retryAttempt < MAX_CACHE_RETRIES) {
-					const delayMs = RETRY_DELAYS_MS[retryAttempt] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]!
-					const delayDesc = retryAttempt === 0 ? "10 min" : retryAttempt === 1 ? "1h" : retryAttempt === 2 ? "2h" : "6h"
-					log(`No new chapters found but expected (source cache issue?). Retry ${retryAttempt + 1}/${MAX_CACHE_RETRIES} in ${delayDesc}`)
-
-					// Update job data with incremented retry count, then move to delayed
-					// This preserves job metadata (logs, ID, parent/children relationships)
-					await job.updateData({
-						...job.data,
-						cache_retry_attempt: retryAttempt + 1,
-					})
-					await job.moveToDelayed(Date.now() + delayMs, token)
-
-					// Throw DelayedError to signal worker the job was intentionally deferred
-					// Don't update last_checked_at yet, don't spawn child jobs
-					throw new DelayedError()
-				}
-				else {
-					log(`No new chapters after ${MAX_CACHE_RETRIES} cache retries`)
-				}
-			}
+			await maybeDelayForCacheRetry({
+				job,
+				token,
+				hasNewChapters: has_new_chapters,
+				hasExistingSerieSource: !!existingSerieSource,
+				log,
+			})
 
 			const mode = existingSerieSource ? "Updated" : targetSerieId ? "Linked to" : "Created"
 			log(`${mode} serie ${serie_id} with ${chapter_ids.length} chapters to process`)
@@ -363,95 +287,17 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 			// Inherit priority from parent job, default to NORMAL
 			const priority = job.opts.priority ?? JOB_PRIORITY.NORMAL
 
-			// Early jobs: cover update and optimistic deduplication
-			const earlyChildren = [
-				{
-					name: `cover-${serie_source_id}`,
-					queueName: "cover-update",
-					data: {
-						type: "SOURCE",
-						serie_source_id,
-					} as CoverUpdateJobData,
-					opts: { priority },
-				},
-				{
-					name: `dedup-early-${serie_id}`,
-					queueName: "chapter-dedup",
-					data: { serie_id } as ChapterDedupJobData,
-					opts: { priority },
-				},
-			]
-
-			if (chapter_ids.length > 0) {
-				// Full flow: indexer-final <- dedup-final <- chapters <- indexer-middle <- (cover + dedup-early)
-				// Two dedup passes: early (optimistic) and final (accurate after chapters complete)
-				await flowProducer.add({
-					name: `indexer-final-${serie_id}`,
-					queueName: "indexer",
-					data: { serie_id, type: "UPDATE" } as IndexerJobData,
-					opts: { priority },
-					children: [
-						{
-							name: `dedup-final-${serie_id}`,
-							queueName: "chapter-dedup",
-							data: { serie_id } as ChapterDedupJobData,
-							opts: { priority },
-							children: chapter_ids.map((chapter_id, index) => ({
-								name: `chapter-${chapter_id}`,
-								queueName: "chapter-data",
-								data: {
-									serie_id,
-									source_id: sourceId,
-									chapter_id,
-									type: "UPDATE",
-								} as ChapterDataJobData,
-								opts: { priority },
-								// First chapter waits for middle indexer (which waits for cover+dedup-early)
-								...(index === 0 && {
-									children: [
-										{
-											name: `indexer-middle-${serie_id}`,
-											queueName: "indexer",
-											data: { serie_id, type: "UPDATE" } as IndexerJobData,
-											opts: { priority },
-											children: earlyChildren,
-										},
-									],
-								}),
-							})),
-						},
-					],
-				})
-			}
-			else {
-				// No chapters to update: indexer-final <- dedup <- cover
-				// Single dedup is enough when no new chapters
-				await flowProducer.add({
-					name: `indexer-final-${serie_id}`,
-					queueName: "indexer",
-					data: { serie_id, type: "UPDATE" } as IndexerJobData,
-					opts: { priority },
-					children: [
-						{
-							name: `dedup-${serie_id}`,
-							queueName: "chapter-dedup",
-							data: { serie_id } as ChapterDedupJobData,
-							opts: { priority },
-							children: [
-								{
-									name: `cover-${serie_source_id}`,
-									queueName: "cover-update",
-									data: {
-										type: "SOURCE",
-										serie_source_id,
-									} as CoverUpdateJobData,
-									opts: { priority },
-								},
-							],
-						},
-					],
-				})
-			}
+			// Full flow when chapters exist:
+			// indexer-final <- dedup-final <- chapters <- indexer-middle <- (cover + dedup-early)
+			// Compact flow when no chapter jobs:
+			// indexer-final <- dedup <- cover
+			await flowProducer.add(buildSerieInserterFlow({
+				serieId: serie_id,
+				serieSourceId: serie_source_id,
+				chapterIds: chapter_ids,
+				sourceId,
+				priority,
+			}))
 
 			// Update last_checked_at and reset consecutive_failures
 			await db.serieSource.update({

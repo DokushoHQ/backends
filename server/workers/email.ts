@@ -23,7 +23,7 @@ async function sendPasswordResetEmail(
 	await sendMail({
 		to,
 		subject: "Reset your Tsundoku password",
-		html,
+		html: typeof html === "string" ? html : html.html,
 	})
 
 	await job.updateProgress(100)
@@ -48,7 +48,7 @@ async function sendPasswordResetConfirmation(
 	await sendMail({
 		to,
 		subject: "Your password has been changed",
-		html,
+		html: typeof html === "string" ? html : html.html,
 	})
 
 	await job.updateProgress(100)
@@ -75,7 +75,7 @@ async function sendVerificationEmail(
 	await sendMail({
 		to,
 		subject: "Verify your Tsundoku account",
-		html,
+		html: typeof html === "string" ? html : html.html,
 	})
 
 	await job.updateProgress(100)
@@ -102,7 +102,7 @@ async function sendChangeEmailEmail(
 	await sendMail({
 		to,
 		subject: "Verify your new email address",
-		html,
+		html: typeof html === "string" ? html : html.html,
 	})
 
 	await job.updateProgress(100)
@@ -129,7 +129,7 @@ async function sendChangeEmailWarning(
 	await sendMail({
 		to,
 		subject: "Your email address is being changed",
-		html,
+		html: typeof html === "string" ? html : html.html,
 	})
 
 	await job.updateProgress(100)
