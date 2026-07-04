@@ -34,7 +34,7 @@ const createChapter = (overrides: Partial<{
 	enabled: overrides.enabled ?? true,
 	page_fetch_status: overrides.page_fetch_status ?? "Success",
 	date_upload: overrides.date_upload ?? new Date("2024-01-01"),
-	groups: overrides.groups ?? [],
+	groups: (overrides.groups ?? []).map(g => ({ group: g })),
 	manual_override: overrides.manual_override ?? null,
 })
 

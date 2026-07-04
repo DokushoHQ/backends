@@ -216,7 +216,7 @@ export async function deduplicateForLanguage(
 	}
 
 	// Load all chapters for this serie+language (with groups for preference comparison)
-	const chapters = await db.chapter.findMany({
+	const chapterRows = await db.chapter.findMany({
 		where: { serie_id: serieId, language },
 		select: {
 			id: true,
@@ -224,10 +224,11 @@ export async function deduplicateForLanguage(
 			source_id: true,
 			enabled: true,
 			page_fetch_status: true,
-			groups: { select: { id: true, name: true } },
+			groups: { select: { group: { select: { id: true, name: true } } } },
 			manual_override: true,
 		},
 	})
+	const chapters = chapterRows.map(c => ({ ...c, groups: c.groups.map(g => g.group) }))
 
 	// Get group preferences for cross-source comparison
 	const groupPrefs = await getGroupPreferences(serieId, language)
@@ -648,13 +649,13 @@ async function getGroupChapterCounts(
 	const chapters = await db.chapter.findMany({
 		where: { serie_id: serieId, source_id: sourceId, language },
 		select: {
-			groups: { select: { id: true } },
+			groups: { select: { group: { select: { id: true } } } },
 		},
 	})
 
 	const counts = new Map<string, number>()
 	for (const chapter of chapters) {
-		for (const group of chapter.groups) {
+		for (const { group } of chapter.groups) {
 			counts.set(group.id, (counts.get(group.id) || 0) + 1)
 		}
 	}
@@ -716,7 +717,7 @@ export async function dedupSameSourceChapters(
 	log: (msg: string) => void,
 ): Promise<SameSourceDedupResult> {
 	// Load all chapters for this serie + source + language with groups
-	const chapters = await db.chapter.findMany({
+	const chapterRows = await db.chapter.findMany({
 		where: { serie_id: serieId, source_id: sourceId, language },
 		select: {
 			id: true,
@@ -725,10 +726,11 @@ export async function dedupSameSourceChapters(
 			enabled: true,
 			page_fetch_status: true,
 			date_upload: true,
-			groups: { select: { id: true, name: true } },
+			groups: { select: { group: { select: { id: true, name: true } } } },
 			manual_override: true,
 		},
 	})
+	const chapters = chapterRows.map(c => ({ ...c, groups: c.groups.map(g => g.group) }))
 
 	if (chapters.length === 0) {
 		return { changes: { to_enable: [], to_disable: [] }, duplicates_processed: 0 }

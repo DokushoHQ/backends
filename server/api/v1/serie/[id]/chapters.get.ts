@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
 	const { id } = await getValidatedRouterParams(event, paramsSchema.parse)
 	const { includeDisabled, lang } = await getValidatedQuery(event, querySchema.parse)
 
-	const chapters = await db.chapter.findMany({
+	const chapterRows = await db.chapter.findMany({
 		where: {
 			serie_id: id,
 
@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
 		},
 		include: {
 			groups: {
-				select: { id: true, name: true, url: true },
+				select: { group: { select: { id: true, name: true, url: true } } },
 			},
 			source: {
 				select: { id: true, external_id: true, name: true },
@@ -44,6 +44,8 @@ export default defineEventHandler(async (event) => {
 		},
 		orderBy: [{ chapter_number: "desc" }, { id: "asc" }],
 	})
+	// Flatten join rows so the API response shape is unchanged
+	const chapters = chapterRows.map(c => ({ ...c, groups: c.groups.map(g => g.group) }))
 
 	// If includeDisabled is true, compute alternatives for each chapter
 	// (chapters with same source_id, chapter_number, language)

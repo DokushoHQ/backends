@@ -31,10 +31,7 @@ export default defineEventHandler(async (event) => {
 		select: {
 			language: true,
 			groups: {
-				select: {
-					id: true,
-					name: true,
-				},
+				select: { group: { select: { id: true, name: true } } },
 			},
 		},
 	})
@@ -64,7 +61,7 @@ export default defineEventHandler(async (event) => {
 			groupsByLanguage[lang] = new Map()
 		}
 
-		for (const group of chapter.groups) {
+		for (const { group } of chapter.groups) {
 			const existing = groupsByLanguage[lang].get(group.id)
 			if (existing) {
 				existing.count++
