@@ -126,7 +126,7 @@ function handlePanelToggle() {
 							icon="i-lucide-x"
 							variant="ghost"
 							size="sm"
-							@click="router.push('/dashboard/series')"
+							@click="() => { router.push('/dashboard/series') }"
 						/>
 					</template>
 				</UiPageHeader>
@@ -265,7 +265,7 @@ function handlePanelToggle() {
 						<div class="browse-footer">
 							<UButton
 								variant="outline"
-								@click="router.push('/dashboard/series/import/browse')"
+								@click="() => { router.push('/dashboard/series/import/browse') }"
 							>
 								<UIcon
 									name="i-lucide-arrow-left"
@@ -275,7 +275,7 @@ function handlePanelToggle() {
 							</UButton>
 							<UButton
 								:disabled="cart.cartCount.value === 0"
-								@click="router.push('/dashboard/series/import/review')"
+								@click="() => { router.push('/dashboard/series/import/review') }"
 							>
 								Review ({{ cart.cartCount.value }})
 								<UIcon

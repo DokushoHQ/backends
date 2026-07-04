@@ -88,7 +88,7 @@ async function handleDelete() {
 					<UButton
 						variant="outline"
 						color="error"
-						@click="isOpen = true"
+						@click="() => { isOpen = true }"
 					>
 						Delete Account
 					</UButton>
@@ -163,7 +163,7 @@ async function handleDelete() {
 								<div class="flex justify-end gap-2">
 									<UButton
 										variant="outline"
-										@click="isOpen = false"
+										@click="() => { isOpen = false }"
 									>
 										Cancel
 									</UButton>

@@ -189,7 +189,7 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 										size="sm"
 										color="error"
 										variant="outline"
-										@click="purgeDialogOpen = true"
+										@click="() => { purgeDialogOpen = true }"
 									>
 										<UIcon
 											name="i-lucide-trash-2"
@@ -251,7 +251,7 @@ async function triggerJob(job: (typeof jobs.value)[number]) {
 					<div class="modal-actions">
 						<UButton
 							variant="outline"
-							@click="purgeDialogOpen = false"
+							@click="() => { purgeDialogOpen = false }"
 						>
 							Cancel
 						</UButton>

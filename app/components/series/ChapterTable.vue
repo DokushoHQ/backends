@@ -610,7 +610,7 @@ const sourceAvailabilityFilterItems = [
 				variant="outline"
 				color="error"
 				:disabled="isPending || isDeleting || selectedDeletableChapters.length === 0"
-				@click="deleteDialogOpen = true"
+				@click="() => { deleteDialogOpen = true }"
 			>
 				<UIcon
 					name="i-lucide-trash-2"
@@ -635,7 +635,7 @@ const sourceAvailabilityFilterItems = [
 				size="sm"
 				variant="ghost"
 				:disabled="isPending || isDeleting || isAcknowledging"
-				@click="selectedIds = new Set()"
+				@click="() => { selectedIds = new Set() }"
 			>
 				Clear
 			</UButton>
@@ -1155,7 +1155,7 @@ const sourceAvailabilityFilterItems = [
 							<UButton
 								variant="outline"
 								:disabled="isDeleting"
-								@click="deleteDialogOpen = false"
+								@click="() => { deleteDialogOpen = false }"
 							>
 								Cancel
 							</UButton>

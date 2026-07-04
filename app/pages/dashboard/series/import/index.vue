@@ -125,7 +125,7 @@ onMounted(() => {
 								<span class="cart-hint">Ready to review</span>
 							</div>
 						</div>
-						<UButton @click="router.push('/dashboard/series/import/review')">
+						<UButton @click="() => { router.push('/dashboard/series/import/review') }">
 							View Selection
 							<UIcon
 								name="i-lucide-arrow-right"

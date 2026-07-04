@@ -114,7 +114,7 @@ async function handleChangePassword() {
 				>
 					<UButton
 						variant="outline"
-						@click="isOpen = true"
+						@click="() => { isOpen = true }"
 					>
 						Change Password
 					</UButton>
@@ -210,7 +210,7 @@ async function handleChangePassword() {
 								<div class="flex justify-end gap-2">
 									<UButton
 										variant="outline"
-										@click="isOpen = false"
+										@click="() => { isOpen = false }"
 									>
 										Cancel
 									</UButton>
