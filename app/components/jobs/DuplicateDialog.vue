@@ -245,7 +245,7 @@ async function handleSubmit() {
 						<UButton
 							variant="outline"
 							:disabled="submitting"
-							@click="open = false"
+							@click="() => { open = false }"
 						>
 							Cancel
 						</UButton>

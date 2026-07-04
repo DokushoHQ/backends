@@ -149,7 +149,7 @@ model Chapter {
     serie       Serie             @relation(fields: [serie_id], references: [id], onDelete: Cascade)
     source      Source            @relation(fields: [source_id], references: [id])
     data        ChapterData[]
-    groups      ScanlationGroup[]
+    groups      ChapterGroup[]
     fillable_for FillableChapter[]
 
     @@unique([source_id, external_id])
@@ -218,11 +218,23 @@ model ScanlationGroup {
     url         String?
 
     source            Source                 @relation(fields: [source_id], references: [id])
-    chapters          Chapter[]
+    chapters          ChapterGroup[]
     serie_preferences SerieGroupPreference[]
 
     @@unique([source_id, external_id])
     @@map("scanlation_group")
+}
+
+model ChapterGroup {
+    chapter_id String @db.Uuid
+    group_id   String @db.Uuid
+
+    chapter Chapter         @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
+    group   ScanlationGroup @relation(fields: [group_id], references: [id], onDelete: Cascade)
+
+    @@id([chapter_id, group_id])
+    @@index([group_id])
+    @@map("chapter_group")
 }
 
 enum Language {

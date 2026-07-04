@@ -36,7 +36,7 @@ async function handleDelete() {
 			variant="soft"
 			size="sm"
 			title="Delete series"
-			@click="open = true"
+			@click="() => { open = true }"
 		>
 			<UIcon
 				name="i-lucide-trash-2"
@@ -64,7 +64,7 @@ async function handleDelete() {
 					<div class="flex justify-end gap-2">
 						<UButton
 							variant="outline"
-							@click="open = false"
+							@click="() => { open = false }"
 						>
 							Cancel
 						</UButton>

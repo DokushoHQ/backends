@@ -296,7 +296,7 @@ watch(() => cart.cartItems.value, (items) => {
 								<UButton
 									variant="outline"
 									class="hidden sm:inline-flex"
-									@click="router.push('/dashboard/series/import')"
+									@click="() => { router.push('/dashboard/series/import') }"
 								>
 									<UIcon
 										name="i-lucide-arrow-left"

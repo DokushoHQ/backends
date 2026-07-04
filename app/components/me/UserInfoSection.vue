@@ -152,7 +152,7 @@ async function handleChangeEmail() {
 						>
 							<UButton
 								variant="outline"
-								@click="changeEmailOpen = true"
+								@click="() => { changeEmailOpen = true }"
 							>
 								Change
 							</UButton>
@@ -188,7 +188,7 @@ async function handleChangeEmail() {
 										</div>
 										<UButton
 											variant="outline"
-											@click="changeEmailOpen = false"
+											@click="() => { changeEmailOpen = false }"
 										>
 											Close
 										</UButton>
@@ -230,7 +230,7 @@ async function handleChangeEmail() {
 										<div class="flex justify-end gap-2">
 											<UButton
 												variant="outline"
-												@click="changeEmailOpen = false"
+												@click="() => { changeEmailOpen = false }"
 											>
 												Cancel
 											</UButton>

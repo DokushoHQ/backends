@@ -159,7 +159,7 @@ async function refetchChapter() {
 								variant="ghost"
 								size="sm"
 								icon="i-lucide-x"
-								@click="open = false"
+								@click="() => { open = false }"
 							/>
 						</div>
 					</div>

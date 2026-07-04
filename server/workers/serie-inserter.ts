@@ -6,6 +6,8 @@ import type { CoverUpdateJobData } from "../queues/cover-update"
 import type { IndexerJobData } from "../queues/indexer"
 import type { SerieInserterJobData, SerieInserterJobResult } from "../queues/serie-inserter"
 import { JOB_PRIORITY, QUEUE_NAME, serieInserterJobDataSchema } from "../queues/serie-inserter"
+import type { IncomingChapter } from "../utils/chapter-diff"
+import { diffChapters } from "../utils/chapter-diff"
 import type { Language, Prisma } from "../utils/db"
 import { db } from "../utils/db"
 import { getFlowProducer } from "../utils/flow-producer"
@@ -95,32 +97,47 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					where: { name: { in: serieData.authors } },
 				})
 
-				// Upsert scanlation groups
+				// Scanlation groups: bulk-create the missing ones, update only the changed ones
 				const allGroups = chaptersResult.chapters.flatMap(c => c.groups)
 				const uniqueGroups = new Map(allGroups.map(g => [g.id, g]))
 
-				for (const group of uniqueGroups.values()) {
-					await tx.scanlationGroup.upsert({
-						where: {
-							source_id_external_id: {
-								source_id: sourceId,
-								external_id: group.id,
-							},
-						},
-						update: {
-							name: group.name,
-							...(group.url && { url: group.url.toString() }),
-						},
-						create: {
+				const existingGroups = await tx.scanlationGroup.findMany({
+					where: {
+						source_id: sourceId,
+						external_id: { in: [...uniqueGroups.keys()] },
+					},
+					select: { id: true, external_id: true, name: true, url: true },
+				})
+				const existingGroupMap = new Map(existingGroups.map(g => [g.external_id, g]))
+
+				const groupsToCreate = [...uniqueGroups.values()].filter(g => !existingGroupMap.has(g.id))
+				if (groupsToCreate.length > 0) {
+					await tx.scanlationGroup.createMany({
+						data: groupsToCreate.map(g => ({
 							source_id: sourceId,
-							external_id: group.id,
-							name: group.name,
-							...(group.url && { url: group.url.toString() }),
-						},
+							external_id: g.id,
+							name: g.name,
+							...(g.url && { url: g.url.toString() }),
+						})),
+						skipDuplicates: true,
 					})
 				}
+				for (const g of uniqueGroups.values()) {
+					const current = existingGroupMap.get(g.id)
+					if (!current) continue
+					const urlChanged = g.url !== undefined && current.url !== g.url.toString()
+					if (current.name !== g.name || urlChanged) {
+						await tx.scanlationGroup.update({
+							where: { id: current.id },
+							data: {
+								name: g.name,
+								...(g.url && { url: g.url.toString() }),
+							},
+						})
+					}
+				}
 
-				// Build group ID map (external_id -> db id)
+				// Build group ID map (external_id -> db id), including freshly created groups
 				const groupRecords = await tx.scanlationGroup.findMany({
 					where: {
 						source_id: sourceId,
@@ -225,16 +242,46 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					},
 				})
 
-				// Get existing chapters
+				// Get existing chapters with every compared field (for the in-memory diff)
 				const existingChapters = await tx.chapter.findMany({
 					where: { serie_id: serieId, source_id: sourceId },
-					select: { external_id: true, date_upload: true, source_removed_at: true },
+					select: {
+						id: true,
+						external_id: true,
+						title: true,
+						chapter_number: true,
+						date_upload: true,
+						external_url: true,
+						volume_name: true,
+						volume_number: true,
+						source_removed_at: true,
+						source_removal_acknowledged_at: true,
+						groups: { select: { group_id: true } },
+					},
 				})
-				const existingChapterMap = new Map(existingChapters.map(c => [c.external_id, c.date_upload]))
 
-				// Check for new chapters
-				const hasNewChapters = chaptersResult.chapters.some(c => !existingChapterMap.has(c.id))
+				// Map source chapters to DB-ready values, then diff against existing rows.
+				// Only changed/new chapters produce writes: the transaction stays short
+				// no matter how many chapters the serie has.
+				const incomingChapters: IncomingChapter[] = chaptersResult.chapters.map(c => ({
+					external_id: c.id,
+					title: resolveMultiLanguage(c.title, "") || null,
+					chapter_number: c.chapterNumber,
+					date_upload: c.dateUpload,
+					language: c.language as Language,
+					...(c.externalUrl && { external_url: c.externalUrl.toString() }),
+					...(c.volumeName !== undefined && { volume_name: c.volumeName }),
+					...(c.volumeNumber !== undefined && { volume_number: c.volumeNumber }),
+					group_ids: c.groups
+						.map(g => groupMap.get(g.id))
+						.filter((id): id is string => id !== undefined),
+				}))
+				const { to_create, to_update } = diffChapters(
+					incomingChapters,
+					existingChapters.map(c => ({ ...c, group_ids: c.groups.map(g => g.group_id) })),
+				)
 
+				const hasNewChapters = to_create.length > 0
 				if (hasNewChapters) {
 					await tx.serie.update({
 						where: { id: serieId },
@@ -242,46 +289,68 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					})
 				}
 
-				// Upsert all chapters
-				const upsertedChapters = await Promise.all(
-					chaptersResult.chapters.map((c) => {
-						const chapterGroupIds = c.groups
-							.map(g => groupMap.get(g.id))
-							.filter((id): id is string => id !== undefined)
+				// Bulk-create new chapters, then their group links
+				let createdChapters: { id: string, external_id: string }[] = []
+				if (to_create.length > 0) {
+					createdChapters = await tx.chapter.createManyAndReturn({
+						data: to_create.map(c => ({
+							serie_id: serieId,
+							source_id: sourceId,
+							external_id: c.external_id,
+							chapter_number: c.chapter_number,
+							date_upload: c.date_upload,
+							language: c.language,
+							title: c.title,
+							...(c.external_url !== undefined && { external_url: c.external_url }),
+							...(c.volume_name !== undefined && { volume_name: c.volume_name }),
+							...(c.volume_number !== undefined && { volume_number: c.volume_number }),
+						})),
+						skipDuplicates: true,
+						select: { id: true, external_id: true },
+					})
 
-						const resolvedTitle = resolveMultiLanguage(c.title, "") || null
+					const createdIdMap = new Map(createdChapters.map(c => [c.external_id, c.id]))
+					const groupLinks = to_create.flatMap((c) => {
+						const chapterId = createdIdMap.get(c.external_id)
+						if (!chapterId) return []
+						return c.group_ids.map(group_id => ({ chapter_id: chapterId, group_id }))
+					})
+					if (groupLinks.length > 0) {
+						await tx.chapterGroup.createMany({ data: groupLinks, skipDuplicates: true })
+					}
+				}
 
-						return tx.chapter.upsert({
-							where: {
-								source_id_external_id: { source_id: sourceId, external_id: c.id },
-							},
-							update: {
-								chapter_number: c.chapterNumber,
-								date_upload: c.dateUpload,
-								title: resolvedTitle,
-								source_removed_at: null, // Clear if chapter reappears on source
-								source_removal_acknowledged_at: null, // Clear acknowledgment too
-								...(c.externalUrl && { external_url: c.externalUrl.toString() }),
-								...(c.volumeName !== undefined && { volume_name: c.volumeName }),
-								...(c.volumeNumber !== undefined && { volume_number: c.volumeNumber }),
-								groups: { set: chapterGroupIds.map(id => ({ id })) },
-							},
-							create: {
-								serie_id: serieId,
-								source_id: sourceId,
-								external_id: c.id,
-								chapter_number: c.chapterNumber,
-								date_upload: c.dateUpload,
-								language: c.language as Language,
-								title: resolvedTitle,
-								...(c.externalUrl && { external_url: c.externalUrl.toString() }),
-								...(c.volumeName !== undefined && { volume_name: c.volumeName }),
-								...(c.volumeNumber !== undefined && { volume_number: c.volumeNumber }),
-								groups: { connect: chapterGroupIds.map(id => ({ id })) },
-							},
-						})
-					}),
-				)
+				// Update the changed chapters — assumes the changed set stays small per run;
+				// a source mass-mutating every chapter would make this loop O(chapters) again
+				for (const { existing, incoming } of to_update) {
+					await tx.chapter.update({
+						where: { id: existing.id },
+						data: {
+							chapter_number: incoming.chapter_number,
+							date_upload: incoming.date_upload,
+							title: incoming.title,
+							source_removed_at: null, // Clear if chapter reappears on source
+							source_removal_acknowledged_at: null, // Clear acknowledgment too
+							...(incoming.external_url !== undefined && { external_url: incoming.external_url }),
+							...(incoming.volume_name !== undefined && { volume_name: incoming.volume_name }),
+							...(incoming.volume_number !== undefined && { volume_number: incoming.volume_number }),
+						},
+					})
+				}
+
+				// Rewrite group links only for chapters whose groups actually changed
+				const groupsChangedUpdates = to_update.filter(u => u.groups_changed)
+				if (groupsChangedUpdates.length > 0) {
+					await tx.chapterGroup.deleteMany({
+						where: { chapter_id: { in: groupsChangedUpdates.map(u => u.existing.id) } },
+					})
+					const relinkData = groupsChangedUpdates.flatMap(u =>
+						u.incoming.group_ids.map(group_id => ({ chapter_id: u.existing.id, group_id })),
+					)
+					if (relinkData.length > 0) {
+						await tx.chapterGroup.createMany({ data: relinkData, skipDuplicates: true })
+					}
+				}
 
 				// Mark chapters that no longer exist on source
 				const sourceChapterIds = new Set(chaptersResult.chapters.map(c => c.id))
@@ -304,16 +373,18 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 					job.log(`Marked ${removedChapterIds.length} chapters as removed from source`)
 				}
 
-				// Identify chapters needing refresh
-				const chaptersToRefresh = upsertedChapters.filter((c) => {
-					const oldDate = existingChapterMap.get(c.external_id)
-					return !oldDate || oldDate.getTime() !== c.date_upload.getTime()
-				})
+				// Chapters needing a data refresh: newly created + changed upload date
+				const chapterIdsToRefresh = [
+					...createdChapters.map(c => c.id),
+					...to_update
+						.filter(u => u.existing.date_upload.getTime() !== u.incoming.date_upload.getTime())
+						.map(u => u.existing.id),
+				]
 
 				return {
 					serie_id: serieId,
 					serie_source_id: serieSourceId,
-					chapter_ids: chaptersToRefresh.map(c => c.id),
+					chapter_ids: chapterIdsToRefresh,
 					has_new_chapters: hasNewChapters,
 				}
 			})

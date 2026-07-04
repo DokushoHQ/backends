@@ -226,7 +226,7 @@ async function disable2FA() {
 								<div class="flex justify-end gap-2">
 									<UButton
 										variant="outline"
-										@click="isPasswordModalOpen = false"
+										@click="() => { isPasswordModalOpen = false }"
 									>
 										Cancel
 									</UButton>
@@ -300,7 +300,7 @@ async function disable2FA() {
 										/>
 										{{ copied ? 'Copied!' : 'Copy Codes' }}
 									</UButton>
-									<UButton @click="isBackupCodesOpen = false">
+									<UButton @click="() => { isBackupCodesOpen = false }">
 										Done
 									</UButton>
 								</div>

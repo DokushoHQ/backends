@@ -39,9 +39,7 @@ export default defineEventHandler(async (event) => {
 				},
 			},
 			groups: {
-				select: {
-					name: true,
-				},
+				select: { group: { select: { name: true } } },
 			},
 		},
 		orderBy: [
@@ -65,7 +63,7 @@ export default defineEventHandler(async (event) => {
 			manual_override: chapter.manual_override!,
 			title: chapter.title,
 			source_name: chapter.source.name,
-			groups: chapter.groups.map(g => g.name),
+			groups: chapter.groups.map(g => g.group.name),
 		})),
 		count_by_language: countByLanguage,
 		total_count: overrides.length,

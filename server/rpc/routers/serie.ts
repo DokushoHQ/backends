@@ -159,20 +159,21 @@ export const chapters = authed
 		language: languageSchema.optional(),
 	}))
 	.handler(async ({ input }) => {
-		const chapters = await db.chapter.findMany({
+		const chapterRows = await db.chapter.findMany({
 			where: {
 				serie_id: input.serieId,
 				enabled: true,
 				...(input.language ? { language: input.language } : {}),
 			},
 			include: {
-				groups: { select: { id: true, name: true, url: true } },
+				groups: { select: { group: { select: { id: true, name: true, url: true } } } },
 				source: { select: { id: true, external_id: true, name: true } },
 			},
 			orderBy: [{ chapter_number: "desc" }, { id: "asc" }],
 		})
 
-		return { chapters }
+		// Flatten join rows so the RPC response shape is unchanged
+		return { chapters: chapterRows.map(c => ({ ...c, groups: c.groups.map(g => g.group) })) }
 	})
 
 export const serieRouter = {

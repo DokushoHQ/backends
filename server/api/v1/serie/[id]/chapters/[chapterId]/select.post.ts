@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
 			chapter_number: true,
 			language: true,
 			source_id: true,
-			groups: { select: { id: true, name: true } },
+			groups: { select: { group: { select: { id: true, name: true } } } },
 		},
 	})
 
@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
 
 		// Store group preference for future chapters (if the chapter has groups)
 		if (selectedChapter.groups.length > 0) {
-			const groupId = selectedChapter.groups[0]!.id
+			const groupId = selectedChapter.groups[0]!.group.id
 
 			// Upsert preference - increase priority for selected group
 			await tx.serieGroupPreference.upsert({

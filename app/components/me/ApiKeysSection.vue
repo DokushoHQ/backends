@@ -116,7 +116,7 @@ function formatDate(date: Date | string | null): string {
 				<UButton
 					variant="outline"
 					size="sm"
-					@click="isCreateOpen = true"
+					@click="() => { isCreateOpen = true }"
 				>
 					<UIcon
 						name="i-lucide-plus"
