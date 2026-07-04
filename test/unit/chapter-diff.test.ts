@@ -111,6 +111,23 @@ describe("diffChapters", () => {
 		expect(result.to_update).toHaveLength(0)
 	})
 
+	it("treats duplicate incoming group ids as their unique set", () => {
+		const result = diffChapters(
+			[incoming({ group_ids: ["g1", "g1"] })],
+			[existing({ group_ids: ["g1"] })],
+		)
+		expect(result.to_update).toHaveLength(0)
+	})
+
+	it("detects group changes hidden by duplicate ids", () => {
+		const result = diffChapters(
+			[incoming({ group_ids: ["g1", "g1"] })],
+			[existing({ group_ids: ["g1", "g2"] })],
+		)
+		expect(result.to_update).toHaveLength(1)
+		expect(result.to_update[0]!.groups_changed).toBe(true)
+	})
+
 	it("deduplicates incoming chapters sharing an external_id", () => {
 		const result = diffChapters(
 			[incoming({ external_id: "dup" }), incoming({ external_id: "dup", title: "Other" })],

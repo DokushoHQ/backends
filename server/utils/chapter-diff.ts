@@ -42,9 +42,12 @@ export type ChapterDiffResult = {
 }
 
 function sameGroups(a: string[], b: string[]): boolean {
-	if (a.length !== b.length) return false
-	const set = new Set(b)
-	return a.every(id => set.has(id))
+	// True set equality: sources can emit duplicate group ids, so lengths alone
+	// would both hide real changes and flag phantom ones on every run
+	const setA = new Set(a)
+	const setB = new Set(b)
+	if (setA.size !== setB.size) return false
+	return [...setA].every(id => setB.has(id))
 }
 
 /**

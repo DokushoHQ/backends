@@ -292,7 +292,7 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 				// Bulk-create new chapters, then their group links
 				let createdChapters: { id: string, external_id: string }[] = []
 				if (to_create.length > 0) {
-					await tx.chapter.createMany({
+					createdChapters = await tx.chapter.createManyAndReturn({
 						data: to_create.map(c => ({
 							serie_id: serieId,
 							source_id: sourceId,
@@ -306,13 +306,6 @@ export default defineWorker<typeof QUEUE_NAME, SerieInserterJobData, SerieInsert
 							...(c.volume_number !== undefined && { volume_number: c.volume_number }),
 						})),
 						skipDuplicates: true,
-					})
-					// No serie_id filter needed: (source_id, external_id) is globally unique
-					createdChapters = await tx.chapter.findMany({
-						where: {
-							source_id: sourceId,
-							external_id: { in: to_create.map(c => c.external_id) },
-						},
 						select: { id: true, external_id: true },
 					})
 
